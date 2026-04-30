@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import MemberGrid from './components/MemberGrid';
+import Sidebar from './components/Sidebar';
 
 const App = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [activeTab, setActiveTab] = useState('members');
   const [members] = useState([
     {
       id: 1,
@@ -63,69 +65,93 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen p-8 md:p-16 text-[var(--text-primary)]">
-      <header className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div>
-          <div className="flex items-center gap-4 mb-4">
-            <h1 className="text-4xl md:text-5xl font-light tracking-luxury uppercase mb-0">
-              Trainer <span className="font-bold">Dashboard</span>
-            </h1>
-            <button 
-              onClick={toggleTheme}
-              className="glass-card p-3 rounded-full hover:scale-110 transition-transform active:scale-95"
-              aria-label="Toggle Theme"
-            >
-              {theme === 'dark' ? (
-                <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
-            </button>
-          </div>
-          <p className="text-[var(--text-secondary)] text-sm tracking-wide uppercase">
-            Managing <span className="text-[var(--text-primary)] opacity-60">Luxe Wellness Collective</span>
-          </p>
-        </div>
-        
-        <div className="flex gap-4">
-          <div className="glass-card px-6 py-3">
-            <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Total Members</span>
-            <span className="text-2xl font-semibold">{members.length}</span>
-          </div>
-          <div className="glass-card px-6 py-3">
-            <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Active Now</span>
-            <span className="text-2xl font-semibold text-emerald-500 dark:text-emerald-400">12</span>
-          </div>
-        </div>
-      </header>
-
-      <main>
-        <div className="flex items-center gap-4 mb-8">
-          <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold">Member Directory</h2>
-          <div className="h-[1px] flex-grow bg-[var(--glass-border)]"></div>
-          <div className="flex gap-2">
-            <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold">All</button>
-            <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)] transition-all">Expiring</button>
-          </div>
-        </div>
-        
-        <MemberGrid members={members} />
-      </main>
+    <div className="min-h-screen flex gap-12 p-8 lg:p-12 text-[var(--text-primary)]">
+      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       
-      <footer className="mt-16 pt-8 border-t border-[var(--glass-border)] flex justify-between text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">
-        <span>© 2026 Antigravity Wellness Systems</span>
-        <div className="flex gap-6">
-          <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Privacy</a>
-          <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Security</a>
-          <a href="#" className="hover:text-[var(--text-primary)] transition-colors">System Status</a>
-        </div>
-      </footer>
+      <div className="flex-grow max-w-7xl mx-auto">
+        <header className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div>
+            <div className="flex items-center gap-4 mb-4">
+              <h1 className="text-4xl md:text-5xl font-light tracking-luxury uppercase mb-0">
+                {activeTab === 'members' ? (
+                  <>Member <span className="font-bold">Directory</span></>
+                ) : (
+                  <>{activeTab} <span className="font-bold">Panel</span></>
+                )}
+              </h1>
+              <button 
+                onClick={toggleTheme}
+                className="glass-card p-3 rounded-full hover:scale-110 transition-transform active:scale-95"
+                aria-label="Toggle Theme"
+              >
+                {theme === 'dark' ? (
+                  <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            <p className="text-[var(--text-secondary)] text-sm tracking-wide uppercase">
+              Managing <span className="text-[var(--text-primary)] opacity-60">Luxe Wellness Collective</span>
+            </p>
+          </div>
+          
+          <div className="flex gap-4">
+            <div className="glass-card px-6 py-3">
+              <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Total Members</span>
+              <span className="text-2xl font-semibold">{members.length}</span>
+            </div>
+            <div className="glass-card px-6 py-3">
+              <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Active Now</span>
+              <span className="text-2xl font-semibold text-emerald-500 dark:text-emerald-400">12</span>
+            </div>
+          </div>
+        </header>
+
+        <main className="transition-all duration-500">
+          {activeTab === 'members' ? (
+            <>
+              <div className="flex items-center gap-4 mb-8">
+                <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold">Live Member Stream</h2>
+                <div className="h-[1px] flex-grow bg-[var(--glass-border)]"></div>
+                <div className="flex gap-2">
+                  <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold">All</button>
+                  <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)] transition-all">Expiring</button>
+                </div>
+              </div>
+              <MemberGrid members={members} />
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] glass-card p-12 text-center">
+              <div className="w-16 h-16 mb-6 rounded-full bg-[var(--glass-border)] flex items-center justify-center animate-pulse-soft">
+                <svg className="w-8 h-8 text-[var(--text-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-light uppercase tracking-luxury mb-2">Module Initializing</h2>
+              <p className="text-[var(--text-secondary)] text-sm max-w-md">
+                The <span className="text-[var(--text-primary)] font-semibold uppercase">{activeTab}</span> interface is being optimized for your personalized trainer experience.
+              </p>
+            </div>
+          )}
+        </main>
+        
+        <footer className="mt-16 pt-8 border-t border-[var(--glass-border)] flex flex-wrap justify-between gap-6 text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">
+          <span>© 2026 Antigravity Wellness Systems</span>
+          <div className="flex gap-6">
+            <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Privacy</a>
+            <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Security</a>
+            <a href="#" className="hover:text-[var(--text-primary)] transition-colors">System Status</a>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 };
 
 export default App;
+
