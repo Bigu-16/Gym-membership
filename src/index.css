@@ -66,3 +66,117 @@ body {
   background: var(--glass-border);
   border-radius: 10px;
 }
+
+/* Luxury Phone Input Overrides for react-international-phone */
+.luxury-phone-input .react-international-phone-input-container {
+  width: 100%;
+}
+
+.luxury-phone-input .react-international-phone-input {
+  height: 46px !important;
+  color: var(--text-primary) !important;
+  font-family: inherit !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-button {
+  height: 46px !important;
+  background: transparent !important;
+  border-color: var(--glass-border) !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  border-radius: 12px 0 0 12px !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-dropdown {
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-list-item {
+  color: var(--text-primary) !important;
+  padding: 10px !important;
+  transition: all 0.2s ease !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-list-item:hover {
+  background: var(--card-hover) !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-list-item--selected {
+  background: var(--card-hover) !important;
+}
+
+/* Hide native datalist arrow */
+input::-webkit-calendar-picker-indicator {
+  display: none !important;
+  opacity: 0;
+}
+
+/* Training Type Selection */
+.training-type-btn {
+  @apply flex-1 py-6 px-4 rounded-2xl border transition-all duration-500 text-center space-y-3 relative overflow-hidden;
+  border-color: var(--glass-border);
+  background: var(--glass-bg);
+}
+
+.training-type-btn.active {
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  transform: scale(1.02);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2);
+}
+
+.training-type-btn:not(.active):hover {
+  background: var(--card-hover);
+  border-color: var(--text-secondary);
+}
+
+.training-type-btn .icon-container {
+  @apply w-12 h-12 rounded-xl flex items-center justify-center mx-auto transition-colors duration-500;
+  background: var(--card-hover);
+}
+
+.training-type-btn.active .icon-container {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Family Container Grouping */
+.family-group {
+  @apply p-8 rounded-[32px] border transition-all duration-500 space-y-8;
+  border-color: var(--glass-border);
+  background: linear-gradient(135deg, var(--glass-bg), transparent);
+}
+
+.family-group:hover {
+  border-color: var(--text-secondary);
+}
+
+.family-badge {
+  @apply absolute -top-3 left-8 px-4 py-1 rounded-full text-[9px] uppercase tracking-luxury font-bold;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+/* Schedule Slots */
+.slot-pill {
+  @apply px-4 py-3 rounded-xl border text-[11px] uppercase tracking-wider font-semibold transition-all cursor-pointer text-center;
+  border-color: var(--glass-border);
+  background: var(--bg-primary);
+}
+
+.slot-pill.active {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+}
+
+.slot-pill:not(.active):hover {
+  border-color: var(--text-secondary);
+  background: var(--card-hover);
+}

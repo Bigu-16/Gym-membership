@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import MemberGrid from './components/MemberGrid';
 import Sidebar from './components/Sidebar';
+import EnrollmentForm from './components/EnrollmentForm';
 
 const App = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [activeTab, setActiveTab] = useState('members');
-  const [members] = useState([
+  const [members, setMembers] = useState([
     {
       id: 1,
       name: 'Alexander Rossi',
@@ -64,6 +65,10 @@ const App = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
+  const handleEnroll = (newMembers) => {
+    setMembers(prev => [...newMembers, ...prev]);
+  };
+
   return (
     <div className="min-h-screen flex gap-12 p-8 lg:p-12 text-[var(--text-primary)]">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
@@ -75,6 +80,8 @@ const App = () => {
               <h1 className="text-4xl md:text-5xl font-light tracking-luxury uppercase mb-0">
                 {activeTab === 'members' ? (
                   <>Member <span className="font-bold">Directory</span></>
+                ) : activeTab === 'enrollment' ? (
+                  <>New <span className="font-bold">Registration</span></>
                 ) : (
                   <>{activeTab} <span className="font-bold">Panel</span></>
                 )}
@@ -125,6 +132,8 @@ const App = () => {
               </div>
               <MemberGrid members={members} />
             </>
+          ) : activeTab === 'enrollment' ? (
+            <EnrollmentForm onEnroll={handleEnroll} />
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[50vh] glass-card p-12 text-center">
               <div className="w-16 h-16 mb-6 rounded-full bg-[var(--glass-border)] flex items-center justify-center animate-pulse-soft">
