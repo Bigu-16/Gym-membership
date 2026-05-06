@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import EnrollmentForm from './components/EnrollmentForm';
 import Schedule from './components/Schedule';
 import { setHours, setMinutes, addDays } from 'date-fns';
+import { GROUP_SCHEDULE_SLOTS } from './config/scheduleConfig';
 
 const MOCK_SESSIONS = [
   {
@@ -98,6 +99,15 @@ const App = () => {
 
   const [sessions, setSessions] = useState(MOCK_SESSIONS);
 
+  const [scheduleTemplates, setScheduleTemplates] = useState(() => {
+    const saved = localStorage.getItem('gym_schedule_templates');
+    return saved ? JSON.parse(saved) : GROUP_SCHEDULE_SLOTS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gym_schedule_templates', JSON.stringify(scheduleTemplates));
+  }, [scheduleTemplates]);
+
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -117,6 +127,37 @@ const App = () => {
     if (newSessions && newSessions.length > 0) {
       setSessions(prev => [...newSessions, ...prev]);
     }
+
+    // Update enrolled count for selected schedule templates
+    newMembers.forEach(member => {
+      if (member.trainingType === 'group' && member.schedule?.slot) {
+        setScheduleTemplates(prev => prev.map(template => {
+          const slotText = `${template.days} @ ${template.time}`;
+          if (slotText === member.schedule.slot) {
+            return {
+              ...template,
+              enrolled: Math.min(template.capacity, template.enrolled + 1)
+            };
+          }
+          return template;
+        }));
+      }
+    });
+  };
+
+  const handleAddTemplate = (newTemplate) => {
+    setScheduleTemplates(prev => [
+      ...prev,
+      {
+        id: Date.now(),
+        ...newTemplate,
+        enrolled: 0
+      }
+    ]);
+  };
+
+  const handleDeleteTemplate = (id) => {
+    setScheduleTemplates(prev => prev.filter(t => t.id !== id));
   };
 
   return (
@@ -185,9 +226,15 @@ const App = () => {
               <MemberGrid members={members} />
             </>
           ) : activeTab === 'enrollment' ? (
-            <EnrollmentForm onEnroll={handleEnroll} />
+            <EnrollmentForm onEnroll={handleEnroll} scheduleTemplates={scheduleTemplates} />
           ) : activeTab === 'schedule' ? (
-            <Schedule sessions={sessions} />
+            <Schedule 
+              sessions={sessions} 
+              scheduleTemplates={scheduleTemplates}
+              members={members}
+              onAddTemplate={handleAddTemplate}
+              onDeleteTemplate={handleDeleteTemplate}
+            />
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[50vh] glass-card p-12 text-center">
               <div className="w-16 h-16 mb-6 rounded-full bg-[var(--glass-border)] flex items-center justify-center animate-pulse-soft">

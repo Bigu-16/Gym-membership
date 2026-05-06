@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { PhoneInput } from 'react-international-phone';
 import 'react-international-phone/style.css';
-import { GROUP_SCHEDULE_SLOTS, PERSONAL_DEFAULTS } from '../config/scheduleConfig';
+import { PERSONAL_DEFAULTS } from '../config/scheduleConfig';
 
-const EnrollmentForm = ({ onEnroll }) => {
+const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
   const [trainingType, setTrainingType] = useState('group'); // 'group' or 'personal'
   const [personalType, setPersonalType] = useState('individual'); // 'individual' or 'group'
   
@@ -422,40 +422,63 @@ const EnrollmentForm = ({ onEnroll }) => {
             </div>
 
             {scheduleMode === 'preset' ? (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex justify-between items-end">
                   <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Available Pre-set Schedules</label>
                   <span className="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] opacity-50">Click to select</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {GROUP_SCHEDULE_SLOTS.map(slot => {
-                    const isFull = slot.enrolled >= slot.capacity;
-                    const slotText = `${slot.days} @ ${slot.time}`;
-                    return (
-                      <div 
-                        key={slot.id}
-                        onClick={() => !isFull && setSchedule({...schedule, slot: slotText})}
-                        className={`slot-pill flex flex-col items-center justify-center py-4 px-2 relative ${schedule.slot === slotText ? 'active ring-2 ring-[var(--text-primary)]' : ''} ${isFull ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:border-[var(--text-primary)]'}`}
-                      >
-                        <span className="text-[10px] font-bold mb-1">{slot.days}</span>
-                        <span className="text-[12px] font-light opacity-80">{slot.time}</span>
-                        
-                        <div className="mt-3 flex items-center gap-2 w-full px-4">
-                          <div className="flex-grow h-1 bg-[var(--glass-border)] rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-emerald-500 transition-all duration-1000" 
-                              style={{ width: `${(slot.enrolled / slot.capacity) * 100}%` }}
-                            ></div>
+                
+                {(() => {
+                  const grouped = scheduleTemplates.reduce((acc, t) => {
+                    const cName = t.className || 'General Classes';
+                    if (!acc[cName]) acc[cName] = [];
+                    acc[cName].push(t);
+                    return acc;
+                  }, {});
+                  
+                  return (
+                    <div className="space-y-8">
+                      {Object.entries(grouped).map(([cName, slots]) => (
+                        <div key={cName} className="space-y-4">
+                          <div className="flex items-center gap-3 mb-2 ml-1">
+                            <div className="w-1.5 h-4 bg-[var(--text-primary)] rounded-full opacity-60"></div>
+                            <h3 className="text-xs uppercase tracking-luxury font-bold text-[var(--text-primary)] opacity-80">{cName}</h3>
                           </div>
-                          <span className="text-[8px] font-bold opacity-60">
-                            {slot.enrolled}/{slot.capacity}
-                          </span>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {slots.map(slot => {
+                              const isFull = slot.enrolled >= slot.capacity;
+                              const slotText = `${cName}: ${slot.days} @ ${slot.time}`;
+                              return (
+                                <div 
+                                  key={slot.id}
+                                  onClick={() => !isFull && setSchedule({...schedule, slot: slotText})}
+                                  className={`slot-pill flex flex-col items-center justify-center py-4 px-2 relative ${schedule.slot === slotText ? 'active ring-2 ring-[var(--text-primary)]' : ''} ${isFull ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:border-[var(--text-primary)]'}`}
+                                >
+                                  <span className="text-[10px] font-bold mb-1">{slot.days}</span>
+                                  <span className="text-[11px] font-light opacity-80">{slot.time}</span>
+                                  
+                                  <div className="mt-3 flex items-center gap-2 w-full px-4">
+                                    <div className="flex-grow h-1 bg-[var(--glass-border)] rounded-full overflow-hidden">
+                                      <div 
+                                        className="h-full bg-emerald-500 transition-all duration-1000" 
+                                        style={{ width: `${(slot.enrolled / slot.capacity) * 100}%` }}
+                                      ></div>
+                                    </div>
+                                    <span className="text-[8px] font-bold opacity-60">
+                                      {slot.enrolled}/{slot.capacity}
+                                    </span>
+                                  </div>
+                                  {isFull && <span className="absolute inset-0 flex items-center justify-center bg-[var(--bg-primary)]/80 text-rose-500 text-[8px] font-bold tracking-widest uppercase">Full</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                        {isFull && <span className="absolute inset-0 flex items-center justify-center bg-[var(--bg-primary)]/80 text-rose-500 text-[8px] font-bold tracking-widest uppercase">Full</span>}
-                      </div>
-                    );
-                  })}
-                </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

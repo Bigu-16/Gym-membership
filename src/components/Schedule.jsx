@@ -30,18 +30,42 @@ import {
   MoreHorizontal,
   LayoutGrid,
   CalendarDays,
-  CalendarRange
+  CalendarRange,
+  Trash2,
+  Plus,
+  Users,
+  X
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
-const Schedule = ({ sessions = [] }) => {
-  const [view, setView] = useState('week'); // 'day', 'week', 'month'
+const Schedule = ({ 
+  sessions = [], 
+  scheduleTemplates = [], 
+  members = [], 
+  onAddTemplate, 
+  onDeleteTemplate 
+}) => {
+  const [view, setView] = useState('week'); // 'day', 'week', 'month', 'templates'
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedSession, setSelectedSession] = useState(null);
   const [timeLeft, setTimeLeft] = useState('');
+
+  // Create Template form state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedClassOption, setSelectedClassOption] = useState('Taekwondo');
+  const [selectedDays, setSelectedDays] = useState([]);
+  const [startTime, setStartTime] = useState('16:00');
+  const [endTime, setEndTime] = useState('17:00');
+  const [capacity, setCapacity] = useState(15);
+  const [deleteTemplateId, setDeleteTemplateId] = useState(null);
+
+  // Derive unique existing class names for selector dropdown
+  const existingClassNames = Array.from(new Set(scheduleTemplates.map(t => t.className).filter(Boolean)));
+  const defaultClassNames = ['Taekwondo', 'Muay Thai', 'Kickboxing', 'Fitness' ];
+  const uniqueClassNames = Array.from(new Set([...defaultClassNames, ...existingClassNames]));
 
   // Update time left for in-progress session
   useEffect(() => {
@@ -83,6 +107,7 @@ const Schedule = ({ sessions = [] }) => {
       <div className="flex items-center gap-4">
         <div className="flex bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl p-1">
           <button 
+            type="button"
             onClick={() => setView('day')}
             className={cn(
               "px-4 py-2 rounded-xl text-[10px] uppercase tracking-luxury transition-all flex items-center gap-2",
@@ -92,6 +117,7 @@ const Schedule = ({ sessions = [] }) => {
             <CalendarIcon size={14} /> Day
           </button>
           <button 
+            type="button"
             onClick={() => setView('week')}
             className={cn(
               "px-4 py-2 rounded-xl text-[10px] uppercase tracking-luxury transition-all flex items-center gap-2",
@@ -101,6 +127,7 @@ const Schedule = ({ sessions = [] }) => {
             <CalendarRange size={14} /> Week
           </button>
           <button 
+            type="button"
             onClick={() => setView('month')}
             className={cn(
               "px-4 py-2 rounded-xl text-[10px] uppercase tracking-luxury transition-all flex items-center gap-2",
@@ -109,32 +136,47 @@ const Schedule = ({ sessions = [] }) => {
           >
             <CalendarDays size={14} /> Month
           </button>
+          <button 
+            type="button"
+            onClick={() => setView('templates')}
+            className={cn(
+              "px-4 py-2 rounded-xl text-[10px] uppercase tracking-luxury transition-all flex items-center gap-2",
+              view === 'templates' ? "bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-lg" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            )}
+          >
+            <LayoutGrid size={14} /> Templates
+          </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => navigateDate('prev')}
-            className="p-2 rounded-xl glass-card hover:bg-[var(--card-hover)] border-[var(--glass-border)]"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button 
-            onClick={() => setCurrentDate(new Date())}
-            className="px-4 py-2 rounded-xl glass-card text-[10px] uppercase tracking-luxury border-[var(--glass-border)] hover:bg-[var(--card-hover)]"
-          >
-            Today
-          </button>
-          <button 
-            onClick={() => navigateDate('next')}
-            className="p-2 rounded-xl glass-card hover:bg-[var(--card-hover)] border-[var(--glass-border)]"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
+        {view !== 'templates' && (
+          <div className="flex items-center gap-2">
+            <button 
+              type="button"
+              onClick={() => navigateDate('prev')}
+              className="p-2 rounded-xl glass-card hover:bg-[var(--card-hover)] border-[var(--glass-border)]"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button 
+              type="button"
+              onClick={() => setCurrentDate(new Date())}
+              className="px-4 py-2 rounded-xl glass-card text-[10px] uppercase tracking-luxury border-[var(--glass-border)] hover:bg-[var(--card-hover)]"
+            >
+              Today
+            </button>
+            <button 
+              type="button"
+              onClick={() => navigateDate('next')}
+              className="p-2 rounded-xl glass-card hover:bg-[var(--card-hover)] border-[var(--glass-border)]"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
       </div>
 
       <h2 className="text-2xl font-light tracking-luxury uppercase">
-        {format(currentDate, view === 'month' ? 'MMMM yyyy' : 'MMMM d, yyyy')}
+        {view === 'templates' ? 'Schedule Templates' : format(currentDate, view === 'month' ? 'MMMM yyyy' : 'MMMM d, yyyy')}
       </h2>
     </div>
   );
@@ -409,6 +451,147 @@ const Schedule = ({ sessions = [] }) => {
     );
   };
 
+  const renderTemplatesView = () => {
+    const grouped = scheduleTemplates.reduce((acc, t) => {
+      const cName = t.className || 'General Classes';
+      if (!acc[cName]) acc[cName] = [];
+      acc[cName].push(t);
+      return acc;
+    }, {});
+
+    return (
+      <div className="space-y-12 animate-in fade-in duration-700">
+        {/* Templates Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-3xl p-6">
+          <div>
+            <h3 className="text-lg font-light tracking-luxury uppercase mb-1">Active Class Templates</h3>
+            <p className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)]">Create and manage recurring schedule options for group enrollment</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
+          >
+            <Plus size={14} /> Create Template
+          </button>
+        </div>
+
+        {/* Grouped Templates Grid */}
+        {Object.entries(grouped).map(([cName, slots]) => (
+          <div key={cName} className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-1.5 h-6 bg-[var(--text-primary)] rounded-full opacity-60"></div>
+              <h3 className="text-sm uppercase tracking-luxury font-bold text-[var(--text-primary)] opacity-80">{cName}</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {slots.map(template => {
+                const slotText = `${cName}: ${template.days} @ ${template.time}`;
+                // Find members registered to this slot
+                const enrolledMembers = members.filter(m => m.schedule?.slot === slotText);
+                const enrolledCount = enrolledMembers.length || template.enrolled || 0;
+                const isFull = enrolledCount >= template.capacity;
+
+                return (
+                  <div 
+                    key={template.id}
+                    className="glass-card p-6 border-[var(--glass-border)] relative overflow-hidden flex flex-col justify-between group hover:border-[var(--text-primary)]/40 hover:translate-y-[-4px] transition-all duration-300 min-h-[220px]"
+                  >
+                    {/* Background decorative gradient */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[var(--text-primary)]/5 to-transparent rounded-bl-full pointer-events-none transition-all group-hover:scale-110"></div>
+
+                    <div>
+                      {/* Card Header */}
+                      <div className="flex justify-between items-center mb-4 relative z-10">
+                        <span className="text-[9px] uppercase tracking-luxury px-3 py-1 rounded-full bg-[var(--glass-border)] font-bold text-[var(--text-secondary)]">
+                          Slot #{template.id}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTemplateId(template.id)}
+                          className="p-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 duration-300"
+                          title="Delete Template"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      {/* Main Time & Days */}
+                      <div className="mb-6 relative z-10">
+                        <h4 className="text-2xl font-bold tracking-tight mb-1 flex items-center gap-2">
+                          <Clock size={18} className="opacity-60 text-[var(--text-primary)]" />
+                          {template.time}
+                        </h4>
+                        <p className="text-sm font-light text-[var(--text-secondary)] tracking-wide">
+                          {template.days}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Capacity & Enrolled Members Stack */}
+                    <div className="space-y-4 relative z-10">
+                      <div>
+                        <div className="flex justify-between text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] mb-1.5">
+                          <span>Capacity Progress</span>
+                          <span className={cn("font-bold", isFull ? "text-rose-500" : "text-emerald-500")}>
+                            {enrolledCount} / {template.capacity} {isFull ? '(FULL)' : ''}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-[var(--glass-border)] rounded-full overflow-hidden">
+                          <div 
+                            className={cn("h-full transition-all duration-1000", isFull ? "bg-rose-500 animate-pulse" : "bg-emerald-500")}
+                            style={{ width: `${Math.min(100, (enrolledCount / template.capacity) * 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-[var(--glass-border)] border-dashed">
+                        <span className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)]">Enrolled Members</span>
+                        {enrolledMembers.length > 0 ? (
+                          <div className="flex items-center">
+                            <div className="flex -space-x-2 mr-2">
+                              {enrolledMembers.slice(0, 3).map((member) => (
+                                <img
+                                  key={member.id}
+                                  src={member.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random&color=fff`}
+                                  alt={member.name}
+                                  title={member.name}
+                                  className="w-6 h-6 rounded-full border border-[var(--bg-primary)] object-cover shadow-sm"
+                                />
+                              ))}
+                            </div>
+                            {enrolledMembers.length > 3 && (
+                              <span className="text-[8px] font-bold text-[var(--text-secondary)] px-1.5 py-0.5 rounded bg-[var(--glass-border)]">
+                                +{enrolledMembers.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[9px] font-light text-[var(--text-secondary)] opacity-60">No members enrolled</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* Global Add Template Placeholder Button Card */}
+        <div 
+          onClick={() => setIsCreateModalOpen(true)}
+          className="glass-card p-8 border-dashed border-2 border-[var(--glass-border)] hover:border-[var(--text-primary)]/40 hover:bg-[var(--card-hover)] cursor-pointer flex flex-col items-center justify-center min-h-[140px] transition-all group duration-300"
+        >
+          <div className="w-10 h-10 rounded-full bg-[var(--glass-border)] flex items-center justify-center text-[var(--text-secondary)] group-hover:scale-110 group-hover:text-[var(--text-primary)] group-hover:bg-[var(--text-primary)]/10 transition-all mb-3">
+            <Plus size={18} />
+          </div>
+          <span className="text-xs uppercase tracking-luxury font-bold">Add Another Template Class Slot</span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="animate-in fade-in duration-700">
       {renderHeader()}
@@ -416,6 +599,240 @@ const Schedule = ({ sessions = [] }) => {
       {view === 'week' && renderWeekView()}
       {view === 'month' && renderMonthView()}
       {view === 'day' && renderDayView()}
+      {view === 'templates' && renderTemplatesView()}
+
+      {deleteTemplateId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-sm glass-card p-6 border-[var(--glass-border)] bg-[var(--bg-secondary)] flex flex-col items-center text-center animate-in scale-in duration-300">
+            <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 mb-4 animate-bounce">
+              <Trash2 size={22} />
+            </div>
+            <h3 className="text-lg font-light uppercase tracking-luxury mb-2 text-white">Delete Template Slot?</h3>
+            <p className="text-xs text-[var(--text-secondary)] mb-6 leading-relaxed">
+              Are you sure you want to delete this schedule template? Enrolled members will need to be rescheduled. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteTemplate(deleteTemplateId);
+                  setDeleteTemplateId(null);
+                }}
+                className="flex-grow py-3 rounded-xl bg-rose-500 text-white text-[10px] uppercase tracking-luxury font-bold hover:bg-rose-600 active:scale-95 transition-all shadow-lg"
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteTemplateId(null)}
+                className="flex-grow py-3 rounded-xl glass-card text-[10px] uppercase tracking-luxury font-bold border-[var(--glass-border)] hover:bg-[var(--card-hover)] active:scale-95 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end p-4 bg-black bg-opacity-40 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-md h-full glass-card p-8 shadow-2xl relative flex flex-col animate-in slide-in-from-right duration-500 border-[var(--glass-border)] bg-[var(--bg-secondary)]">
+            <button 
+              type="button"
+              onClick={() => {
+                setIsCreateModalOpen(false);
+                setSelectedDays([]);
+                setTime('16:00');
+                setCapacity(15);
+              }}
+              className="absolute top-6 right-6 p-2 rounded-full hover:bg-[var(--glass-border)] transition-all text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            >
+              <X size={18} />
+            </button>
+            
+            <div className="mb-8">
+              <span className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury font-bold mb-4 inline-block bg-[var(--text-primary)]/10 text-[var(--text-primary)]">
+                Configuration Panel
+              </span>
+              <h2 className="text-3xl font-light tracking-luxury uppercase mb-2">New Template</h2>
+              <p className="text-[var(--text-secondary)] text-xs">Define a recurring training session for group classes.</p>
+            </div>
+
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (selectedDays.length === 0) {
+                  alert('Please select at least one training day.');
+                  return;
+                }
+                
+                const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                const shortDays = {
+                  'Monday': 'Mon',
+                  'Tuesday': 'Tue',
+                  'Wednesday': 'Wed',
+                  'Thursday': 'Thu',
+                  'Friday': 'Fri',
+                  'Saturday': 'Sat',
+                  'Sunday': 'Sun'
+                };
+                
+                const formattedDaysStr = selectedDays
+                  .sort((a, b) => daysOrder.indexOf(a) - daysOrder.indexOf(b))
+                  .map(d => shortDays[d])
+                  .join(', ');
+
+                const formatTime12h = (t24) => {
+                  const [hStr, mStr] = t24.split(':');
+                  const h = parseInt(hStr, 10);
+                  const ampm = h >= 12 ? 'PM' : 'AM';
+                  const h12 = h % 12 || 12;
+                  return `${h12}:${mStr} ${ampm}`;
+                };
+
+                onAddTemplate({
+                  className: selectedClassOption.trim() || 'General Class',
+                  days: formattedDaysStr,
+                  time: `${formatTime12h(startTime)} - ${formatTime12h(endTime)}`,
+                  capacity: parseInt(capacity, 10)
+                });
+
+                // Reset and close
+                setIsCreateModalOpen(false);
+                setSelectedClassOption('Taekwondo');
+                setSelectedDays([]);
+                setStartTime('16:00');
+                setEndTime('17:00');
+                setCapacity(15);
+              }}
+              className="space-y-6 flex-grow flex flex-col justify-between"
+            >
+              <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-2 custom-scrollbar">
+                {/* Session Name Combo Selector */}
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Class / Session Name</label>
+                  <input
+                    required
+                    type="text"
+                    list="class-names-list"
+                    value={selectedClassOption}
+                    onChange={(e) => setSelectedClassOption(e.target.value)}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
+                    placeholder="Type to search or add custom class..."
+                  />
+                  <datalist id="class-names-list">
+                    {uniqueClassNames.map(name => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                </div>
+
+                {/* Select Days */}
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Days of the Week</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                      const isSelected = selectedDays.includes(day);
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => {
+                            setSelectedDays(prev => 
+                              prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+                            );
+                          }}
+                          className={cn(
+                            "px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase transition-all border",
+                            isSelected 
+                              ? "bg-[var(--text-primary)] text-[var(--bg-primary)] border-transparent" 
+                              : "bg-[var(--bg-primary)] border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)]/40"
+                          )}
+                        >
+                          {day.slice(0, 3)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Start Time & End Time */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Start Time</label>
+                    <input
+                      required
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all cursor-pointer"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">End Time</label>
+                    <input
+                      required
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Capacity Input */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center ml-1">
+                    <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">Max Capacity</label>
+                    <span className="text-xs font-bold text-[var(--text-primary)]">{capacity} Members</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="5"
+                      max="30"
+                      step="1"
+                      value={capacity}
+                      onChange={(e) => setCapacity(parseInt(e.target.value, 10))}
+                      className="flex-grow accent-[var(--text-primary)] cursor-pointer"
+                    />
+                    <input
+                      type="number"
+                      min="5"
+                      max="30"
+                      value={capacity}
+                      onChange={(e) => setCapacity(parseInt(e.target.value, 10))}
+                      className="w-16 bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-lg px-2 py-2 text-center text-xs focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]/20"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-8 flex gap-4">
+                <button 
+                  type="submit"
+                  className="flex-grow py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:opacity-90 transition-all"
+                >
+                  Create Template
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setIsCreateModalOpen(false);
+                    setSelectedDays([]);
+                    setStartTime('16:00');
+                    setEndTime('17:00');
+                    setCapacity(15);
+                  }}
+                  className="px-8 py-4 rounded-2xl glass-card text-[10px] uppercase tracking-luxury font-bold border-[var(--glass-border)] hover:bg-[var(--card-hover)]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {selectedSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-end p-4 bg-black bg-opacity-40 backdrop-blur-sm animate-in fade-in duration-300">
