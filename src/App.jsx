@@ -2,6 +2,51 @@ import React, { useState, useEffect } from 'react';
 import MemberGrid from './components/MemberGrid';
 import Sidebar from './components/Sidebar';
 import EnrollmentForm from './components/EnrollmentForm';
+import Schedule from './components/Schedule';
+import { setHours, setMinutes, addDays } from 'date-fns';
+
+const MOCK_SESSIONS = [
+  {
+    id: 1,
+    title: 'Elite Performance',
+    trainer: 'Marcus Thorne',
+    location: 'Studio A - Main Floor',
+    start: setMinutes(setHours(new Date(), 14), 0),
+    end: setMinutes(setHours(new Date(), 15), 30),
+    status: 'in-progress',
+    type: 'group',
+    checklist: [
+      { id: 1, text: 'Warm-up completed', checked: true },
+      { id: 2, text: 'High-intensity interval set', checked: false },
+      { id: 3, text: 'Cool-down stretch', checked: false }
+    ]
+  },
+  {
+    id: 2,
+    title: 'Personal Training',
+    trainer: 'Elena Vance',
+    location: 'VIP Zone - Sector 4',
+    start: setMinutes(setHours(addDays(new Date(), 1), 10), 0),
+    end: setMinutes(setHours(addDays(new Date(), 1), 11), 30),
+    status: 'upcoming',
+    type: 'personal',
+    checklist: [
+      { id: 1, text: 'Posture assessment', checked: false },
+      { id: 2, text: 'Strength baseline', checked: false }
+    ]
+  },
+  {
+    id: 3,
+    title: 'Yoga Flow',
+    trainer: 'Sophia Chen',
+    location: 'Zen Garden',
+    start: setMinutes(setHours(new Date(), 16), 30),
+    end: setMinutes(setHours(new Date(), 18), 0),
+    status: 'upcoming',
+    type: 'group',
+    checklist: []
+  }
+];
 
 const App = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
@@ -51,6 +96,8 @@ const App = () => {
     }
   ]);
 
+  const [sessions, setSessions] = useState(MOCK_SESSIONS);
+
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -65,8 +112,11 @@ const App = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  const handleEnroll = (newMembers) => {
+  const handleEnroll = (newMembers, newSessions) => {
     setMembers(prev => [...newMembers, ...prev]);
+    if (newSessions && newSessions.length > 0) {
+      setSessions(prev => [...newSessions, ...prev]);
+    }
   };
 
   return (
@@ -82,6 +132,8 @@ const App = () => {
                   <>Member <span className="font-bold">Directory</span></>
                 ) : activeTab === 'enrollment' ? (
                   <>New <span className="font-bold">Registration</span></>
+                ) : activeTab === 'schedule' ? (
+                  <>Training <span className="font-bold">Schedule</span></>
                 ) : (
                   <>{activeTab} <span className="font-bold">Panel</span></>
                 )}
@@ -134,6 +186,8 @@ const App = () => {
             </>
           ) : activeTab === 'enrollment' ? (
             <EnrollmentForm onEnroll={handleEnroll} />
+          ) : activeTab === 'schedule' ? (
+            <Schedule sessions={sessions} />
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[50vh] glass-card p-12 text-center">
               <div className="w-16 h-16 mb-6 rounded-full bg-[var(--glass-border)] flex items-center justify-center animate-pulse-soft">

@@ -56,7 +56,18 @@ const MembershipCard = ({ member }) => {
           </div>
           <div>
             <h3 className="text-lg font-semibold tracking-wide text-[var(--text-primary)] opacity-90">{name}</h3>
-            <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-medium">{plan}</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-medium">{plan}</p>
+              {member.schedule?.location && (
+                <p className="text-[9px] text-[var(--text-secondary)] opacity-60 flex items-center gap-1">
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {member.schedule.location}
+                </p>
+              )}
+            </div>
           </div>
         </div>
         <div className={`w-2 h-2 rounded-full ${styles.indicator}`}></div>
