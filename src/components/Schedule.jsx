@@ -52,6 +52,62 @@ const Schedule = ({
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('All');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedSession, setSelectedSession] = useState(null);
+  const [localChecklists, setLocalChecklists] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gym_session_checklists');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gym_session_checklists', JSON.stringify(localChecklists));
+  }, [localChecklists]);
+
+  const handleToggleChecklist = (sessionId, itemId) => {
+    setLocalChecklists(prev => {
+      const currentList = prev[sessionId] || (sessions.find(s => s.id === sessionId)?.checklist || []);
+      const updatedList = currentList.map(item => 
+        item.id === itemId ? { ...item, checked: !item.checked } : item
+      );
+      return {
+        ...prev,
+        [sessionId]: updatedList
+      };
+    });
+  };
+
+  const handleAddChecklistItem = (sessionId, text) => {
+    if (!text.trim()) return;
+    setLocalChecklists(prev => {
+      const currentList = prev[sessionId] || (sessions.find(s => s.id === sessionId)?.checklist || []);
+      const newItem = {
+        id: Date.now(),
+        text: text.trim(),
+        checked: false
+      };
+      return {
+        ...prev,
+        [sessionId]: [...currentList, newItem]
+      };
+    });
+  };
+
+  const handleDeleteChecklistItem = (sessionId, itemId) => {
+    const isConfirmed = window.confirm("Are you sure you want to delete this task from the checklist?");
+    if (!isConfirmed) return;
+
+    setLocalChecklists(prev => {
+      const currentList = prev[sessionId] || (sessions.find(s => s.id === sessionId)?.checklist || []);
+      const updatedList = currentList.filter(item => item.id !== itemId);
+      return {
+        ...prev,
+        [sessionId]: updatedList
+      };
+    });
+  };
+
   const [timeLeft, setTimeLeft] = useState('');
 
   // Create Template form state
@@ -888,34 +944,79 @@ const Schedule = ({
             </div>
 
             <div className="space-y-6 flex-grow">
-              <div className="bg-[var(--bg-primary)] p-6 rounded-[32px] border border-[var(--glass-border)]">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xs uppercase tracking-luxury font-bold">Session Checklist</h3>
-                  <span className="text-[10px] text-[var(--text-secondary)]">
-                    {selectedSession.checklist.filter(c => c.checked).length} / {selectedSession.checklist.length}
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {selectedSession.checklist.length > 0 ? selectedSession.checklist.map(item => (
-                    <div key={item.id} className="flex items-center gap-3 group cursor-pointer">
-                      <div className={cn(
-                        "w-5 h-5 rounded-md border flex items-center justify-center transition-all",
-                        item.checked ? "bg-[var(--accent-color)] border-transparent" : "border-[var(--glass-border)] group-hover:border-[var(--text-secondary)]"
-                      )}>
-                        {item.checked && <CheckCircle2 size={12} className="text-white" />}
-                      </div>
-                      <span className={cn(
-                        "text-sm transition-all",
-                        item.checked ? "text-[var(--text-secondary)] line-through" : "text-[var(--text-primary)]"
-                      )}>
-                        {item.text}
+              {(() => {
+                const sessionChecklist = localChecklists[selectedSession.id] || selectedSession.checklist || [];
+                const totalTasks = sessionChecklist.length;
+                const completedTasks = sessionChecklist.filter(item => item.checked).length;
+
+                return (
+                  <div className="bg-[var(--bg-primary)] p-6 rounded-[32px] border border-[var(--glass-border)]">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xs uppercase tracking-luxury font-bold">Session Checklist</h3>
+                      <span className="text-[10px] text-[var(--text-secondary)]">
+                        {completedTasks} / {totalTasks}
                       </span>
                     </div>
-                  )) : (
-                    <p className="text-xs text-[var(--text-secondary)] opacity-60">No checklist items for this session type.</p>
-                  )}
-                </div>
-              </div>
+                    <div className="space-y-3 mb-4">
+                      {sessionChecklist.length > 0 ? sessionChecklist.map(item => (
+                        <div key={item.id} className="flex items-center justify-between group cursor-pointer">
+                          <div 
+                            onClick={() => handleToggleChecklist(selectedSession.id, item.id)}
+                            className="flex items-center gap-3 flex-grow"
+                          >
+                            <div className={cn(
+                              "w-5 h-5 rounded-md border flex items-center justify-center transition-all",
+                              item.checked ? "bg-[var(--accent-color)] border-transparent" : "border-[var(--glass-border)] group-hover:border-[var(--text-secondary)]"
+                            )}>
+                              {item.checked && <CheckCircle2 size={12} className="text-white" />}
+                            </div>
+                            <span className={cn(
+                              "text-sm transition-all select-none",
+                              item.checked ? "text-[var(--text-secondary)] line-through" : "text-[var(--text-primary)]"
+                            )}>
+                              {item.text}
+                            </span>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => handleDeleteChecklistItem(selectedSession.id, item.id)}
+                            className="text-[var(--text-secondary)] hover:text-rose-500 transition-colors p-1 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            title="Delete task"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      )) : (
+                        <p className="text-xs text-[var(--text-secondary)] opacity-60 italic">No tasks assigned for today. Add one below!</p>
+                      )}
+                    </div>
+
+                    <form 
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const input = e.target.elements.newItemText;
+                        handleAddChecklistItem(selectedSession.id, input.value);
+                        input.value = '';
+                      }}
+                      className="flex gap-2"
+                    >
+                      <input 
+                        type="text" 
+                        required
+                        name="newItemText"
+                        placeholder="Add custom daily activity..." 
+                        className="flex-grow bg-[var(--card-hover)] border border-[var(--glass-border)] rounded-xl px-3 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--text-primary)] transition-colors placeholder:text-[var(--text-secondary)] placeholder:opacity-50"
+                      />
+                      <button 
+                        type="submit"
+                        className="px-3 py-1.5 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-bold hover:scale-[1.02] active:scale-95 transition-all"
+                      >
+                        Add
+                      </button>
+                    </form>
+                  </div>
+                );
+              })()}
 
               {selectedSession.status === 'in-progress' && (
                 <div className="glass-card p-6 border-[var(--accent-color)] border-opacity-30 bg-[var(--accent-color)] bg-opacity-5">

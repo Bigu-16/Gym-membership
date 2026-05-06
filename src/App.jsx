@@ -99,6 +99,7 @@ const App = () => {
   ]);
 
   const [sessions, setSessions] = useState(MOCK_SESSIONS);
+  const [inClubList, setInClubList] = useState([1, 4]);
 
   const [scheduleTemplates, setScheduleTemplates] = useState(() => {
     const saved = localStorage.getItem('gym_schedule_templates');
@@ -210,7 +211,7 @@ const App = () => {
             </div>
             <div className="glass-card px-6 py-3">
               <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Active Now</span>
-              <span className="text-2xl font-semibold text-emerald-500 dark:text-emerald-400">12</span>
+              <span className="text-2xl font-semibold text-emerald-500 dark:text-emerald-400">{inClubList.length}</span>
             </div>
           </div>
         </header>
@@ -245,6 +246,8 @@ const App = () => {
               setSessions={setSessions}
               scheduleTemplates={scheduleTemplates}
               onTabChange={setActiveTab}
+              inClubList={inClubList}
+              setInClubList={setInClubList}
             />
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[50vh] glass-card p-12 text-center">

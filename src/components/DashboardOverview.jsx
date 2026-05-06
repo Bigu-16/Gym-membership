@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
 
-const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates = [], onTabChange }) => {
+const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates = [], onTabChange, inClubList, setInClubList }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCheckInSuccess, setShowCheckInSuccess] = useState(null);
-  const [inClubList, setInClubList] = useState([1, 4]); // Member IDs currently in the club
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [localChecklists, setLocalChecklists] = useState({});
+  const [localChecklists, setLocalChecklists] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gym_session_checklists');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gym_session_checklists', JSON.stringify(localChecklists));
+  }, [localChecklists]);
+
 
   // Merge custom sessions with mapped schedule templates to represent live scheduled classes (e.g. Muay Thai, Taekwondo, Fitness)
   const allSessions = React.useMemo(() => {
@@ -129,34 +140,48 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
 
   // Toggle checklist item for sessions
   const handleToggleChecklist = (sessionId, itemId) => {
-    if (typeof sessionId === 'string' && sessionId.startsWith('template-')) {
-      setLocalChecklists(prev => {
-        const checkedList = prev[sessionId] || [];
-        const exists = checkedList.includes(itemId);
-        return {
-          ...prev,
-          [sessionId]: exists 
-            ? checkedList.filter(id => id !== itemId) 
-            : [...checkedList, itemId]
-        };
-      });
-      return;
-    }
+    setLocalChecklists(prev => {
+      const currentList = prev[sessionId] || (allSessions.find(s => s.id === sessionId)?.checklist || []);
+      const updatedList = currentList.map(item => 
+        item.id === itemId ? { ...item, checked: !item.checked } : item
+      );
+      return {
+        ...prev,
+        [sessionId]: updatedList
+      };
+    });
+  };
 
-    setSessions(prev => prev.map(session => {
-      if (session.id === sessionId) {
-        return {
-          ...session,
-          checklist: session.checklist.map(item => {
-            if (item.id === itemId) {
-              return { ...item, checked: !item.checked };
-            }
-            return item;
-          })
-        };
-      }
-      return session;
-    }));
+  // Add dynamic custom checklist item to a specific session
+  const handleAddChecklistItem = (sessionId, text) => {
+    if (!text.trim()) return;
+    setLocalChecklists(prev => {
+      const currentList = prev[sessionId] || (allSessions.find(s => s.id === sessionId)?.checklist || []);
+      const newItem = {
+        id: Date.now(),
+        text: text.trim(),
+        checked: false
+      };
+      return {
+        ...prev,
+        [sessionId]: [...currentList, newItem]
+      };
+    });
+  };
+
+  // Remove dynamic custom checklist item from a specific session
+  const handleDeleteChecklistItem = (sessionId, itemId) => {
+    const isConfirmed = window.confirm("Are you sure you want to delete this task from the checklist?");
+    if (!isConfirmed) return;
+
+    setLocalChecklists(prev => {
+      const currentList = prev[sessionId] || (allSessions.find(s => s.id === sessionId)?.checklist || []);
+      const updatedList = currentList.filter(item => item.id !== itemId);
+      return {
+        ...prev,
+        [sessionId]: updatedList
+      };
+    });
   };
 
   // Check in a member
@@ -206,7 +231,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
       )}
 
       {/* Grid of Key Performance Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Total Members */}
         <div 
           onClick={() => onTabChange('members')}
@@ -291,25 +316,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           </div>
         </div>
 
-        {/* Active Trainers */}
-        <div className="glass-card p-6 relative overflow-hidden">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Active Coaching</span>
-              <span className="text-3xl font-light tracking-wide">3 <span className="text-xs text-[var(--text-secondary)]">On Duty</span></span>
-            </div>
-            <div className="p-3 bg-[var(--card-hover)] rounded-xl">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-          </div>
-          <div className="flex -space-x-2 overflow-hidden mt-2">
-            <div className="inline-block h-6 w-6 rounded-full ring-2 ring-[var(--bg-primary)] bg-neutral-800 text-[10px] flex items-center justify-center font-bold">MT</div>
-            <div className="inline-block h-6 w-6 rounded-full ring-2 ring-[var(--bg-primary)] bg-emerald-800 text-[10px] flex items-center justify-center font-bold">EV</div>
-            <div className="inline-block h-6 w-6 rounded-full ring-2 ring-[var(--bg-primary)] bg-indigo-800 text-[10px] flex items-center justify-center font-bold">SC</div>
-          </div>
-        </div>
+
       </div>
 
       {/* Main Two-Column Layout */}
@@ -334,12 +341,9 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           <div className="space-y-6">
             {allSessions.map((session) => {
               const isProgress = session.status === 'in-progress';
-              const totalTasks = session.checklist?.length || 0;
-              const completedTasks = session.checklist?.filter(item => {
-                return typeof session.id === 'string' && session.id.startsWith('template-')
-                  ? (localChecklists[session.id]?.includes(item.id) || false)
-                  : item.checked;
-              }).length || 0;
+              const sessionChecklist = localChecklists[session.id] || session.checklist || [];
+              const totalTasks = sessionChecklist.length;
+              const completedTasks = sessionChecklist.filter(item => item.checked).length;
               const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
               return (
@@ -377,59 +381,88 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
                   </div>
 
                   {/* Checklist & Micro-Tasks */}
-                  {totalTasks > 0 && (
-                    <div className="mt-6 pt-4 border-t border-[var(--glass-border)]">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Trainer Protocol Checklist</span>
-                        <span className="text-[10px] font-semibold text-[var(--text-secondary)]">{completedTasks}/{totalTasks} Completed</span>
-                      </div>
-                      
-                      {/* Interactive Checkboxes */}
+                  <div className="mt-6 pt-4 border-t border-[var(--glass-border)]">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Trainer Protocol Checklist</span>
+                      <span className="text-[10px] font-semibold text-[var(--text-secondary)]">{completedTasks}/{totalTasks} Completed</span>
+                    </div>
+                    
+                    {totalTasks > 0 ? (
+                      /* Interactive Checkboxes */
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                        {session.checklist.map((item) => {
-                          const isChecked = typeof session.id === 'string' && session.id.startsWith('template-')
-                            ? (localChecklists[session.id]?.includes(item.id) || false)
-                            : item.checked;
-
-                          return (
-                            <label 
-                              key={item.id} 
-                              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border text-xs transition-all duration-300 cursor-pointer ${
-                                isChecked 
-                                  ? 'bg-[var(--card-hover)] border-emerald-500/20 text-[var(--text-primary)] opacity-70' 
-                                  : 'bg-transparent border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)]'
-                              }`}
-                            >
+                        {sessionChecklist.map((item) => (
+                          <div 
+                            key={item.id} 
+                            className={`flex items-center justify-between px-4 py-2.5 rounded-xl border text-xs transition-all duration-300 group/item ${
+                              item.checked 
+                                ? 'bg-[var(--card-hover)] border-emerald-500/20 text-[var(--text-primary)] opacity-70' 
+                                : 'bg-transparent border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)]/40'
+                            }`}
+                          >
+                            <label className="flex items-center gap-3 cursor-pointer flex-grow select-none">
                               <input 
                                 type="checkbox" 
-                                checked={isChecked} 
+                                checked={item.checked} 
                                 onChange={() => handleToggleChecklist(session.id, item.id)}
                                 className="w-4 h-4 rounded border-[var(--glass-border)] accent-[var(--text-primary)] bg-transparent cursor-pointer"
                               />
-                              <span className={isChecked ? 'line-through' : ''}>{item.text}</span>
+                              <span className={item.checked ? 'line-through' : ''}>{item.text}</span>
                             </label>
-                          );
-                        })}
+                            <button 
+                              type="button"
+                              onClick={() => handleDeleteChecklistItem(session.id, item.id)}
+                              className="text-[var(--text-secondary)] hover:text-rose-500 transition-colors p-1 rounded-md opacity-0 group-hover/item:opacity-100 focus:opacity-100"
+                              title="Delete task"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
                       </div>
+                    ) : (
+                      <p className="text-xs text-[var(--text-secondary)] opacity-60 italic mb-4">
+                        No custom protocol tasks assigned for this session. Add one below!
+                      </p>
+                    )}
 
-                      {/* Custom checklist progress bar */}
-                      <div className="w-full h-1 bg-[var(--glass-border)] rounded-full overflow-hidden">
+                    {/* Progress Bar */}
+                    {totalTasks > 0 && (
+                      <div className="w-full h-1 bg-[var(--glass-border)] rounded-full overflow-hidden mb-4">
                         <div 
                           className="h-full bg-[var(--text-primary)] transition-all duration-500"
                           style={{ width: `${progressPercentage}%` }}
                         ></div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* No checklist items state */}
-                  {totalTasks === 0 && (
-                    <div className="mt-4 pt-4 border-t border-[var(--glass-border)] text-center py-2">
-                      <p className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] italic">
-                        No custom protocol tasks assigned for this template
-                      </p>
-                    </div>
-                  )}
+                    {/* Form to add custom checklist item on the fly */}
+                    <form 
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const input = e.target.elements.newItemText;
+                        handleAddChecklistItem(session.id, input.value);
+                        input.value = '';
+                      }}
+                      className="flex gap-2"
+                    >
+                      <input 
+                        type="text" 
+                        required
+                        name="newItemText"
+                        placeholder="Add custom daily activity..." 
+                        className="flex-grow bg-[var(--card-hover)] border border-[var(--glass-border)] rounded-xl px-3 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--text-primary)] transition-colors placeholder:text-[var(--text-secondary)] placeholder:opacity-50"
+                      />
+                      <button 
+                        type="submit"
+                        className="px-3 py-1.5 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-bold hover:scale-[1.02] active:scale-95 transition-all"
+                      >
+                        Add
+                      </button>
+                    </form>
+                  </div>
+
                 </div>
               );
             })}
@@ -645,68 +678,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
             </div>
           </div>
 
-          {/* Zone Occupancy Hotspots */}
-          <div className="glass-card p-6 border border-[var(--glass-border)]">
-            <h3 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold mb-5 flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Zone Density Monitor
-            </h3>
 
-            <div className="space-y-4">
-              {/* Zone 1 */}
-              <div>
-                <div className="flex justify-between items-center text-[10px] uppercase tracking-luxury mb-1.5">
-                  <span className="font-semibold text-[var(--text-primary)] opacity-80">Main Lifting Floor</span>
-                  <span className="text-rose-500 font-bold">82% Peak</span>
-                </div>
-                <div className="w-full h-1.5 bg-[var(--glass-border)] rounded-full overflow-hidden">
-                  <div className="h-full bg-rose-500 rounded-full" style={{ width: '82%' }}></div>
-                </div>
-              </div>
-
-              {/* Zone 2 */}
-              <div>
-                <div className="flex justify-between items-center text-[10px] uppercase tracking-luxury mb-1.5">
-                  <span className="font-semibold text-[var(--text-primary)] opacity-80">Cardio Loft</span>
-                  <span className="text-amber-500 font-bold">55% Moderate</span>
-                </div>
-                <div className="w-full h-1.5 bg-[var(--glass-border)] rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: '55%' }}></div>
-                </div>
-              </div>
-
-              {/* Zone 3 */}
-              <div>
-                <div className="flex justify-between items-center text-[10px] uppercase tracking-luxury mb-1.5">
-                  <span className="font-semibold text-[var(--text-primary)] opacity-80">Zen Yoga Studio</span>
-                  <span className="text-emerald-500 font-bold">20% Serene</span>
-                </div>
-                <div className="w-full h-1.5 bg-[var(--glass-border)] rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: '20%' }}></div>
-                </div>
-              </div>
-
-              {/* Zone 4 */}
-              <div>
-                <div className="flex justify-between items-center text-[10px] uppercase tracking-luxury mb-1.5">
-                  <span className="font-semibold text-[var(--text-primary)] opacity-80">Cryo & Spa Suite</span>
-                  <span className="text-indigo-400 font-bold">40% Chilled</span>
-                </div>
-                <div className="w-full h-1.5 bg-[var(--glass-border)] rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-400 rounded-full" style={{ width: '40%' }}></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-[var(--glass-border)] text-center">
-              <span className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] font-medium">
-                Density updates automatically every 5 mins
-              </span>
-            </div>
-          </div>
         </div>
       </div>
     </div>
