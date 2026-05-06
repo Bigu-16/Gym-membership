@@ -3,6 +3,7 @@ import MemberGrid from './components/MemberGrid';
 import Sidebar from './components/Sidebar';
 import EnrollmentForm from './components/EnrollmentForm';
 import Schedule from './components/Schedule';
+import DashboardOverview from './components/DashboardOverview';
 import { setHours, setMinutes, addDays } from 'date-fns';
 import { GROUP_SCHEDULE_SLOTS } from './config/scheduleConfig';
 
@@ -51,7 +52,7 @@ const MOCK_SESSIONS = [
 
 const App = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-  const [activeTab, setActiveTab] = useState('members');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [members, setMembers] = useState([
     {
       id: 1,
@@ -169,7 +170,9 @@ const App = () => {
           <div>
             <div className="flex items-center gap-4 mb-4">
               <h1 className="text-4xl md:text-5xl font-light tracking-luxury uppercase mb-0">
-                {activeTab === 'members' ? (
+                {activeTab === 'dashboard' ? (
+                  <>Club <span className="font-bold">Overview</span></>
+                ) : activeTab === 'members' ? (
                   <>Member <span className="font-bold">Directory</span></>
                 ) : activeTab === 'enrollment' ? (
                   <>New <span className="font-bold">Registration</span></>
@@ -234,6 +237,14 @@ const App = () => {
               members={members}
               onAddTemplate={handleAddTemplate}
               onDeleteTemplate={handleDeleteTemplate}
+            />
+          ) : activeTab === 'dashboard' ? (
+            <DashboardOverview 
+              members={members} 
+              sessions={sessions} 
+              setSessions={setSessions}
+              scheduleTemplates={scheduleTemplates}
+              onTabChange={setActiveTab}
             />
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[50vh] glass-card p-12 text-center">

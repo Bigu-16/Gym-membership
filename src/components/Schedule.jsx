@@ -49,6 +49,7 @@ const Schedule = ({
   onDeleteTemplate 
 }) => {
   const [view, setView] = useState('week'); // 'day', 'week', 'month', 'templates'
+  const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('All');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedSession, setSelectedSession] = useState(null);
   const [timeLeft, setTimeLeft] = useState('');
@@ -452,12 +453,19 @@ const Schedule = ({
   };
 
   const renderTemplatesView = () => {
+    const categories = ['All', ...Array.from(new Set(scheduleTemplates.map(t => t.className || 'General Classes')))];
+
     const grouped = scheduleTemplates.reduce((acc, t) => {
       const cName = t.className || 'General Classes';
       if (!acc[cName]) acc[cName] = [];
       acc[cName].push(t);
       return acc;
     }, {});
+
+    const filteredGrouped = Object.entries(grouped).filter(([cName]) => {
+      if (selectedTemplateCategory === 'All') return true;
+      return cName === selectedTemplateCategory;
+    });
 
     return (
       <div className="space-y-12 animate-in fade-in duration-700">
@@ -476,8 +484,29 @@ const Schedule = ({
           </button>
         </div>
 
+        {/* Category Tabs Filter */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {categories.map(cat => {
+            const isActive = selectedTemplateCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedTemplateCategory(cat)}
+                className={`px-4 py-2 rounded-full text-[10px] uppercase tracking-luxury font-bold whitespace-nowrap transition-all ${
+                  isActive 
+                    ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md' 
+                    : 'bg-[var(--glass-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--glass-border)]'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Grouped Templates Grid */}
-        {Object.entries(grouped).map(([cName, slots]) => (
+        {filteredGrouped.map(([cName, slots]) => (
           <div key={cName} className="space-y-6">
             <div className="flex items-center gap-3">
               <div className="w-1.5 h-6 bg-[var(--text-primary)] rounded-full opacity-60"></div>
