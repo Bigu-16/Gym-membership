@@ -164,14 +164,14 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen flex gap-12 p-8 lg:p-12 text-[var(--text-primary)]">
+    <div className="min-h-screen flex flex-col lg:flex-row gap-6 lg:gap-12 p-4 sm:p-8 lg:p-12 pb-24 lg:pb-12 text-[var(--text-primary)]">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       
-      <div className="flex-grow max-w-7xl mx-auto">
-        <header className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <div>
-            <div className="flex items-center gap-4 mb-4">
-              <h1 className="text-4xl md:text-5xl font-light tracking-luxury uppercase mb-0">
+      <div className="flex-grow max-w-7xl mx-auto w-full">
+        <header className="mb-8 lg:mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div className="w-full md:w-auto">
+            <div className="flex items-center gap-4 mb-4 justify-between md:justify-start">
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-light tracking-luxury uppercase mb-0">
                 {activeTab === 'dashboard' ? (
                   <>Club <span className="font-bold">Overview</span></>
                 ) : activeTab === 'members' ? (
@@ -188,33 +188,33 @@ const App = () => {
               </h1>
               <button 
                 onClick={toggleTheme}
-                className="glass-card p-3 rounded-full hover:scale-110 transition-transform active:scale-95"
+                className="glass-card p-2.5 sm:p-3 rounded-full hover:scale-110 transition-transform active:scale-95"
                 aria-label="Toggle Theme"
               >
                 {theme === 'dark' ? (
-                  <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z" />
                   </svg>
                 ) : (
-                  <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                   </svg>
                 )}
               </button>
             </div>
-            <p className="text-[var(--text-secondary)] text-sm tracking-wide uppercase">
+            <p className="text-[var(--text-secondary)] text-xs sm:text-sm tracking-wide uppercase">
               Managing <span className="text-[var(--text-primary)] opacity-60">Luxe Wellness Collective</span>
             </p>
           </div>
           
-          <div className="flex gap-4">
-            <div className="glass-card px-6 py-3">
-              <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Total Members</span>
-              <span className="text-2xl font-semibold">{members.length}</span>
+          <div className="grid grid-cols-2 md:flex gap-4 w-full md:w-auto">
+            <div className="glass-card px-4 py-2.5 sm:px-6 sm:py-3 text-center md:text-left">
+              <span className="text-[9px] sm:text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-0.5">Total Members</span>
+              <span className="text-xl sm:text-2xl font-semibold">{members.length}</span>
             </div>
-            <div className="glass-card px-6 py-3">
-              <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Active Now</span>
-              <span className="text-2xl font-semibold text-emerald-500 dark:text-emerald-400">{inClubList.length}</span>
+            <div className="glass-card px-4 py-2.5 sm:px-6 sm:py-3 text-center md:text-left">
+              <span className="text-[9px] sm:text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-0.5">Active Now</span>
+              <span className="text-xl sm:text-2xl font-semibold text-emerald-500 dark:text-emerald-400">{inClubList.length}</span>
             </div>
           </div>
         </header>

@@ -63,56 +63,74 @@ const Sidebar = ({ activeTab = 'members', onTabChange }) => {
         </svg>
       )
     },
-    { 
-      id: 'settings', 
-      label: 'Settings', 
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      )
-    },
   ];
 
   return (
-    <aside className="w-64 h-[calc(100vh-4rem)] sticky top-8 hidden lg:flex flex-col gap-8">
-      <div className="px-4">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-widest leading-none">Antigravity</h2>
-            <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-luxury">Wellness Systems</span>
+    <>
+      {/* Desktop Aside Sidebar */}
+      <aside className="w-64 h-[calc(100vh-4rem)] sticky top-8 hidden lg:flex flex-col gap-8">
+        <div className="px-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-widest leading-none">Antigravity</h2>
+              <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-luxury">Wellness Systems</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <nav className="flex-grow flex flex-col gap-2">
-        {menuItems.map((item) => (
-          <SidebarItem
-            key={item.id}
-            {...item}
-            active={activeTab === item.id}
-            onClick={() => onTabChange(item.id)}
-          />
-        ))}
-      </nav>
+        <nav className="flex-grow flex flex-col gap-2">
+          {menuItems.map((item) => (
+            <SidebarItem
+              key={item.id}
+              {...item}
+              active={activeTab === item.id}
+              onClick={() => onTabChange(item.id)}
+            />
+          ))}
+        </nav>
 
-      <div className="mt-auto px-4 pb-4">
-        <div className="glass-card p-4 relative overflow-hidden group cursor-pointer">
-          <div className="relative z-10">
-            <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Current Shift</span>
-            <span className="text-xs font-semibold block">Morning Session</span>
-            <span className="text-[10px] text-emerald-500 block mt-1">Ends in 2h 15m</span>
+        <div className="mt-auto px-4 pb-4">
+          <div className="glass-card p-4 relative overflow-hidden group cursor-pointer">
+            <div className="relative z-10">
+              <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Current Shift</span>
+              <span className="text-xs font-semibold block">Morning Session</span>
+              <span className="text-[10px] text-emerald-500 block mt-1">Ends in 2h 15m</span>
+            </div>
+            <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-[var(--accent-color)] opacity-5 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
           </div>
-          <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-[var(--accent-color)] opacity-5 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
         </div>
+      </aside>
+
+      {/* Mobile/Tablet Floating Bottom Navigation Bar */}
+      <div className="lg:hidden fixed bottom-4 left-4 right-4 z-50 glass-card px-1.5 py-1 flex justify-around items-center shadow-2xl border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-xl">
+        {menuItems.map((item) => {
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onTabChange(item.id)}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 rounded-xl transition-all duration-300 ${
+                isActive 
+                  ? 'text-[var(--text-primary)] scale-105 font-bold' 
+                  : 'text-[var(--text-secondary)] opacity-50 hover:opacity-100'
+              }`}
+            >
+              <div className={`transition-transform duration-300 ${isActive ? 'scale-110 text-[var(--accent-color)]' : ''}`}>
+                {item.icon}
+              </div>
+              <span className="text-[8px] sm:text-[9px] uppercase tracking-widest scale-90 whitespace-nowrap font-medium">
+                {item.id === 'dashboard' ? 'Overview' : item.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
-    </aside>
+    </>
   );
 };
 

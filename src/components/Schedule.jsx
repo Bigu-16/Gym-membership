@@ -160,7 +160,7 @@ const Schedule = ({
   };
 
   const renderHeader = () => (
-    <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
+    <div className="sticky top-0 z-30 flex flex-col md:flex-row justify-between items-center gap-6 pb-4 mb-6 bg-[var(--bg-primary)] bg-opacity-70 backdrop-blur-md border-b border-[var(--glass-border)] pt-2">
       <div className="flex items-center gap-4">
         <div className="flex bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl p-1">
           <button 
@@ -247,82 +247,86 @@ const Schedule = ({
 
     return (
       <div className="glass-card overflow-hidden border-[var(--glass-border)]">
-        <div className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-[var(--glass-border)]">
-          <div className="p-4 border-r border-[var(--glass-border)] bg-[var(--bg-primary)] opacity-50"></div>
-          {days.map(day => (
-            <div 
-              key={day.toString()} 
-              className={cn(
-                "p-4 text-center border-r border-[var(--glass-border)] last:border-r-0",
-                isToday(day) && "bg-[var(--text-primary)] bg-opacity-[0.03]"
-              )}
-            >
-              <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">
-                {format(day, 'EEE')}
-              </span>
-              <span className={cn(
-                "text-lg font-semibold w-8 h-8 inline-flex items-center justify-center rounded-full transition-all",
-                isToday(day) ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" : ""
-              )}>
-                {format(day, 'd')}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="relative h-[600px] overflow-y-auto custom-scrollbar bg-[var(--glass-bg)]">
-          <div className="grid grid-cols-[80px_repeat(7,1fr)] h-[900px]">
-            {/* Time labels */}
-            <div className="relative">
-              {hours.map(hour => (
-                <div key={hour} className="h-[60px] text-[10px] text-[var(--text-secondary)] pr-4 text-right -mt-2">
-                  {hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
+        <div className="overflow-x-auto pb-2">
+          <div className="min-w-[800px]">
+            <div className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-[var(--glass-border)]">
+              <div className="p-4 border-r border-[var(--glass-border)] bg-[var(--bg-primary)] opacity-50"></div>
+              {days.map(day => (
+                <div 
+                  key={day.toString()} 
+                  className={cn(
+                    "p-4 text-center border-r border-[var(--glass-border)] last:border-r-0",
+                    isToday(day) && "bg-[var(--text-primary)] bg-opacity-[0.03]"
+                  )}
+                >
+                  <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">
+                    {format(day, 'EEE')}
+                  </span>
+                  <span className={cn(
+                    "text-lg font-semibold w-8 h-8 inline-flex items-center justify-center rounded-full transition-all",
+                    isToday(day) ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" : ""
+                  )}>
+                    {format(day, 'd')}
+                  </span>
                 </div>
               ))}
             </div>
 
-            {/* Grid lines & Sessions */}
-            {days.map((day, dayIdx) => (
-              <div key={day.toString()} className="relative border-r border-[var(--glass-border)] last:border-r-0">
-                {hours.map(hour => (
-                  <div key={hour} className="h-[60px] border-b border-[var(--glass-border)] border-dashed opacity-30"></div>
-                ))}
-                
-                {getSessionsForDay(day).map(session => {
-                  const startHour = session.start.getHours() + session.start.getMinutes() / 60;
-                  const endHour = session.end.getHours() + session.end.getMinutes() / 60;
-                  const top = (startHour - 7) * 60;
-                  const height = (endHour - startHour) * 60;
-
-                  return (
-                    <div
-                      key={session.id}
-                      onClick={() => setSelectedSession(session)}
-                      className={cn(
-                        "absolute left-1 right-1 rounded-xl p-2 text-xs cursor-pointer transition-all hover:scale-[1.02] hover:z-10 group overflow-hidden border",
-                        session.status === 'in-progress' 
-                          ? "bg-[var(--text-primary)] text-[var(--bg-primary)] border-transparent shadow-xl ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[var(--bg-primary)]" 
-                          : "bg-[var(--glass-bg)] border-[var(--glass-border)] hover:border-[var(--text-secondary)] shadow-sm"
-                      )}
-                      style={{ top: `${top}px`, height: `${height}px` }}
-                    >
-                      <div className="font-bold mb-0.5 truncate">{session.title}</div>
-                      <div className="opacity-70 text-[9px] flex items-center gap-1 mb-1">
-                        <MapPin size={8} /> {session.location}
-                      </div>
-                      {session.status === 'in-progress' && (
-                        <div className="mt-auto flex items-center gap-2">
-                          <div className="flex-grow h-1 bg-white bg-opacity-20 rounded-full overflow-hidden">
-                            <div className="h-full bg-[var(--accent-color)] animate-pulse" style={{ width: '65%' }}></div>
-                          </div>
-                          <span className="text-[8px] font-bold">LIVE</span>
-                        </div>
-                      )}
+            <div className="relative h-[600px] overflow-y-auto custom-scrollbar bg-[var(--glass-bg)]">
+              <div className="grid grid-cols-[80px_repeat(7,1fr)] h-[900px]">
+                {/* Time labels */}
+                <div className="relative">
+                  {hours.map(hour => (
+                    <div key={hour} className="h-[60px] text-[10px] text-[var(--text-secondary)] pr-4 text-right -mt-2">
+                      {hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+
+                {/* Grid lines & Sessions */}
+                {days.map((day, dayIdx) => (
+                  <div key={day.toString()} className="relative border-r border-[var(--glass-border)] last:border-r-0">
+                    {hours.map(hour => (
+                      <div key={hour} className="h-[60px] border-b border-[var(--glass-border)] border-dashed opacity-30"></div>
+                    ))}
+                    
+                    {getSessionsForDay(day).map(session => {
+                      const startHour = session.start.getHours() + session.start.getMinutes() / 60;
+                      const endHour = session.end.getHours() + session.end.getMinutes() / 60;
+                      const top = (startHour - 7) * 60;
+                      const height = (endHour - startHour) * 60;
+
+                      return (
+                        <div
+                          key={session.id}
+                          onClick={() => setSelectedSession(session)}
+                          className={cn(
+                            "absolute left-1 right-1 rounded-xl p-2 text-xs cursor-pointer transition-all hover:scale-[1.02] hover:z-10 group overflow-hidden border",
+                            session.status === 'in-progress' 
+                              ? "bg-[var(--text-primary)] text-[var(--bg-primary)] border-transparent shadow-xl ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[var(--bg-primary)]" 
+                              : "bg-[var(--glass-bg)] border-[var(--glass-border)] hover:border-[var(--text-secondary)] shadow-sm"
+                          )}
+                          style={{ top: `${top}px`, height: `${height}px` }}
+                        >
+                          <div className="font-bold mb-0.5 truncate">{session.title}</div>
+                          <div className="opacity-70 text-[9px] flex items-center gap-1 mb-1">
+                            <MapPin size={8} /> {session.location}
+                          </div>
+                          {session.status === 'in-progress' && (
+                            <div className="mt-auto flex items-center gap-2">
+                              <div className="flex-grow h-1 bg-white bg-opacity-20 rounded-full overflow-hidden">
+                                <div className="h-full bg-[var(--accent-color)] animate-pulse" style={{ width: '65%' }}></div>
+                              </div>
+                              <span className="text-[8px] font-bold">LIVE</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>
@@ -339,62 +343,66 @@ const Schedule = ({
 
     return (
       <div className="glass-card overflow-hidden border-[var(--glass-border)] bg-[var(--glass-bg)]">
-        <div className="grid grid-cols-7 border-b border-[var(--glass-border)]">
-          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-            <div key={day} className="p-4 text-center text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold">
-              {day}
+        <div className="overflow-x-auto pb-2">
+          <div className="min-w-[800px]">
+            <div className="grid grid-cols-7 border-b border-[var(--glass-border)]">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                <div key={day} className="p-4 text-center text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold">
+                  {day}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7">
-          {days.map((day, idx) => {
-            const daySessions = getSessionsForDay(day);
-            return (
-              <div 
-                key={day.toString()} 
-                className={cn(
-                  "min-h-[120px] p-2 border-r border-b border-[var(--glass-border)] transition-all hover:bg-[var(--card-hover)]",
-                  !isSameDay(day, currentDate) && format(day, 'M') !== format(currentDate, 'M') && "opacity-20",
-                  isToday(day) && "bg-[var(--text-primary)] bg-opacity-[0.02]"
-                )}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className={cn(
-                    "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full",
-                    isToday(day) ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" : "text-[var(--text-secondary)]"
-                  )}>
-                    {format(day, 'd')}
-                  </span>
-                  {daySessions.length > 0 && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--glass-border)] font-bold">
-                      {daySessions.length}
-                    </span>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  {daySessions.slice(0, 3).map(session => (
-                    <div 
-                      key={session.id}
-                      onClick={() => setSelectedSession(session)}
-                      className={cn(
-                        "text-[9px] p-1 rounded-md truncate cursor-pointer",
-                        session.status === 'in-progress' 
-                          ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" 
-                          : "bg-[var(--glass-border)] text-[var(--text-primary)]"
+            <div className="grid grid-cols-7">
+              {days.map((day, idx) => {
+                const daySessions = getSessionsForDay(day);
+                return (
+                  <div 
+                    key={day.toString()} 
+                    className={cn(
+                      "min-h-[120px] p-2 border-r border-b border-[var(--glass-border)] transition-all hover:bg-[var(--card-hover)]",
+                      !isSameDay(day, currentDate) && format(day, 'M') !== format(currentDate, 'M') && "opacity-20",
+                      isToday(day) && "bg-[var(--text-primary)] bg-opacity-[0.02]"
+                    )}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className={cn(
+                        "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full",
+                        isToday(day) ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" : "text-[var(--text-secondary)]"
+                      )}>
+                        {format(day, 'd')}
+                      </span>
+                      {daySessions.length > 0 && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--glass-border)] font-bold">
+                          {daySessions.length}
+                        </span>
                       )}
-                    >
-                      {format(session.start, 'HH:mm')} {session.title}
                     </div>
-                  ))}
-                  {daySessions.length > 3 && (
-                    <div className="text-[9px] text-[var(--text-secondary)] pl-1">
-                      + {daySessions.length - 3} more
+                    <div className="space-y-1">
+                      {daySessions.slice(0, 3).map(session => (
+                        <div 
+                          key={session.id}
+                          onClick={() => setSelectedSession(session)}
+                          className={cn(
+                            "text-[9px] p-1 rounded-md truncate cursor-pointer",
+                            session.status === 'in-progress' 
+                              ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" 
+                              : "bg-[var(--glass-border)] text-[var(--text-primary)]"
+                          )}
+                        >
+                          {format(session.start, 'HH:mm')} {session.title}
+                        </div>
+                      ))}
+                      {daySessions.length > 3 && (
+                        <div className="text-[9px] text-[var(--text-secondary)] pl-1">
+                          + {daySessions.length - 3} more
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     );
