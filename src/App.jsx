@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import EnrollmentForm from './components/EnrollmentForm';
 import Schedule from './components/Schedule';
 import DashboardOverview from './components/DashboardOverview';
+import Analytics from './components/Analytics';
 import { setHours, setMinutes, addDays } from 'date-fns';
 import { GROUP_SCHEDULE_SLOTS } from './config/scheduleConfig';
 
@@ -179,6 +180,8 @@ const App = () => {
                   <>New <span className="font-bold">Registration</span></>
                 ) : activeTab === 'schedule' ? (
                   <>Training <span className="font-bold">Schedule</span></>
+                ) : activeTab === 'analytics' ? (
+                  <>Business <span className="font-bold">Analytics</span></>
                 ) : (
                   <>{activeTab} <span className="font-bold">Panel</span></>
                 )}
@@ -249,6 +252,8 @@ const App = () => {
               inClubList={inClubList}
               setInClubList={setInClubList}
             />
+          ) : activeTab === 'analytics' ? (
+            <Analytics members={members} scheduleTemplates={scheduleTemplates} />
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[50vh] glass-card p-12 text-center">
               <div className="w-16 h-16 mb-6 rounded-full bg-[var(--glass-border)] flex items-center justify-center animate-pulse-soft">
