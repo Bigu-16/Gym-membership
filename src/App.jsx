@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import MemberGrid from './components/MemberGrid';
+import MemberDetails from './components/MemberDetails';
 import Sidebar from './components/Sidebar';
 import EnrollmentForm from './components/EnrollmentForm';
 import Schedule from './components/Schedule';
@@ -54,6 +55,7 @@ const MOCK_SESSIONS = [
 const App = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [selectedMember, setSelectedMember] = useState(null);
   const [members, setMembers] = useState([
     {
       id: 1,
@@ -163,9 +165,14 @@ const App = () => {
     setScheduleTemplates(prev => prev.filter(t => t.id !== id));
   };
 
+  const handleUpdateMember = (updatedMember) => {
+    setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
+    setSelectedMember(updatedMember);
+  };
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row gap-6 lg:gap-12 p-4 sm:p-8 lg:p-12 pb-24 lg:pb-12 text-[var(--text-primary)]">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Sidebar activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setSelectedMember(null); }} />
       
       <div className="flex-grow max-w-7xl mx-auto w-full">
         <header className="mb-8 lg:mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
@@ -221,17 +228,25 @@ const App = () => {
 
         <main className="transition-all duration-500">
           {activeTab === 'members' ? (
-            <>
-              <div className="flex items-center gap-4 mb-8">
-                <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold">Live Member Stream</h2>
-                <div className="h-[1px] flex-grow bg-[var(--glass-border)]"></div>
-                <div className="flex gap-2">
-                  <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold">All</button>
-                  <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)] transition-all">Expiring</button>
+            selectedMember ? (
+              <MemberDetails 
+                member={selectedMember} 
+                onBack={() => setSelectedMember(null)} 
+                onUpdateMember={handleUpdateMember} 
+              />
+            ) : (
+              <>
+                <div className="flex items-center gap-4 mb-8">
+                  <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold">Live Member Stream</h2>
+                  <div className="h-[1px] flex-grow bg-[var(--glass-border)]"></div>
+                  <div className="flex gap-2">
+                    <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold">All</button>
+                    <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)] transition-all">Expiring</button>
+                  </div>
                 </div>
-              </div>
-              <MemberGrid members={members} />
-            </>
+                <MemberGrid members={members} onManage={setSelectedMember} />
+              </>
+            )
           ) : activeTab === 'enrollment' ? (
             <EnrollmentForm onEnroll={handleEnroll} scheduleTemplates={scheduleTemplates} />
           ) : activeTab === 'schedule' ? (
@@ -248,7 +263,7 @@ const App = () => {
               sessions={sessions} 
               setSessions={setSessions}
               scheduleTemplates={scheduleTemplates}
-              onTabChange={setActiveTab}
+              onTabChange={(tab) => { setActiveTab(tab); setSelectedMember(null); }}
               inClubList={inClubList}
               setInClubList={setInClubList}
             />
