@@ -549,19 +549,20 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
               {/* Dynamic Heatmap Cell Tooltip */}
               {hoveredHeatmapCell && (
                 <div 
-                  className="fixed z-50 glass-card px-4 py-3 text-left shadow-xl pointer-events-none animate-fade-in text-xs border border-[var(--glass-border)]"
+                  className="fixed z-50 bg-[var(--text-primary)] text-[var(--bg-primary)] rounded-xl px-4 py-3 text-left shadow-2xl pointer-events-none animate-fade-in text-xs"
                   style={{
-                    left: `${hoveredHeatmapCell.clientX + 15}px`,
-                    top: `${hoveredHeatmapCell.clientY - 45}px`,
+                    left: `${hoveredHeatmapCell.clientX - 100}px`,
+                    top: `${hoveredHeatmapCell.clientY - 100}px`,
+                    transform: 'translate(-100%, -200%)',
                   }}
                 >
-                  <span className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold block mb-0.5">
+                  <span className="text-[9px] uppercase tracking-luxury opacity-70 font-bold block mb-0.5">
                     {hoveredHeatmapCell.day}s @ {hoveredHeatmapCell.hour}
                   </span>
                   <div className="font-semibold mb-1">
                     Avg. Occupancy: <span className="font-light">{hoveredHeatmapCell.intensity}%</span>
                   </div>
-                  <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-luxury">
+                  <div className="text-[9px] opacity-70 uppercase tracking-luxury">
                     Staffing: {hoveredHeatmapCell.intensity > 70 ? '🔥 Double Shift' : '🛡️ Standard Shift'}
                   </div>
                 </div>

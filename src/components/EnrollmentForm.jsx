@@ -11,7 +11,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
     {
       id: Date.now(),
       parentInfo: { name: '', phone: '', email: '' },
-      trainees: [{ name: '', age: '', service: 'Group Taekwondo' }]
+      trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Group Taekwondo' }]
     }
   ]);
 
@@ -32,7 +32,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
     setFamilies([...families, {
       id: Date.now(),
       parentInfo: { name: '', phone: '', email: '' },
-      trainees: [{ name: '', age: '', service: 'Personal Taekwondo Training' }]
+      trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Personal Taekwondo Training' }]
     }]);
   };
 
@@ -44,7 +44,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
 
   const addTrainee = (familyIndex) => {
     const newFamilies = [...families];
-    newFamilies[familyIndex].trainees.push({ name: '', age: '', service: trainingType === 'group' ? 'Group Taekwondo' : 'Personal Taekwondo Training' });
+    newFamilies[familyIndex].trainees.push({ name: '', age: '', gender: 'Male', medicalIssues: '', service: trainingType === 'group' ? 'Group Taekwondo' : 'Personal Taekwondo Training' });
     setFamilies(newFamilies);
   };
 
@@ -90,6 +90,9 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
         const newMember = {
           id: Math.random(),
           name: t.name,
+          age: t.age,
+          gender: t.gender,
+          medicalIssues: t.medicalIssues,
           plan: t.service,
           expiryDate: new Date(new Date().setMonth(new Date().getMonth() + monthsToAdd)).toISOString(),
           image: `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=random&color=fff`,
@@ -149,7 +152,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
       setFamilies([{
         id: Date.now(),
         parentInfo: { name: '', phone: '', email: '' },
-        trainees: [{ name: '', age: '', service: 'Group Taekwondo' }]
+        trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Group Taekwondo' }]
       }]);
       setPayment({ amount: '', method: 'Cash', status: 'Paid', currency: 'AED', duration: '1 Month' });
     }, 3000);
@@ -346,28 +349,58 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {family.trainees.map((trainee, tIndex) => (
                     <div key={tIndex} className="glass-card p-5 flex gap-4 items-center group relative">
-                      <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Kid's Full Name</label>
-                          <input 
-                            required
-                            type="text" 
-                            value={trainee.name}
-                            onChange={(e) => handleTraineeChange(fIndex, tIndex, 'name', e.target.value)}
-                            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
-                            placeholder="e.g. Leo Smith"
-                          />
+                      <div className="flex-grow flex flex-col gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Kid's Full Name</label>
+                            <input 
+                              required
+                              type="text" 
+                              value={trainee.name}
+                              onChange={(e) => handleTraineeChange(fIndex, tIndex, 'name', e.target.value)}
+                              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
+                              placeholder="e.g. Leo Smith"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Age</label>
+                            <input 
+                              required
+                              type="number" 
+                              min={PERSONAL_DEFAULTS.minAge}
+                              value={trainee.age}
+                              onChange={(e) => handleTraineeChange(fIndex, tIndex, 'age', e.target.value)}
+                              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
+                              placeholder="Age"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Gender</label>
+                            <div className="relative">
+                              <select 
+                                value={trainee.gender}
+                                onChange={(e) => handleTraineeChange(fIndex, tIndex, 'gender', e.target.value)}
+                                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-8"
+                              >
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                              </select>
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Age</label>
+                          <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Medical Issues (Optional)</label>
                           <input 
-                            required
-                            type="number" 
-                            min={PERSONAL_DEFAULTS.minAge}
-                            value={trainee.age}
-                            onChange={(e) => handleTraineeChange(fIndex, tIndex, 'age', e.target.value)}
+                            type="text" 
+                            value={trainee.medicalIssues}
+                            onChange={(e) => handleTraineeChange(fIndex, tIndex, 'medicalIssues', e.target.value)}
                             className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
-                            placeholder="Age"
+                            placeholder="e.g. Asthma, Allergies, or None"
                           />
                         </div>
                       </div>
