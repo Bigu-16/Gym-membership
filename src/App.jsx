@@ -56,6 +56,7 @@ const App = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedMember, setSelectedMember] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [members, setMembers] = useState([
     {
       id: 1,
@@ -166,9 +167,68 @@ const App = () => {
   };
 
   const handleUpdateMember = (updatedMember) => {
-    setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
+    if (updatedMember.isGroup) {
+      setMembers(prev => prev.map(m => {
+        if (m.parentPhone === updatedMember.parentPhone) {
+          const updatedTrainee = updatedMember.trainees.find(t => t.id === m.id);
+          return updatedTrainee || m;
+        }
+        return m;
+      }));
+    } else {
+      setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
+    }
     setSelectedMember(updatedMember);
   };
+
+  const getProcessedMembers = () => {
+    const groups = new Map();
+    const result = [];
+
+    members.forEach(m => {
+      if (m.parentPhone) {
+        if (!groups.has(m.parentPhone)) {
+          groups.set(m.parentPhone, {
+            isGroup: true,
+            id: m.parentPhone,
+            parentName: m.parentName,
+            parentPhone: m.parentPhone,
+            trainees: [m],
+            name: `${m.parentName}'s Family`,
+            plan: 'Family Group',
+            image: `https://ui-avatars.com/api/?name=${encodeURIComponent(m.parentName)}&background=random&color=fff`,
+            expiryDate: m.expiryDate,
+            isFrozen: m.isFrozen
+          });
+        } else {
+          const group = groups.get(m.parentPhone);
+          group.trainees.push(m);
+          if (m.isFrozen) group.isFrozen = true;
+        }
+      } else {
+        result.push(m);
+      }
+    });
+
+    groups.forEach(g => {
+      g.plan = `Family Group (${g.trainees.length} Kids)`;
+      result.push(g);
+    });
+
+    if (!searchQuery) return result;
+    
+    const lowerQ = searchQuery.toLowerCase();
+    return result.filter(item => {
+      if (item.isGroup) {
+        if (item.parentName.toLowerCase().includes(lowerQ) || item.parentPhone.includes(lowerQ)) return true;
+        return item.trainees.some(t => t.name.toLowerCase().includes(lowerQ));
+      } else {
+        return item.name.toLowerCase().includes(lowerQ);
+      }
+    });
+  };
+
+  const processedMembers = getProcessedMembers();
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row gap-6 lg:gap-12 p-4 sm:p-8 lg:p-12 pb-24 lg:pb-12 text-[var(--text-primary)]">
@@ -237,14 +297,28 @@ const App = () => {
             ) : (
               <>
                 <div className="flex items-center gap-4 mb-8">
-                  <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold">Live Member Stream</h2>
-                  <div className="h-[1px] flex-grow bg-[var(--glass-border)]"></div>
-                  <div className="flex gap-2">
-                    <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold">All</button>
-                    <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)] transition-all">Expiring</button>
+                  <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold whitespace-nowrap">Live Member Stream</h2>
+                  <div className="h-[1px] flex-grow bg-[var(--glass-border)] hidden md:block"></div>
+                  <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center">
+                    <div className="relative w-full sm:w-64">
+                      <input 
+                        type="text" 
+                        placeholder="Search name or phone..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-full px-4 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]/20 pl-8"
+                      />
+                      <svg className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold">All</button>
+                      <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)] transition-all">Expiring</button>
+                    </div>
                   </div>
                 </div>
-                <MemberGrid members={members} onManage={setSelectedMember} />
+                <MemberGrid members={processedMembers} onManage={setSelectedMember} />
               </>
             )
           ) : activeTab === 'enrollment' ? (
