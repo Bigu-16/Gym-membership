@@ -160,7 +160,7 @@ const Schedule = ({
   };
 
   const renderHeader = () => (
-    <div className="sticky top-0 z-30 flex flex-col md:flex-row justify-between items-center gap-6 pb-4 mb-6 bg-[var(--bg-primary)] bg-opacity-70 backdrop-blur-md border-b border-[var(--glass-border)] pt-2">
+    <div className="sticky top-0 z-30 flex flex-col md:flex-row justify-between items-center gap-6 pb-4 mb-6 pt-2">
       <div className="flex items-center gap-4">
         <div className="flex bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl p-1">
           <button 
@@ -217,9 +217,9 @@ const Schedule = ({
             <button 
               type="button"
               onClick={() => setCurrentDate(new Date())}
-              className="px-4 py-2 rounded-xl glass-card text-[10px] uppercase tracking-luxury border-[var(--glass-border)] hover:bg-[var(--card-hover)]"
+              className="px-4 py-2 rounded-xl glass-card text-[10px] uppercase tracking-luxury border-[var(--glass-border)] hover:bg-[var(--card-hover)] min-w-[80px]"
             >
-              Today
+              {view === 'week' ? 'This Week' : view === 'month' ? 'This Month' : 'Today'}
             </button>
             <button 
               type="button"
@@ -498,7 +498,7 @@ const Schedule = ({
           <div className="glass-card p-6 border-[var(--glass-border)]">
             <h3 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold mb-4">Upcoming Next</h3>
             <div className="space-y-4">
-              {MOCK_SESSIONS.filter(s => s.status === 'upcoming').slice(0, 2).map(s => (
+              {sessions.filter(s => s.status === 'upcoming').slice(0, 2).map(s => (
                 <div key={s.id} className="flex gap-4 items-center">
                   <div className="w-10 h-10 rounded-xl bg-[var(--glass-border)] flex items-center justify-center text-[var(--text-primary)]">
                     <Clock size={16} />
