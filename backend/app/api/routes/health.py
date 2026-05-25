@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from sqlalchemy import text
 
-from app.db import get_db_session
+from app.db import SessionLocal
 
 router = APIRouter(prefix="/health", tags=["health"])
 
@@ -13,6 +13,6 @@ async def live() -> dict[str, str]:
 
 @router.get("/ready")
 async def ready() -> dict[str, str]:
-    async with get_db_session() as session:
+    async with SessionLocal() as session:
         await session.execute(text("SELECT 1"))
     return {"status": "ok"}
