@@ -6,6 +6,11 @@ class Settings(BaseSettings):
     app_env: str = "development"
     api_v1_prefix: str = "/api/v1"
     debug: bool = True
+    secret_key: str = "change-me-in-production"
+    access_token_expire_minutes: int = 60 * 24
+    redis_host: str = "redis"
+    redis_port: int = 6379
+    redis_db: int = 0
     postgres_user: str = "postgres"
     postgres_password: str = "postgres"
     postgres_db: str = "gym_membership"
@@ -30,6 +35,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def redis_url(self) -> str:
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
 
 settings = Settings()

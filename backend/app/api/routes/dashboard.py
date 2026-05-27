@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.db import get_db_session
+from app.models import AppUser
 from app.models import CheckIn, Member, Session
 from app.schemas.dashboard import ActiveMemberResponse, DashboardStatsResponse, RecentActivityResponse
 
@@ -12,7 +14,10 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/stats", response_model=DashboardStatsResponse)
-async def get_dashboard_stats(db: AsyncSession = Depends(get_db_session)) -> DashboardStatsResponse:
+async def get_dashboard_stats(
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_user),
+) -> DashboardStatsResponse:
     today = date.today()
 
     total_members = await db.scalar(select(func.count(Member.id)))
@@ -33,7 +38,10 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_db_session)) -> Das
 
 
 @router.get("/active-members", response_model=list[ActiveMemberResponse])
-async def get_active_members(db: AsyncSession = Depends(get_db_session)) -> list[ActiveMemberResponse]:
+async def get_active_members(
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_user),
+) -> list[ActiveMemberResponse]:
     result = await db.execute(
         select(CheckIn, Member)
         .join(Member, Member.id == CheckIn.member_id)
@@ -55,6 +63,7 @@ async def get_active_members(db: AsyncSession = Depends(get_db_session)) -> list
 async def get_recent_activities(
     limit: int = 10,
     db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_user),
 ) -> list[RecentActivityResponse]:
     result = await db.execute(
         select(CheckIn, Member)

@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_admin_user, get_current_user
 from app.db import get_db_session
+from app.models import AppUser
 from app.models import Member
 from app.schemas.member import (
     FamilyCreate,
@@ -26,6 +28,7 @@ async def list_members(
     expired: bool | None = None,
     is_frozen: bool | None = None,
     db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_user),
 ) -> list[MemberResponse]:
     stmt = select(Member).order_by(Member.created_at.desc())
 
@@ -50,7 +53,11 @@ async def list_members(
 
 
 @router.post("/", response_model=MemberResponse, status_code=status.HTTP_201_CREATED)
-async def create_member(payload: MemberCreate, db: AsyncSession = Depends(get_db_session)) -> MemberResponse:
+async def create_member(
+    payload: MemberCreate,
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_admin_user),
+) -> MemberResponse:
     member = Member(**payload.model_dump())
     db.add(member)
     await db.commit()
@@ -59,7 +66,11 @@ async def create_member(payload: MemberCreate, db: AsyncSession = Depends(get_db
 
 
 @router.post("/families", response_model=list[MemberResponse], status_code=status.HTTP_201_CREATED)
-async def create_family(payload: FamilyCreate, db: AsyncSession = Depends(get_db_session)) -> list[MemberResponse]:
+async def create_family(
+    payload: FamilyCreate,
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_admin_user),
+) -> list[MemberResponse]:
     if not payload.members:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="members list cannot be empty")
 
@@ -75,6 +86,7 @@ async def create_family(payload: FamilyCreate, db: AsyncSession = Depends(get_db
 async def list_families(
     parent_phone: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_user),
 ) -> list[FamilyGroupResponse]:
     stmt = select(Member).where(Member.parent_phone.is_not(None)).order_by(Member.parent_phone, Member.name)
     if parent_phone:
@@ -91,7 +103,11 @@ async def list_families(
 
 
 @router.get("/{member_id}", response_model=MemberResponse)
-async def get_member(member_id: int, db: AsyncSession = Depends(get_db_session)) -> MemberResponse:
+async def get_member(
+    member_id: int,
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_user),
+) -> MemberResponse:
     member = await db.get(Member, member_id)
     if member is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
@@ -103,6 +119,7 @@ async def update_member(
     member_id: int,
     payload: MemberUpdate,
     db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_admin_user),
 ) -> MemberResponse:
     member = await db.get(Member, member_id)
     if member is None:
@@ -117,7 +134,11 @@ async def update_member(
 
 
 @router.delete("/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_member(member_id: int, db: AsyncSession = Depends(get_db_session)) -> None:
+async def delete_member(
+    member_id: int,
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_admin_user),
+) -> None:
     member = await db.get(Member, member_id)
     if member is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
@@ -130,6 +151,7 @@ async def freeze_member(
     member_id: int,
     payload: FreezeRequest,
     db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_admin_user),
 ) -> MemberResponse:
     member = await db.get(Member, member_id)
     if member is None:
@@ -146,6 +168,7 @@ async def freeze_family(
     parent_phone: str,
     payload: FamilyFreezeRequest,
     db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_admin_user),
 ) -> list[MemberResponse]:
     await db.execute(
         update(Member).where(Member.parent_phone == parent_phone).values(is_frozen=payload.is_frozen)

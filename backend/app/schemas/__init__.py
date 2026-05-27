@@ -1,5 +1,8 @@
 from app.schemas.analytics import AttendancePoint, GrowthPoint
+from app.schemas.auth import BootstrapAdminRequest, LoginResponse, UserResponse
+from app.schemas.check_in import CheckInCreate, CheckInResponse, CheckOutRequest
 from app.schemas.dashboard import ActiveMemberResponse, DashboardStatsResponse, RecentActivityResponse
+from app.schemas.enrollment import EnrollmentCreate, EnrollmentResponse
 from app.schemas.member import (
     FamilyCreate,
     FamilyFreezeRequest,
@@ -20,12 +23,19 @@ from app.schemas.schedule import (
 __all__ = [
     "ActiveMemberResponse",
     "AttendancePoint",
+    "BootstrapAdminRequest",
+    "CheckInCreate",
+    "CheckInResponse",
+    "CheckOutRequest",
     "DashboardStatsResponse",
+    "EnrollmentCreate",
+    "EnrollmentResponse",
     "FamilyCreate",
     "FamilyFreezeRequest",
     "FamilyGroupResponse",
     "FreezeRequest",
     "GrowthPoint",
+    "LoginResponse",
     "MemberCreate",
     "MemberResponse",
     "MemberUpdate",
@@ -35,4 +45,5 @@ __all__ = [
     "SessionCreate",
     "SessionResponse",
     "SessionStatusUpdate",
+    "UserResponse",
 ]

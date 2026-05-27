@@ -19,6 +19,7 @@ session_status_enum = sa.Enum(
     "cancelled",
     name="session_status_enum",
 )
+user_role_enum = sa.Enum("admin", "staff", name="user_role_enum")
 
 
 def upgrade() -> None:
@@ -26,6 +27,22 @@ def upgrade() -> None:
     gender_enum.create(bind, checkfirst=True)
     schedule_type_enum.create(bind, checkfirst=True)
     session_status_enum.create(bind, checkfirst=True)
+    user_role_enum.create(bind, checkfirst=True)
+
+    op.create_table(
+        "app_users",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("full_name", sa.String(length=120), nullable=False),
+        sa.Column("email", sa.String(length=255), nullable=False),
+        sa.Column("password_hash", sa.String(length=255), nullable=False),
+        sa.Column("role", user_role_enum, nullable=False),
+        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.UniqueConstraint("email"),
+    )
+    op.create_index(op.f("ix_app_users_id"), "app_users", ["id"], unique=False)
+    op.create_index(op.f("ix_app_users_email"), "app_users", ["email"], unique=False)
 
     op.create_table(
         "membership_plans",
@@ -107,12 +124,20 @@ def upgrade() -> None:
         sa.Column("member_id", sa.Integer(), sa.ForeignKey("members.id"), nullable=False),
         sa.Column("check_in_time", sa.DateTime(timezone=True), nullable=False),
         sa.Column("check_out_time", sa.DateTime(timezone=True), nullable=True),
+        sa.CheckConstraint(
+            "check_out_time IS NULL OR check_out_time >= check_in_time",
+            name="ck_check_out_after_check_in",
+        ),
     )
     op.create_index(op.f("ix_check_ins_id"), "check_ins", ["id"], unique=False)
     op.create_index(op.f("ix_check_ins_member_id"), "check_ins", ["member_id"], unique=False)
 
 
 def downgrade() -> None:
+    op.drop_index(op.f("ix_app_users_email"), table_name="app_users")
+    op.drop_index(op.f("ix_app_users_id"), table_name="app_users")
+    op.drop_table("app_users")
+
     op.drop_index(op.f("ix_check_ins_member_id"), table_name="check_ins")
     op.drop_index(op.f("ix_check_ins_id"), table_name="check_ins")
     op.drop_table("check_ins")
@@ -138,6 +163,7 @@ def downgrade() -> None:
     op.drop_table("membership_plans")
 
     bind = op.get_bind()
+    user_role_enum.drop(bind, checkfirst=True)
     session_status_enum.drop(bind, checkfirst=True)
     schedule_type_enum.drop(bind, checkfirst=True)
     gender_enum.drop(bind, checkfirst=True)

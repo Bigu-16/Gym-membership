@@ -17,3 +17,8 @@ class SessionStatus(StrEnum):
     in_progress = "in_progress"
     completed = "completed"
     cancelled = "cancelled"
+
+
+class UserRole(StrEnum):
+    admin = "admin"
+    staff = "staff"
