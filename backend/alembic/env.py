@@ -7,7 +7,16 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
 from app.core.database import Base
-from app.models import app_user, check_in, enrollment, member, membership_plan, schedule_template, session
+from app.models import (
+    app_user,
+    check_in,
+    enrollment,
+    member,
+    membership_plan,
+    notification_job,
+    schedule_template,
+    session,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

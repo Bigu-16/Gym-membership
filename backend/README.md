@@ -18,6 +18,11 @@ All endpoints are served under `/api/v1`.
 - `POST /api/v1/auth/bootstrap-admin`
 - `POST /api/v1/auth/login`
 - `GET /api/v1/auth/me`
+- `GET /api/v1/users/`
+- `POST /api/v1/users/`
+- `GET /api/v1/users/{id}`
+- `PATCH /api/v1/users/{id}`
+- `PATCH /api/v1/users/{id}/password`
 - `GET /api/v1/dashboard/stats`
 - `GET /api/v1/dashboard/active-members`
 - `GET /api/v1/members/`
@@ -34,9 +39,11 @@ All endpoints are served under `/api/v1`.
 - `GET /api/v1/check-ins/`
 - `POST /api/v1/check-ins/`
 - `PATCH /api/v1/check-ins/{id}/check-out`
+- `GET /api/v1/notifications/jobs`
 - `GET /api/v1/analytics/growth`
 - `GET /api/v1/analytics/attendance`
 - `POST /api/v1/tasks/membership-expiry-reminders`
+- `POST /api/v1/tasks/process-notification-jobs`
 
 ## Auth
 
@@ -49,6 +56,17 @@ curl -X POST http://localhost:8000/api/v1/auth/bootstrap-admin \
 ```
 
 Then log in with form data and use the bearer token on protected endpoints.
+
+Admin users can then create and manage staff/admin accounts through `/api/v1/users/*`.
+
+## Background Jobs
+
+The backend now queues internal notification jobs for:
+
+- welcome messages on member creation
+- membership expiry reminders
+
+These are stored in `notification_jobs` and processed by Celery worker/beat services. External providers are not wired yet.
 
 ## Docker
 

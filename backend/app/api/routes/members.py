@@ -1,4 +1,5 @@
 from datetime import date
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select, update
@@ -17,8 +18,10 @@ from app.schemas.member import (
     MemberResponse,
     MemberUpdate,
 )
+from app.tasks.notifications import queue_welcome_message
 
 router = APIRouter(prefix="/members", tags=["members"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=list[MemberResponse])
@@ -62,6 +65,11 @@ async def create_member(
     db.add(member)
     await db.commit()
     await db.refresh(member)
+    if member.messaging_opt_in:
+        try:
+            queue_welcome_message.delay(member.id, member.name, member.phone)
+        except Exception:
+            logger.exception("Failed to queue welcome notification for member_id=%s", member.id)
     return MemberResponse.model_validate(member)
 
 
@@ -79,6 +87,11 @@ async def create_family(
     await db.commit()
     for member in members:
         await db.refresh(member)
+        if member.messaging_opt_in:
+            try:
+                queue_welcome_message.delay(member.id, member.name, member.phone)
+            except Exception:
+                logger.exception("Failed to queue welcome notification for member_id=%s", member.id)
     return [MemberResponse.model_validate(member) for member in members]
 
 

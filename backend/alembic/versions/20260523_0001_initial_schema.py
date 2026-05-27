@@ -20,6 +20,18 @@ session_status_enum = sa.Enum(
     name="session_status_enum",
 )
 user_role_enum = sa.Enum("admin", "staff", name="user_role_enum")
+notification_type_enum = sa.Enum(
+    "welcome",
+    "membership_expiry",
+    "session_reminder",
+    name="notification_type_enum",
+)
+notification_status_enum = sa.Enum(
+    "pending",
+    "processed",
+    "failed",
+    name="notification_status_enum",
+)
 
 
 def upgrade() -> None:
@@ -28,6 +40,8 @@ def upgrade() -> None:
     schedule_type_enum.create(bind, checkfirst=True)
     session_status_enum.create(bind, checkfirst=True)
     user_role_enum.create(bind, checkfirst=True)
+    notification_type_enum.create(bind, checkfirst=True)
+    notification_status_enum.create(bind, checkfirst=True)
 
     op.create_table(
         "app_users",
@@ -93,6 +107,23 @@ def upgrade() -> None:
     op.create_index(op.f("ix_members_expiry_date"), "members", ["expiry_date"], unique=False)
 
     op.create_table(
+        "notification_jobs",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("member_id", sa.Integer(), sa.ForeignKey("members.id"), nullable=True),
+        sa.Column("notification_type", notification_type_enum, nullable=False),
+        sa.Column("status", notification_status_enum, nullable=False, server_default="pending"),
+        sa.Column("scheduled_for", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("processed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("payload", sa.JSON(), nullable=False, server_default=sa.text("'{}'::json")),
+        sa.Column("provider", sa.String(length=50), nullable=False, server_default="internal"),
+        sa.Column("error_message", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+    )
+    op.create_index(op.f("ix_notification_jobs_id"), "notification_jobs", ["id"], unique=False)
+    op.create_index(op.f("ix_notification_jobs_member_id"), "notification_jobs", ["member_id"], unique=False)
+
+    op.create_table(
         "sessions",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("template_id", sa.Integer(), sa.ForeignKey("schedule_templates.id"), nullable=True),
@@ -134,6 +165,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_index(op.f("ix_notification_jobs_member_id"), table_name="notification_jobs")
+    op.drop_index(op.f("ix_notification_jobs_id"), table_name="notification_jobs")
+    op.drop_table("notification_jobs")
+
     op.drop_index(op.f("ix_app_users_email"), table_name="app_users")
     op.drop_index(op.f("ix_app_users_id"), table_name="app_users")
     op.drop_table("app_users")
@@ -163,6 +198,8 @@ def downgrade() -> None:
     op.drop_table("membership_plans")
 
     bind = op.get_bind()
+    notification_status_enum.drop(bind, checkfirst=True)
+    notification_type_enum.drop(bind, checkfirst=True)
     user_role_enum.drop(bind, checkfirst=True)
     session_status_enum.drop(bind, checkfirst=True)
     schedule_type_enum.drop(bind, checkfirst=True)

@@ -25,3 +25,4 @@ class Member(TimestampMixin, Base):
     plan = relationship("MembershipPlan", back_populates="members")
     enrollments = relationship("Enrollment", back_populates="member", cascade="all, delete-orphan")
     check_ins = relationship("CheckIn", back_populates="member", cascade="all, delete-orphan")
+    notification_jobs = relationship("NotificationJob", cascade="all, delete-orphan")
