@@ -35,14 +35,6 @@ notification_status_enum = sa.Enum(
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    gender_enum.create(bind, checkfirst=True)
-    schedule_type_enum.create(bind, checkfirst=True)
-    session_status_enum.create(bind, checkfirst=True)
-    user_role_enum.create(bind, checkfirst=True)
-    notification_type_enum.create(bind, checkfirst=True)
-    notification_status_enum.create(bind, checkfirst=True)
-
     op.create_table(
         "app_users",
         sa.Column("id", sa.Integer(), primary_key=True),
