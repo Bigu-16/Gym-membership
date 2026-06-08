@@ -45,6 +45,40 @@ All endpoints are served under `/api/v1`.
 - `POST /api/v1/tasks/membership-expiry-reminders`
 - `POST /api/v1/tasks/process-notification-jobs`
 
+## Demo data and smoke tests
+
+Start the backend stack first:
+
+```bash
+docker compose up --build
+```
+
+In a second terminal, seed realistic dashboard data:
+
+```bash
+docker compose exec api uv run python scripts/seed_demo_data.py
+```
+
+The seed creates:
+
+- admin login: `admin@example.com` / `ChangeMe123!`
+- staff login: `staff@example.com` / `ChangeMe123!`
+- membership plans, individual members, family members, class templates, sessions, enrollments, check-ins, and notification jobs
+
+Then run API smoke tests from the host:
+
+```bash
+python scripts/smoke_test_api.py
+```
+
+If the API is not on `localhost:8000`, override the base URL:
+
+```bash
+API_BASE_URL=http://localhost:8000 python scripts/smoke_test_api.py
+```
+
+The smoke test exercises auth, users, members, families, schedule, enrollments, check-ins, dashboard, analytics, notifications, and task enqueue endpoints.
+
 ## Auth
 
 Create the first admin once:

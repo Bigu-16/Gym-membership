@@ -61,6 +61,10 @@ async def create_member(
     db: AsyncSession = Depends(get_db_session),
     _: AppUser = Depends(get_current_admin_user),
 ) -> MemberResponse:
+    existing = await db.scalar(select(Member.id).where(Member.phone == payload.phone))
+    if existing is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone is already in use")
+
     member = Member(**payload.model_dump())
     db.add(member)
     await db.commit()
@@ -81,6 +85,14 @@ async def create_family(
 ) -> list[MemberResponse]:
     if not payload.members:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="members list cannot be empty")
+
+    phones = [member.phone for member in payload.members]
+    if len(phones) != len(set(phones)):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Family member phones must be unique")
+
+    existing_phone = await db.scalar(select(Member.phone).where(Member.phone.in_(phones)).limit(1))
+    if existing_phone is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone is already in use")
 
     members = [Member(**member.model_dump()) for member in payload.members]
     db.add_all(members)
