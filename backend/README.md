@@ -79,6 +79,16 @@ API_BASE_URL=http://localhost:8000 python scripts/smoke_test_api.py
 
 The smoke test exercises auth, users, members, families, schedule, enrollments, check-ins, dashboard, analytics, notifications, and task enqueue endpoints.
 
+## Backend dashboard
+
+The backend serves a standalone HTML/CSS/JS console at:
+
+```text
+http://localhost:8000/admin
+```
+
+Use it to log in, inspect dashboard stats, create members and families, create classes and sessions, check members in/out, enroll members, manage users, inspect notification jobs, queue background tasks, and send raw API requests. This page is served by FastAPI from `app/static`; it does not use or modify the React frontend.
+
 ## Auth
 
 Create the first admin once:
