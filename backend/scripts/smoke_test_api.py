@@ -236,7 +236,9 @@ def run() -> None:
     request("GET", "/api/v1/analytics/growth", token=token)
     request("GET", "/api/v1/analytics/attendance", token=token)
     request("GET", "/api/v1/notifications/jobs", token=token)
-    checks.append("dashboard/analytics/notifications")
+    seed_result = request("POST", "/api/v1/tasks/seed-demo-data", token=token)
+    assert seed_result["status"] == "seeded"
+    checks.append("dashboard/analytics/notifications/demo seed")
 
     request("POST", "/api/v1/tasks/membership-expiry-reminders", token=token)
     request("POST", "/api/v1/tasks/process-notification-jobs", token=token)

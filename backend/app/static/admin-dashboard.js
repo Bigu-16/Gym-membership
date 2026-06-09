@@ -326,6 +326,10 @@ function bindForms() {
     if (action === "refresh-active" || action === "refresh-activity") await loadOverview();
     if (action === "load-schedule") await loadSchedule();
     if (action === "load-notifications") await loadNotifications();
+    if (action === "seed-demo") {
+      await runTask("/api/v1/tasks/seed-demo-data");
+      await loadAll();
+    }
     if (action === "expiry-reminders") await runTask("/api/v1/tasks/membership-expiry-reminders");
     if (action === "process-notifications") await runTask("/api/v1/tasks/process-notification-jobs");
   });

@@ -1,3 +1,6 @@
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +19,7 @@ class Settings(BaseSettings):
     postgres_db: str = "gym_membership"
     postgres_host: str = "db"
     postgres_port: int = 5432
+    database_url_override: str | None = Field(default=None, validation_alias="DATABASE_URL")
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     model_config = SettingsConfigDict(
@@ -26,11 +30,15 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        return (
+        if self.database_url_override:
+            return normalize_database_url(self.database_url_override)
+
+        local_url = (
             "postgresql+asyncpg://"
             f"{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
+        return normalize_database_url(local_url)
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -39,6 +47,22 @@ class Settings(BaseSettings):
     @property
     def redis_url(self) -> str:
         return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+
+def normalize_database_url(url: str) -> str:
+    normalized = url.strip()
+    if normalized.startswith("postgres://"):
+        normalized = "postgresql://" + normalized.removeprefix("postgres://")
+    if normalized.startswith("postgresql://"):
+        normalized = "postgresql+asyncpg://" + normalized.removeprefix("postgresql://")
+
+    parts = urlsplit(normalized)
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    sslmode = query.pop("sslmode", None)
+    query.pop("channel_binding", None)
+    if sslmode and "ssl" not in query:
+        query["ssl"] = "require" if sslmode == "require" else sslmode
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
 settings = Settings()

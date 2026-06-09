@@ -44,6 +44,7 @@ All endpoints are served under `/api/v1`.
 - `GET /api/v1/analytics/attendance`
 - `POST /api/v1/tasks/membership-expiry-reminders`
 - `POST /api/v1/tasks/process-notification-jobs`
+- `POST /api/v1/tasks/seed-demo-data`
 
 ## Demo data and smoke tests
 
@@ -88,6 +89,27 @@ http://localhost:8000/admin
 ```
 
 Use it to log in, inspect dashboard stats, create members and families, create classes and sessions, check members in/out, enroll members, manage users, inspect notification jobs, queue background tasks, and send raw API requests. This page is served by FastAPI from `app/static`; it does not use or modify the React frontend.
+
+## Neon/Render database
+
+Local Docker Compose uses the `POSTGRES_*` variables and connects to the compose service host `db`.
+
+For Render + Neon, set a single environment variable instead:
+
+```text
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
+```
+
+The app converts that to the async SQLAlchemy driver URL internally. The Docker image runs `alembic upgrade head` before starting Uvicorn, so a fresh Neon database gets the schema on deploy.
+
+After the first deploy, create an admin with `/api/v1/auth/bootstrap-admin`, log in, then seed demo data:
+
+```bash
+curl -X POST https://YOUR-RENDER-APP.onrender.com/api/v1/tasks/seed-demo-data \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+You can also do this from `https://YOUR-RENDER-APP.onrender.com/admin` with the “Seed demo data” button after logging in.
 
 ## Auth
 
