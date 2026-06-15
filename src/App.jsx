@@ -177,6 +177,10 @@ const App = () => {
     setScheduleTemplates(prev => prev.filter(t => t.id !== id));
   };
 
+  const handleUpdateTemplate = (updatedTemplate) => {
+    setScheduleTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t));
+  };
+
   const handleUpdateMember = (updatedMember) => {
     if (updatedMember.isGroup) {
       setMembers(prev => prev.map(m => {
@@ -341,6 +345,7 @@ const App = () => {
               members={members}
               onAddTemplate={handleAddTemplate}
               onDeleteTemplate={handleDeleteTemplate}
+              onUpdateTemplate={handleUpdateTemplate}
             />
           ) : activeTab === 'dashboard' ? (
             <DashboardOverview 
