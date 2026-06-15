@@ -1,21 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { apiService } from '../services/api';
 
 const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates = [], onTabChange, inClubList, setInClubList }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCheckInSuccess, setShowCheckInSuccess] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [localChecklists, setLocalChecklists] = useState(() => {
-    try {
-      const saved = localStorage.getItem('gym_session_checklists');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
 
-  useEffect(() => {
-    localStorage.setItem('gym_session_checklists', JSON.stringify(localChecklists));
-  }, [localChecklists]);
 
 
   // Merge custom sessions with mapped schedule templates to represent live scheduled classes (e.g. Muay Thai, Taekwondo, Fitness)
@@ -140,76 +130,147 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
     return uniqueMembers;
   }, [filteredSessionsByCat, members]);
 
+  // Materialize template session helper
+  const materializeSession = async (sessionId) => {
+    if (String(sessionId).startsWith('template-')) {
+      const tempId = parseInt(String(sessionId).split('-')[1], 10);
+      const template = scheduleTemplates.find(t => t.id === tempId);
+      
+      const newDbSession = await apiService.createSession({
+        templateId: tempId,
+        start: new Date(),
+        trainer: template?.trainer || 'Master Kim',
+        status: 'in-progress',
+        checklist: [
+          { id: 1, text: 'Safety warm-up completed', checked: false },
+          { id: 2, text: 'Core group training sequence', checked: false },
+          { id: 3, text: 'Assisted stretching session', checked: false }
+        ]
+      });
+
+      const mapped = {
+        id: newDbSession.id,
+        title: template.className,
+        trainer: newDbSession.trainer_name,
+        location: template.className.toLowerCase().includes('yoga') ? 'Zen Garden' : 'Studio B - Group Floor',
+        start: new Date(),
+        end: new Date(Date.now() + 60 * 60 * 1000),
+        status: 'in-progress',
+        type: 'group',
+        checklist: newDbSession.checklist_data?.items || [],
+        templateId: tempId
+      };
+
+      setSessions(prev => [mapped, ...prev]);
+      return mapped;
+    }
+    return allSessions.find(s => s.id === sessionId);
+  };
+
   // Toggle checklist item for sessions
-  const handleToggleChecklist = (sessionId, itemId) => {
-    setLocalChecklists(prev => {
-      const currentList = prev[sessionId] || (allSessions.find(s => s.id === sessionId)?.checklist || []);
-      const updatedList = currentList.map(item => 
+  const handleToggleChecklist = async (sessionId, itemId) => {
+    try {
+      const targetSession = await materializeSession(sessionId);
+      if (!targetSession) return;
+
+      const updatedList = targetSession.checklist.map(item => 
         item.id === itemId ? { ...item, checked: !item.checked } : item
       );
-      return {
-        ...prev,
-        [sessionId]: updatedList
-      };
-    });
+
+      // Optimistic state update
+      setSessions(prev => prev.map(s => s.id === targetSession.id ? { ...s, checklist: updatedList } : s));
+
+      // Persist to backend
+      await apiService.updateSession(targetSession.id, { checklist: updatedList });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to toggle checklist task: ' + err.message);
+    }
   };
 
   // Add dynamic custom checklist item to a specific session
-  const handleAddChecklistItem = (sessionId, text) => {
+  const handleAddChecklistItem = async (sessionId, text) => {
     if (!text.trim()) return;
-    setLocalChecklists(prev => {
-      const currentList = prev[sessionId] || (allSessions.find(s => s.id === sessionId)?.checklist || []);
+    try {
+      const targetSession = await materializeSession(sessionId);
+      if (!targetSession) return;
+
       const newItem = {
         id: Date.now(),
         text: text.trim(),
         checked: false
       };
-      return {
-        ...prev,
-        [sessionId]: [...currentList, newItem]
-      };
-    });
+      const updatedList = [...targetSession.checklist, newItem];
+
+      // Optimistic state update
+      setSessions(prev => prev.map(s => s.id === targetSession.id ? { ...s, checklist: updatedList } : s));
+
+      // Persist to backend
+      await apiService.updateSession(targetSession.id, { checklist: updatedList });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add checklist task: ' + err.message);
+    }
   };
 
   // Remove dynamic custom checklist item from a specific session
-  const handleDeleteChecklistItem = (sessionId, itemId) => {
+  const handleDeleteChecklistItem = async (sessionId, itemId) => {
     const isConfirmed = window.confirm("Are you sure you want to delete this task from the checklist?");
     if (!isConfirmed) return;
 
-    setLocalChecklists(prev => {
-      const currentList = prev[sessionId] || (allSessions.find(s => s.id === sessionId)?.checklist || []);
-      const updatedList = currentList.filter(item => item.id !== itemId);
-      return {
-        ...prev,
-        [sessionId]: updatedList
-      };
-    });
+    try {
+      const targetSession = await materializeSession(sessionId);
+      if (!targetSession) return;
+
+      const updatedList = targetSession.checklist.filter(item => item.id !== itemId);
+
+      // Optimistic state update
+      setSessions(prev => prev.map(s => s.id === targetSession.id ? { ...s, checklist: updatedList } : s));
+
+      // Persist to backend
+      await apiService.updateSession(targetSession.id, { checklist: updatedList });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete checklist task: ' + err.message);
+    }
   };
 
   // Check in a member
-  const handleCheckIn = (memberId) => {
+  const handleCheckIn = async (memberId) => {
     if (inClubList.includes(memberId)) {
-      // Already checked in, show notification but don't duplicate
       const member = members.find(m => m.id === memberId);
       setShowCheckInSuccess(`${member.name} is already checked in.`);
       setTimeout(() => setShowCheckInSuccess(null), 3000);
       return;
     }
     
-    setInClubList(prev => [...prev, memberId]);
-    const member = members.find(m => m.id === memberId);
-    setShowCheckInSuccess(`Successfully checked in ${member.name}!`);
-    setSearchTerm('');
-    setTimeout(() => setShowCheckInSuccess(null), 3000);
+    try {
+      await apiService.checkInMember(memberId);
+      setInClubList(prev => [...prev, memberId]);
+      const member = members.find(m => m.id === memberId);
+      setShowCheckInSuccess(`Successfully checked in ${member.name}!`);
+      setSearchTerm('');
+      setTimeout(() => setShowCheckInSuccess(null), 3000);
+    } catch (err) {
+      console.error(err);
+      alert('Check-in failed: ' + err.message);
+    }
   };
 
   // Check out a member
-  const handleCheckOut = (memberId) => {
-    setInClubList(prev => prev.filter(id => id !== memberId));
-    const member = members.find(m => m.id === memberId);
-    setShowCheckInSuccess(`${member.name} has been checked out.`);
-    setTimeout(() => setShowCheckInSuccess(null), 3000);
+  const handleCheckOut = async (memberId) => {
+    try {
+      await apiService.checkOutMember(memberId);
+      setInClubList(prev => prev.filter(id => id !== memberId));
+      const member = members.find(m => m.id === memberId);
+      setShowCheckInSuccess(`${member.name} has been checked out.`);
+      setTimeout(() => setShowCheckInSuccess(null), 3000);
+    } catch (err) {
+      console.error(err);
+      alert('Check-out failed: ' + err.message);
+    }
   };
+
 
   // Filter members for the search dropdown
   const filteredMembers = searchTerm.trim() === '' 

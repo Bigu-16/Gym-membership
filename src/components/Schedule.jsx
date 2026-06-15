@@ -39,6 +39,7 @@ import {
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { ACTIVITIES } from '../config/scheduleConfig';
+import { apiService } from '../services/api';
 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
@@ -54,18 +55,21 @@ const Schedule = ({
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('All');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedSession, setSelectedSession] = useState(null);
-  const [localChecklists, setLocalChecklists] = useState(() => {
-    try {
-      const saved = localStorage.getItem('gym_session_checklists');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
+  const [localChecklists, setLocalChecklists] = useState({});
 
   useEffect(() => {
-    localStorage.setItem('gym_session_checklists', JSON.stringify(localChecklists));
-  }, [localChecklists]);
+    if (sessions && sessions.length > 0) {
+      setLocalChecklists(prev => {
+        const updated = { ...prev };
+        sessions.forEach(s => {
+          if (s.checklist) {
+            updated[s.id] = s.checklist;
+          }
+        });
+        return updated;
+      });
+    }
+  }, [sessions]);
 
   const handleToggleChecklist = (sessionId, itemId) => {
     setLocalChecklists(prev => {
@@ -73,6 +77,10 @@ const Schedule = ({
       const updatedList = currentList.map(item => 
         item.id === itemId ? { ...item, checked: !item.checked } : item
       );
+      
+      // Persist to backend
+      apiService.updateSession(sessionId, { checklist: updatedList }).catch(console.error);
+      
       return {
         ...prev,
         [sessionId]: updatedList
@@ -89,9 +97,14 @@ const Schedule = ({
         text: text.trim(),
         checked: false
       };
+      const updatedList = [...currentList, newItem];
+      
+      // Persist to backend
+      apiService.updateSession(sessionId, { checklist: updatedList }).catch(console.error);
+      
       return {
         ...prev,
-        [sessionId]: [...currentList, newItem]
+        [sessionId]: updatedList
       };
     });
   };
@@ -103,6 +116,10 @@ const Schedule = ({
     setLocalChecklists(prev => {
       const currentList = prev[sessionId] || (sessions.find(s => s.id === sessionId)?.checklist || []);
       const updatedList = currentList.filter(item => item.id !== itemId);
+      
+      // Persist to backend
+      apiService.updateSession(sessionId, { checklist: updatedList }).catch(console.error);
+      
       return {
         ...prev,
         [sessionId]: updatedList
