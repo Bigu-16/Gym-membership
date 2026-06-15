@@ -155,15 +155,44 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
             ]
           });
         } else if (schedule.slot) {
-          // For group training, we could add them to an existing slot or create a session if it doesn't exist
-          // For this demo, we'll create a session that matches their selected slot
+          // Parse slotText, e.g. "Kids Taekwondo: Mon, Wed, Fri @ 4:00 PM - 5:00 PM"
+          let title = t.service;
+          let startTimeStr = '16:00';
+          let endTimeStr = '17:00';
+          
+          if (schedule.slot.includes(' @ ')) {
+            const parts = schedule.slot.split(' @ ');
+            const headerParts = parts[0].split(': ');
+            title = headerParts[0] || t.service;
+            const timeStr = parts[1]; // "4:00 PM - 5:00 PM"
+            if (timeStr && timeStr.includes(' - ')) {
+              const timeParts = timeStr.split(' - ');
+              const format12hTo24h = (t12) => {
+                const parts12 = t12.trim().split(' ');
+                const timeStrPart = parts12[0];
+                const modifier = parts12[1];
+                let [hours, minutes] = timeStrPart.split(':');
+                if (hours === '12') hours = '00';
+                if (modifier === 'PM') hours = String(parseInt(hours, 10) + 12);
+                return `${hours.padStart(2, '0')}:${minutes}`;
+              };
+              startTimeStr = format12hTo24h(timeParts[0]);
+              endTimeStr = format12hTo24h(timeParts[1]);
+            }
+          }
+          
+          const startHours = parseInt(startTimeStr.split(':')[0], 10);
+          const startMins = parseInt(startTimeStr.split(':')[1], 10);
+          const endHours = parseInt(endTimeStr.split(':')[0], 10);
+          const endMins = parseInt(endTimeStr.split(':')[1], 10);
+
           allSessions.push({
             id: Math.random(),
-            title: t.service,
+            title: title,
             trainer: 'Group Coach',
             location: 'Main Studio',
-            start: new Date(new Date().setHours(16, 0, 0, 0)), // Default to 4 PM today for demo
-            end: new Date(new Date().setHours(17, 30, 0, 0)),
+            start: new Date(new Date().setHours(startHours, startMins, 0, 0)),
+            end: new Date(new Date().setHours(endHours, endMins, 0, 0)),
             status: 'upcoming',
             type: 'group',
             checklist: []

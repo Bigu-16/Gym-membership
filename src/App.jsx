@@ -12,22 +12,22 @@ import { GROUP_SCHEDULE_SLOTS } from './config/scheduleConfig';
 const MOCK_SESSIONS = [
   {
     id: 1,
-    title: 'Elite Performance',
-    trainer: 'Marcus Thorne',
-    location: 'Studio A - Main Floor',
-    start: setMinutes(setHours(new Date(), 14), 0),
-    end: setMinutes(setHours(new Date(), 15), 30),
+    title: 'Kids Taekwondo',
+    trainer: 'Master Kim',
+    location: 'Studio B - Group Floor',
+    start: setMinutes(setHours(new Date(), 16), 0),
+    end: setMinutes(setHours(new Date(), 17), 0),
     status: 'in-progress',
     type: 'group',
     checklist: [
       { id: 1, text: 'Warm-up completed', checked: true },
-      { id: 2, text: 'High-intensity interval set', checked: false },
-      { id: 3, text: 'Cool-down stretch', checked: false }
+      { id: 2, text: 'Stretching and basic stances', checked: false },
+      { id: 3, text: 'Target kicking practice', checked: false }
     ]
   },
   {
     id: 2,
-    title: 'Personal Training',
+    title: 'Personal Taekwondo Training',
     trainer: 'Elena Vance',
     location: 'VIP Zone - Sector 4',
     start: setMinutes(setHours(addDays(new Date(), 1), 10), 0),
@@ -36,15 +36,15 @@ const MOCK_SESSIONS = [
     type: 'personal',
     checklist: [
       { id: 1, text: 'Posture assessment', checked: false },
-      { id: 2, text: 'Strength baseline', checked: false }
+      { id: 2, text: 'Form baseline review', checked: false }
     ]
   },
   {
     id: 3,
-    title: 'Yoga Flow',
-    trainer: 'Sophia Chen',
-    location: 'Zen Garden',
-    start: setMinutes(setHours(new Date(), 16), 30),
+    title: 'Kids Karate',
+    trainer: 'Coach Somchai',
+    location: 'Studio B - Group Floor',
+    start: setMinutes(setHours(new Date(), 17), 0),
     end: setMinutes(setHours(new Date(), 18), 0),
     status: 'upcoming',
     type: 'group',
@@ -149,7 +149,7 @@ const App = () => {
     newMembers.forEach(member => {
       if (member.trainingType === 'group' && member.schedule?.slot) {
         setScheduleTemplates(prev => prev.map(template => {
-          const slotText = `${template.days} @ ${template.time}`;
+          const slotText = `${template.className || 'General Class'}: ${template.days} @ ${template.time}`;
           if (slotText === member.schedule.slot) {
             return {
               ...template,

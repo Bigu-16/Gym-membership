@@ -58,10 +58,10 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
 
       // Assign premium trainer based on class type
       let trainer = "Marcus Thorne";
-      if (templateTitle.includes("yoga")) trainer = "Sophia Chen";
+      if (templateTitle.includes("karate")) trainer = "Coach Somchai";
       if (templateTitle.includes("taekwondo")) trainer = "Master Kim";
-      if (templateTitle.includes("muay") || templateTitle.includes("thai")) trainer = "Coach Somchai";
-      if (templateTitle.includes("fitness")) trainer = "Elena Vance";
+      if (templateTitle.includes("kickboxing")) trainer = "Elena Vance";
+      if (templateTitle.includes("fitness") || templateTitle.includes("zumba")) trainer = "Marcus Thorne";
 
       return {
         id: `template-${template.id}`,
@@ -88,9 +88,11 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
     if (!session) return 'General';
     const title = (session.title || '').toLowerCase();
     if (title.includes('taekwondo')) return 'Taekwondo';
+    if (title.includes('karate')) return 'Karate';
+    if (title.includes('kickboxing')) return 'Kickboxing';
+    if (title.includes('kung fu')) return 'Kung Fu';
     if (title.includes('yoga')) return 'Yoga';
-    if (title.includes('muay') || title.includes('thai')) return 'Muay Thai';
-    if (title.includes('fitness')) return 'Fitness';
+    if (title.includes('zumba') || title.includes('fitness')) return 'Fitness';
     if (title.includes('personal') || title.includes('trainer')) return 'Personal Training';
     if (title.includes('elite') || title.includes('performance')) return 'Elite Performance';
     return 'General';
