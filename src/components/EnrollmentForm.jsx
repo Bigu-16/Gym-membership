@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PhoneInput } from 'react-international-phone';
 import 'react-international-phone/style.css';
-import { PERSONAL_DEFAULTS } from '../config/scheduleConfig';
+import { PERSONAL_DEFAULTS, ACTIVITIES, PRICING_MATRIX } from '../config/scheduleConfig';
 
 const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
   const [trainingType, setTrainingType] = useState('group'); // 'group' or 'personal'
@@ -11,7 +11,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
     {
       id: Date.now(),
       parentInfo: { name: '', phone: '', email: '' },
-      trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Group Taekwondo' }]
+      trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Taekwondo', frequency: '3 classes/week' }]
     }
   ]);
 
@@ -32,7 +32,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
     setFamilies([...families, {
       id: Date.now(),
       parentInfo: { name: '', phone: '', email: '' },
-      trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Personal Taekwondo Training' }]
+      trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Personal Taekwondo Training', frequency: '3 classes/week' }]
     }]);
   };
 
@@ -44,7 +44,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
 
   const addTrainee = (familyIndex) => {
     const newFamilies = [...families];
-    newFamilies[familyIndex].trainees.push({ name: '', age: '', gender: 'Male', medicalIssues: '', service: trainingType === 'group' ? 'Group Taekwondo' : 'Personal Taekwondo Training' });
+    newFamilies[familyIndex].trainees.push({ name: '', age: '', gender: 'Male', medicalIssues: '', service: trainingType === 'group' ? 'Taekwondo' : 'Personal Taekwondo Training', frequency: '3 classes/week' });
     setFamilies(newFamilies);
   };
 
@@ -73,6 +73,35 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
     const m = Math.round((hours - h) * 60);
     return `${h}:${m === 0 ? '00' : m}`;
   };
+
+  // Calculate total amount automatically based on Pricing Matrix
+  useEffect(() => {
+    if (trainingType === 'personal') {
+      let total = 0;
+      families.forEach(family => {
+        family.trainees.forEach(() => {
+          total += 1000; // Base rate for personal training per trainee
+        });
+      });
+      const durationMult = payment.duration === '3 Months' ? 2.5 : payment.duration === '6 Months' ? 4.5 : payment.duration === '1 Year' ? 8 : 1;
+      setPayment(prev => ({ ...prev, amount: String(Math.round(total * durationMult)) }));
+    } else {
+      let total = 0;
+      families.forEach(family => {
+        family.trainees.forEach(t => {
+          const activity = t.service || 'Taekwondo';
+          const duration = payment.duration || '1 Month';
+          const freq = t.frequency || '3 classes/week';
+          
+          const pricing = PRICING_MATRIX[activity] || PRICING_MATRIX['Taekwondo'];
+          const durationPricing = pricing[duration] || pricing['1 Month'];
+          const price = durationPricing[freq] || durationPricing['3 classes/week'] || 300;
+          total += price;
+        });
+      });
+      setPayment(prev => ({ ...prev, amount: String(total) }));
+    }
+  }, [families, payment.duration, trainingType]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -152,7 +181,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
       setFamilies([{
         id: Date.now(),
         parentInfo: { name: '', phone: '', email: '' },
-        trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Group Taekwondo' }]
+        trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Taekwondo', frequency: '3 classes/week' }]
       }]);
       setPayment({ amount: '', method: 'Cash', status: 'Paid', currency: 'AED', duration: '1 Month' });
     }, 3000);
@@ -393,15 +422,68 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
                             </div>
                           </div>
                         </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Medical Issues (Optional)</label>
-                          <input 
-                            type="text" 
-                            value={trainee.medicalIssues}
-                            onChange={(e) => handleTraineeChange(fIndex, tIndex, 'medicalIssues', e.target.value)}
-                            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
-                            placeholder="e.g. Asthma, Allergies, or None"
-                          />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {trainingType === 'group' ? (
+                            <>
+                              <div className="space-y-1.5">
+                                <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Activity / Sport</label>
+                                <div className="relative">
+                                  <select 
+                                    value={trainee.service || 'Taekwondo'}
+                                    onChange={(e) => handleTraineeChange(fIndex, tIndex, 'service', e.target.value)}
+                                    className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-8"
+                                  >
+                                    {ACTIVITIES.map(act => (
+                                      <option key={act} value={act}>{act}</option>
+                                    ))}
+                                  </select>
+                                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Classes per Week</label>
+                                <div className="relative">
+                                  <select 
+                                    value={trainee.frequency || '3 classes/week'}
+                                    onChange={(e) => handleTraineeChange(fIndex, tIndex, 'frequency', e.target.value)}
+                                    className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-8"
+                                  >
+                                    <option value="2 classes/week">2 Classes / Week</option>
+                                    <option value="3 classes/week">3 Classes / Week</option>
+                                  </select>
+                                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="space-y-1.5 md:col-span-2">
+                              <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Personal Training Program</label>
+                              <input 
+                                disabled
+                                type="text"
+                                value={trainee.service || 'Personal Training'}
+                                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm opacity-60 cursor-not-allowed"
+                              />
+                            </div>
+                          )}
+                          <div className="space-y-1.5">
+                            <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Medical Issues (Optional)</label>
+                            <input 
+                              type="text" 
+                              value={trainee.medicalIssues}
+                              onChange={(e) => handleTraineeChange(fIndex, tIndex, 'medicalIssues', e.target.value)}
+                              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
+                              placeholder="e.g. Asthma, Allergies, or None"
+                            />
+                          </div>
                         </div>
                       </div>
                       {family.trainees.length > 1 && (

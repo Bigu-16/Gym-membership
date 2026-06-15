@@ -61,42 +61,42 @@ const App = () => {
     {
       id: 1,
       name: 'Alexander Rossi',
-      plan: 'Elite Performance',
+      plan: 'Taekwondo (3 classes/week)',
       expiryDate: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString(),
       image: '/members/member1.png'
     },
     {
       id: 2,
       name: 'Elena Vance',
-      plan: 'Wellness Pro',
+      plan: 'Karate (2 classes/week)',
       expiryDate: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString(),
       image: '/members/member2.png'
     },
     {
       id: 3,
       name: 'Marcus Thorne',
-      plan: 'Diamond Access',
+      plan: 'Kickboxing (3 classes/week)',
       expiryDate: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString(),
       image: '/members/member3.png'
     },
     {
       id: 4,
       name: 'Sophia Chen',
-      plan: 'Elite Performance',
+      plan: 'Taekwondo (3 classes/week)',
       expiryDate: new Date(new Date().setDate(new Date().getDate() + 25)).toISOString(),
       image: '/members/member1.png'
     },
     {
       id: 5,
       name: 'Julian Drax',
-      plan: 'Wellness Pro',
+      plan: 'Zumba Fitness (3 classes/week)',
       expiryDate: new Date(new Date().setDate(new Date().getDate() + 6)).toISOString(),
       image: '/members/member2.png'
     },
     {
       id: 6,
       name: 'Isabella Saint',
-      plan: 'Diamond Access',
+      plan: 'Karate (3 classes/week)',
       expiryDate: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(),
       image: '/members/member3.png'
     }
@@ -107,7 +107,18 @@ const App = () => {
 
   const [scheduleTemplates, setScheduleTemplates] = useState(() => {
     const saved = localStorage.getItem('gym_schedule_templates');
-    return saved ? JSON.parse(saved) : GROUP_SCHEDULE_SLOTS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.some(t => t.className === 'Group Taekwondo' || t.className === 'Yoga Flow')) {
+          return GROUP_SCHEDULE_SLOTS;
+        }
+        return parsed;
+      } catch (e) {
+        return GROUP_SCHEDULE_SLOTS;
+      }
+    }
+    return GROUP_SCHEDULE_SLOTS;
   });
 
   useEffect(() => {
@@ -270,7 +281,7 @@ const App = () => {
               </button>
             </div>
             <p className="text-[var(--text-secondary)] text-xs sm:text-sm tracking-wide uppercase">
-              Managing <span className="text-[var(--text-primary)] opacity-60">Luxe Wellness Collective</span>
+              Managing <span className="text-[var(--text-primary)] opacity-60">N & T Taekwondo & Karate Center</span>
             </p>
           </div>
           
@@ -359,7 +370,7 @@ const App = () => {
         </main>
         
         <footer className="mt-16 pt-8 border-t border-[var(--glass-border)] flex flex-wrap justify-between gap-6 text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">
-          <span>© 2026 Antigravity Wellness Systems</span>
+          <span>© 2026 Azyab Wellness Systems</span>
           <div className="flex gap-6">
             <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Privacy</a>
             <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Security</a>

@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { ACTIVITIES } from '../config/scheduleConfig';
 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
@@ -112,7 +113,7 @@ const Schedule = ({
 
   // Create Template form state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedClassOption, setSelectedClassOption] = useState('Taekwondo');
+  const [selectedClassOption, setSelectedClassOption] = useState(ACTIVITIES[0] || 'Taekwondo');
   const [selectedDays, setSelectedDays] = useState([]);
   const [startTime, setStartTime] = useState('16:00');
   const [endTime, setEndTime] = useState('17:00');
@@ -121,7 +122,7 @@ const Schedule = ({
 
   // Derive unique existing class names for selector dropdown
   const existingClassNames = Array.from(new Set(scheduleTemplates.map(t => t.className).filter(Boolean)));
-  const defaultClassNames = ['Taekwondo', 'Muay Thai', 'Kickboxing', 'Fitness' ];
+  const defaultClassNames = ACTIVITIES;
   const uniqueClassNames = Array.from(new Set([...defaultClassNames, ...existingClassNames]));
 
   // Update time left for in-progress session
@@ -792,7 +793,7 @@ const Schedule = ({
 
                 // Reset and close
                 setIsCreateModalOpen(false);
-                setSelectedClassOption('Taekwondo');
+                setSelectedClassOption(ACTIVITIES[0] || 'Taekwondo');
                 setSelectedDays([]);
                 setStartTime('16:00');
                 setEndTime('17:00');
