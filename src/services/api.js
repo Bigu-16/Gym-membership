@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+export const API_BASE_URL = localStorage.getItem('gym_api_base_url') || import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 // Helpers to get/set tokens
 const getAuthHeaders = () => {
@@ -75,10 +75,10 @@ const mapMemberToBackend = (m) => ({
 });
 
 // Map session to frontend schema
-const mapSessionToFrontend = (s, templates) => {
-  const template = templates.find(t => t.id === s.template_id);
-  const title = template ? template.title : 'Personal Training';
-  const timeStr = template ? template.time : '10:00 AM - 11:30 AM';
+const mapSessionToFrontend = (s, templates = []) => {
+  const template = Array.isArray(templates) ? templates.find(t => t.id === s.template_id) : null;
+  const title = template ? (template.className || template.title || 'Group Class') : 'Personal Training';
+  const timeStr = (template && template.time) || '10:00 AM - 11:30 AM';
   
   let startTimeStr = '10:00';
   let endTimeStr = '11:30';
@@ -253,12 +253,28 @@ export const apiService = {
     return data.map(mapMemberToFrontend);
   },
 
-  // Check-ins API
+  // Dashboard API
   async getActiveCheckIns() {
     const response = await fetch(`${API_BASE_URL}/dashboard/active-members`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to load active check-ins');
+    return response.json();
+  },
+
+  async getDashboardStats() {
+    const response = await fetch(`${API_BASE_URL}/dashboard/stats`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to load dashboard stats');
+    return response.json();
+  },
+
+  async getRecentActivities(limit = 10) {
+    const response = await fetch(`${API_BASE_URL}/dashboard/recent-activities?limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to load recent activities');
     return response.json();
   },
 

@@ -5,6 +5,37 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
   const [searchTerm, setSearchTerm] = useState('');
   const [showCheckInSuccess, setShowCheckInSuccess] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [recentActivities, setRecentActivities] = useState([]);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDashboardData = async () => {
+      try {
+        setLoadingStats(true);
+        const [stats, activities] = await Promise.all([
+          apiService.getDashboardStats(),
+          apiService.getRecentActivities()
+        ]);
+        if (isMounted) {
+          setDashboardStats(stats);
+          setRecentActivities(activities);
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard stats/activities:', err);
+      } finally {
+        if (isMounted) {
+          setLoadingStats(false);
+        }
+      }
+    };
+
+    fetchDashboardData();
+    return () => {
+      isMounted = false;
+    };
+  }, [inClubList, members.length, sessions.length]);
 
 
 
@@ -303,7 +334,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           <div className="flex justify-between items-start mb-4">
             <div>
               <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Active Directory</span>
-              <span className="text-3xl font-light tracking-wide">{members.length} <span className="text-xs text-[var(--text-secondary)]">Registered</span></span>
+              <span className="text-3xl font-light tracking-wide">{dashboardStats?.total_members !== undefined ? dashboardStats.total_members : members.length} <span className="text-xs text-[var(--text-secondary)]">Registered</span></span>
             </div>
             <div className="p-3 bg-[var(--card-hover)] rounded-xl group-hover:bg-[var(--text-primary)] group-hover:text-[var(--bg-primary)] transition-all duration-300">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -330,7 +361,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           <div className="flex justify-between items-start mb-4">
             <div>
               <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Live Occupancy</span>
-              <span className="text-3xl font-light tracking-wide">{inClubList.length} <span className="text-xs text-[var(--text-secondary)]">In Club</span></span>
+              <span className="text-3xl font-light tracking-wide">{dashboardStats?.active_members !== undefined ? dashboardStats.active_members : inClubList.length} <span className="text-xs text-[var(--text-secondary)]">In Club</span></span>
             </div>
             <div className="p-3 bg-[var(--card-hover)] rounded-xl flex items-center justify-center">
               <div className="relative flex h-3 w-3">
@@ -341,7 +372,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           </div>
           <div className="flex items-center gap-2 mt-2">
             <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] font-medium">
-              ~{Math.round((inClubList.length / 30) * 100)}% Capacity reached
+              ~{Math.round(((dashboardStats?.active_members !== undefined ? dashboardStats.active_members : inClubList.length) / 30) * 100)}% Capacity reached
             </span>
           </div>
           <div className="absolute bottom-0 left-0 w-full h-8 opacity-20 pointer-events-none">
@@ -359,7 +390,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           <div className="flex justify-between items-start mb-4">
             <div>
               <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Today's Sessions</span>
-              <span className="text-3xl font-light tracking-wide">{allSessions.length} <span className="text-xs text-[var(--text-secondary)]">Scheduled</span></span>
+              <span className="text-3xl font-light tracking-wide">{dashboardStats?.today_sessions !== undefined ? dashboardStats.today_sessions : allSessions.length} <span className="text-xs text-[var(--text-secondary)]">Scheduled</span></span>
             </div>
             <div className="p-3 bg-[var(--card-hover)] rounded-xl group-hover:bg-[var(--text-primary)] group-hover:text-[var(--bg-primary)] transition-all duration-300">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -378,8 +409,6 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
             </svg>
           </div>
         </div>
-
-
       </div>
 
       {/* Main Two-Column Layout */}
@@ -404,7 +433,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           <div className="space-y-6">
             {allSessions.map((session) => {
               const isProgress = session.status === 'in-progress';
-              const sessionChecklist = localChecklists[session.id] || session.checklist || [];
+              const sessionChecklist = session.checklist || [];
               const totalTasks = sessionChecklist.length;
               const completedTasks = sessionChecklist.filter(item => item.checked).length;
               const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
@@ -450,12 +479,12 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
                       <span className="text-[10px] font-semibold text-[var(--text-secondary)]">{completedTasks}/{totalTasks} Completed</span>
                     </div>
                     
-                    {totalTasks > 0 ? (
+                     {totalTasks > 0 ? (
                       /* Interactive Checkboxes */
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                        {sessionChecklist.map((item) => (
+                        {sessionChecklist.map((item, index) => (
                           <div 
-                            key={item.id} 
+                            key={`${item.id || index}-${index}`} 
                             className={`flex items-center justify-between px-4 py-2.5 rounded-xl border text-xs transition-all duration-300 group/item ${
                               item.checked 
                                 ? 'bg-[var(--card-hover)] border-emerald-500/20 text-[var(--text-primary)] opacity-70' 
@@ -741,6 +770,56 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
             </div>
           </div>
 
+          {/* Recent Activity Log Widget */}
+          <div className="glass-card p-6 border border-[var(--glass-border)] relative overflow-hidden">
+            <h3 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4 text-[var(--text-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Recent Activity Log
+              {loadingStats && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-primary)] animate-ping ml-auto"></span>
+              )}
+            </h3>
+            
+            {recentActivities.length === 0 ? (
+              <p className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] italic text-center py-4">
+                No recent activity recorded today.
+              </p>
+            ) : (
+              <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
+                {recentActivities.map((act, index) => {
+                  const isCheckIn = act.action?.toLowerCase() === 'check-in' || act.action?.toLowerCase() === 'check_in';
+                  return (
+                    <div key={`${act.check_in_id || 'act'}-${act.timestamp || index}-${index}`} className="flex items-start gap-3 text-xs border-b border-[var(--glass-border)] border-dashed pb-3 last:border-b-0 last:pb-0">
+                      <div className={`p-1.5 rounded-lg ${isCheckIn ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'} shrink-0`}>
+                        {isCheckIn ? (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l-4-4m4 4h-14m5-4v-1a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-grow">
+                        <div className="font-semibold text-[var(--text-primary)]">
+                          {act.member_name}
+                        </div>
+                        <div className="text-[10px] text-[var(--text-secondary)] opacity-85">
+                          {isCheckIn ? 'Checked in' : 'Checked out'}
+                        </div>
+                      </div>
+                      <div className="text-[9px] text-[var(--text-secondary)] whitespace-nowrap pt-0.5 font-mono">
+                        {act.timestamp ? new Date(act.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
         </div>
       </div>

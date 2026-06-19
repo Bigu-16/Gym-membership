@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
-import { apiService } from '../services/api';
+import { apiService, API_BASE_URL } from '../services/api';
 
 const Login = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isEditingUrl, setIsEditingUrl] = useState(false);
+  const [apiUrl, setApiUrl] = useState(API_BASE_URL);
+  const [tempUrl, setTempUrl] = useState(API_BASE_URL);
+
+  const handleSaveUrl = (e) => {
+    e.preventDefault();
+    const trimmed = tempUrl.trim();
+    if (trimmed) {
+      localStorage.setItem('gym_api_base_url', trimmed);
+      setApiUrl(trimmed);
+      setIsEditingUrl(false);
+      window.location.reload();
+    }
+  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -95,7 +110,7 @@ const Login = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-white/5 text-center">
+        <div className="mt-8 pt-6 border-t border-white/5 text-center flex flex-col items-center gap-4">
           <button
             onClick={useDefaultCredentials}
             type="button"
@@ -103,6 +118,39 @@ const Login = ({ onLoginSuccess }) => {
           >
             Use Demo Admin Credentials
           </button>
+
+          <div className="text-[10px] text-white/40 w-full flex flex-col items-center gap-1.5 mt-2">
+            {isEditingUrl ? (
+              <form onSubmit={handleSaveUrl} className="flex gap-2 items-center justify-center w-full max-w-[280px]">
+                <input
+                  type="text"
+                  value={tempUrl}
+                  onChange={(e) => setTempUrl(e.target.value)}
+                  className="bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-[9px] text-white focus:outline-none focus:border-emerald-500/50 w-full font-mono text-center"
+                  placeholder="API Base URL"
+                  required
+                />
+                <div className="flex gap-1.5">
+                  <button type="submit" className="text-emerald-400 hover:underline font-bold uppercase tracking-wider text-[8px]">Save</button>
+                  <button type="button" onClick={() => setIsEditingUrl(false)} className="text-white/60 hover:underline font-bold uppercase tracking-wider text-[8px]">Cancel</button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex items-center justify-center gap-2">
+                <span>API: <span className="font-mono text-white/60">{apiUrl}</span></span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTempUrl(apiUrl);
+                    setIsEditingUrl(true);
+                  }}
+                  className="text-emerald-400 hover:text-emerald-300 transition-colors underline text-[8px] uppercase tracking-wider font-bold"
+                >
+                  Configure
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
