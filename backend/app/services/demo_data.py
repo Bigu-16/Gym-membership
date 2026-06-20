@@ -71,10 +71,81 @@ async def seed_users(session: AsyncSession) -> None:
 
 async def seed_plans(session: AsyncSession) -> dict[str, MembershipPlan]:
     plans = {
-        "Starter Access": {"price": Decimal("49.00"), "duration_days": 30},
-        "Wellness Pro": {"price": Decimal("89.00"), "duration_days": 45},
-        "Elite Performance": {"price": Decimal("149.00"), "duration_days": 60},
-        "Family Group": {"price": Decimal("199.00"), "duration_days": 60},
+        "Taekwondo One Month - 2 Classes": {
+            "program": "Taekwondo",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 2,
+            "price": Decimal("300.00"),
+            "duration_days": 30,
+            "sort_order": 10,
+        },
+        "Taekwondo One Month - 3 Classes": {
+            "program": "Taekwondo",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 3,
+            "price": Decimal("350.00"),
+            "duration_days": 30,
+            "sort_order": 11,
+        },
+        "Taekwondo Three Month - 3 Classes": {
+            "program": "Taekwondo",
+            "duration_label": "3 Month",
+            "duration_months": 3,
+            "classes_per_week": 3,
+            "price": Decimal("900.00"),
+            "duration_days": 90,
+            "included_items": ["Free uniform"],
+            "sort_order": 12,
+        },
+        "Kickboxing Three Month - 3 Classes": {
+            "program": "Kickboxing",
+            "duration_label": "3 Month",
+            "duration_months": 3,
+            "classes_per_week": 3,
+            "price": Decimal("900.00"),
+            "duration_days": 90,
+            "included_items": ["Free gloves"],
+            "sort_order": 22,
+        },
+        "Karate One Month - 3 Classes": {
+            "program": "Karate",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 3,
+            "price": Decimal("350.00"),
+            "duration_days": 30,
+            "sort_order": 31,
+        },
+        "Kung Fu Three Month - 3 Classes": {
+            "program": "Kung Fu",
+            "duration_label": "3 Month",
+            "duration_months": 3,
+            "classes_per_week": 3,
+            "price": Decimal("900.00"),
+            "duration_days": 90,
+            "sort_order": 42,
+        },
+        "Fitness One Month - 2 Classes": {
+            "program": "Fitness",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 2,
+            "price": Decimal("300.00"),
+            "duration_days": 30,
+            "sort_order": 50,
+        },
+        "Family Group": {
+            "program": "Family",
+            "duration_label": "Two Month",
+            "duration_months": 2,
+            "classes_per_week": 3,
+            "price": Decimal("199.00"),
+            "duration_days": 60,
+            "description": "Demo family membership package",
+            "sort_order": 60,
+        },
     }
     output = {}
     for name, values in plans.items():
@@ -82,7 +153,7 @@ async def seed_plans(session: AsyncSession) -> dict[str, MembershipPlan]:
             session,
             MembershipPlan,
             {"name": name},
-            {**values, "is_active": True},
+            {"currency": "AED", "included_items": [], **values, "is_active": True},
         )
     return output
 
@@ -107,7 +178,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "phone": "+15550001001",
             "age": 34,
             "gender": Gender.male,
-            "plan": "Elite Performance",
+            "plan": "Taekwondo Three Month - 3 Classes",
             "expiry_date": today + timedelta(days=21),
         },
         {
@@ -115,7 +186,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "phone": "+15550001002",
             "age": 29,
             "gender": Gender.female,
-            "plan": "Wellness Pro",
+            "plan": "Fitness One Month - 2 Classes",
             "expiry_date": today + timedelta(days=7),
         },
         {
@@ -123,7 +194,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "phone": "+15550001003",
             "age": 41,
             "gender": Gender.male,
-            "plan": "Elite Performance",
+            "plan": "Kickboxing Three Month - 3 Classes",
             "expiry_date": today + timedelta(days=2),
         },
         {
@@ -131,7 +202,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "phone": "+15550001004",
             "age": 26,
             "gender": Gender.female,
-            "plan": "Starter Access",
+            "plan": "Karate One Month - 3 Classes",
             "expiry_date": today - timedelta(days=4),
         },
         {
@@ -139,7 +210,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "phone": "+15550001005",
             "age": 38,
             "gender": Gender.other,
-            "plan": "Wellness Pro",
+            "plan": "Kung Fu Three Month - 3 Classes",
             "expiry_date": today + timedelta(days=32),
             "is_frozen": True,
         },
@@ -148,7 +219,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "phone": "+15550001006",
             "age": 31,
             "gender": Gender.female,
-            "plan": "Elite Performance",
+            "plan": "Taekwondo One Month - 3 Classes",
             "expiry_date": today + timedelta(days=50),
         },
         {

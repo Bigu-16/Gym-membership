@@ -15,6 +15,7 @@ from app.schemas.member import (
     MemberResponse,
     MemberUpdate,
 )
+from app.schemas.membership_plan import MembershipPlanCreate, MembershipPlanResponse, MembershipPlanUpdate
 from app.schemas.notification import NotificationJobResponse
 from app.schemas.schedule import (
     ScheduleTemplateCreate,
@@ -45,6 +46,9 @@ __all__ = [
     "MemberCreate",
     "MemberResponse",
     "MemberUpdate",
+    "MembershipPlanCreate",
+    "MembershipPlanResponse",
+    "MembershipPlanUpdate",
     "NotificationJobResponse",
     "RecentActivityResponse",
     "ScheduleTemplateCreate",

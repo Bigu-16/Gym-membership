@@ -2,6 +2,7 @@ const state = {
   token: localStorage.getItem("gym_api_token") || "",
   members: [],
   families: [],
+  plans: [],
   templates: [],
   sessions: [],
   checkIns: [],
@@ -134,6 +135,16 @@ async function loadMembers() {
   fillSelect("#enrollMemberSelect", state.members.filter((m) => !m.is_frozen), (m) => `${m.name} (${m.phone})`);
 }
 
+async function loadPlans() {
+  state.plans = await api("/api/v1/plans/");
+  renderList("#planList", state.plans.map((plan) => {
+    const classes = plan.classes_per_week ? `${plan.classes_per_week} classes/week` : "custom schedule";
+    const included = plan.included_items.length ? ` | ${plan.included_items.join(", ")}` : "";
+    return row(`${plan.program} - ${plan.duration_label}`, `${plan.name} | ${classes} | ${plan.price} ${plan.currency}${included}`, plan.is_active ? "active" : "inactive", plan.is_active ? "good" : "warn");
+  }).join(""));
+  fillSelect("#memberPlanSelect", [{ id: "", name: "No plan" }, ...state.plans.filter((plan) => plan.is_active)], (plan) => plan.name);
+}
+
 async function loadFamilies() {
   state.families = await api("/api/v1/members/families");
   renderList("#familyList", state.families.map((family) => {
@@ -196,7 +207,7 @@ async function loadNotifications() {
 }
 
 async function loadAll() {
-  await Promise.all([checkHealth(), loadOverview(), loadMembers(), loadFamilies(), loadSchedule(), loadUsers(), loadNotifications()]);
+  await Promise.all([checkHealth(), loadOverview(), loadPlans(), loadMembers(), loadFamilies(), loadSchedule(), loadUsers(), loadNotifications()]);
   await Promise.all([loadCheckIns(), loadEnrollments()]);
 }
 
@@ -231,6 +242,7 @@ function bindForms() {
         phone: data.phone,
         age: Number(data.age),
         gender: data.gender || null,
+        plan_id: data.plan_id ? Number(data.plan_id) : null,
         expiry_date: data.expiry_date || null,
         messaging_opt_in: Boolean(data.messaging_opt_in),
       }),
@@ -263,6 +275,31 @@ function bindForms() {
     event.currentTarget.reset();
     toast("Family created");
     await loadAll();
+  });
+
+  $("#planForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = formData(event.currentTarget);
+    await api("/api/v1/plans/", {
+      method: "POST",
+      body: JSON.stringify({
+        name: data.name,
+        program: data.program,
+        duration_label: data.duration_label,
+        duration_months: Number(data.duration_months),
+        duration_days: Number(data.duration_days),
+        classes_per_week: data.classes_per_week ? Number(data.classes_per_week) : null,
+        price: Number(data.price),
+        currency: data.currency,
+        included_items: data.included_items ? data.included_items.split(",").map((item) => item.trim()).filter(Boolean) : [],
+        description: data.description || null,
+        sort_order: Number(data.sort_order || 0),
+        is_active: Boolean(data.is_active),
+      }),
+    });
+    event.currentTarget.reset();
+    toast("Plan created");
+    await loadPlans();
   });
 
   $("#templateForm").addEventListener("submit", async (event) => {
@@ -360,6 +397,7 @@ function bindForms() {
       await Promise.all([loadMembers(), loadFamilies()]);
     }
     if (action === "refresh-active" || action === "refresh-activity") await loadOverview();
+    if (action === "load-plans") await loadPlans();
     if (action === "load-schedule") await loadSchedule();
     if (action === "load-families") await loadFamilies();
     if (action === "load-notifications") await loadNotifications();

@@ -132,6 +132,57 @@ def run() -> None:
     request("PATCH", f"/api/v1/users/{staff['id']}/password", token=token, json_body={"password": "ChangeMe456!"})
     checks.append("users CRUD/update password")
 
+    plan = request(
+        "POST",
+        "/api/v1/plans/",
+        token=token,
+        json_body={
+            "name": f"Smoke Taekwondo Plan {suffix}",
+            "program": "Taekwondo",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "duration_days": 30,
+            "classes_per_week": 3,
+            "price": "350.00",
+            "currency": "AED",
+            "included_items": ["Trial assessment"],
+            "description": "Smoke test package",
+            "sort_order": 99,
+            "is_active": True,
+        },
+    )
+    temp_plan = request(
+        "POST",
+        "/api/v1/plans/",
+        token=token,
+        json_body={
+            "name": f"Smoke Temp Plan {suffix}",
+            "program": "Fitness",
+            "duration_label": "3 Month",
+            "duration_months": 3,
+            "duration_days": 90,
+            "classes_per_week": 3,
+            "price": "900.00",
+            "currency": "AED",
+            "included_items": ["Free gloves"],
+            "is_active": True,
+        },
+    )
+    request("GET", "/api/v1/plans/", token=token)
+    request("GET", "/api/v1/plans/?program=Taekwondo&is_active=true", token=token)
+    request("GET", f"/api/v1/plans/{plan['id']}", token=token)
+    request("PUT", f"/api/v1/plans/{plan['id']}", token=token, json_body={"is_active": False, "sort_order": 100})
+    expect_error(409, "POST", "/api/v1/plans/", token=token, json_body={
+        "name": plan["name"],
+        "program": "Taekwondo",
+        "duration_label": "One Month",
+        "duration_months": 1,
+        "duration_days": 30,
+        "price": "350.00",
+    })
+    request("DELETE", f"/api/v1/plans/{temp_plan['id']}", token=token)
+    checks.append("plans CRUD/filter/duplicate/delete")
+
     template = request(
         "POST",
         "/api/v1/schedule/templates",
@@ -170,6 +221,7 @@ def run() -> None:
             "phone": f"+15559{phone_suffix}",
             "age": 33,
             "gender": "other",
+            "plan_id": plan["id"],
             "expiry_date": next_month,
             "messaging_opt_in": True,
         },
