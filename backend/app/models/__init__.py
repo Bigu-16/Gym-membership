@@ -1,6 +1,7 @@
 from app.models.app_user import AppUser
 from app.models.check_in import CheckIn
 from app.models.enrollment import Enrollment
+from app.models.family import Family
 from app.models.member import Member
 from app.models.membership_plan import MembershipPlan
 from app.models.notification_job import NotificationJob
@@ -11,6 +12,7 @@ __all__ = [
     "AppUser",
     "CheckIn",
     "Enrollment",
+    "Family",
     "Member",
     "MembershipPlan",
     "NotificationJob",

@@ -93,12 +93,19 @@
                 <input id="memberSearch" placeholder="Search name or phone" />
               </div>
               <div id="memberList" class="table-list"></div>
+              <hr />
+              <div class="panel-head">
+                <h2>Families</h2>
+                <button data-action="load-families" class="secondary small">Reload</button>
+              </div>
+              <div id="familyList" class="table-list"></div>
             </article>
             <article class="panel">
               <h2>Create Member</h2>
               <form id="memberForm" class="form-grid">
                 <input name="name" placeholder="Full name" required />
                 <input name="phone" placeholder="+15550001234" required />
+                <input name="age" type="number" min="0" max="130" placeholder="Age" required />
                 <select name="gender">
                   <option value="">Gender</option>
                   <option value="male">Male</option>
@@ -112,11 +119,18 @@
               <hr />
               <h2>Family Tools</h2>
               <form id="familyForm" class="form-grid">
-                <input name="parent_phone" placeholder="Parent phone" required />
+                <input name="parent_name" placeholder="Parent/guardian name" required />
+                <input name="parent_phone" placeholder="Parent/guardian phone" required />
+                <input name="parent_email" type="email" placeholder="Parent/guardian email" />
+                <input name="parent_address" placeholder="Address" />
+                <input name="parent_relationship" placeholder="Relationship" value="parent" required />
+                <input name="notes" placeholder="Family notes" />
                 <input name="child_a" placeholder="Child A name" required />
                 <input name="child_a_phone" placeholder="Child A phone" required />
+                <input name="child_a_age" type="number" min="0" max="130" placeholder="Child A age" required />
                 <input name="child_b" placeholder="Child B name" required />
                 <input name="child_b_phone" placeholder="Child B phone" required />
+                <input name="child_b_age" type="number" min="0" max="130" placeholder="Child B age" required />
                 <button>Create family</button>
               </form>
             </article>

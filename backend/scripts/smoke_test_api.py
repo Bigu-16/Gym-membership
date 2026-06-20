@@ -168,6 +168,7 @@ def run() -> None:
         json_body={
             "name": f"Smoke Member {suffix}",
             "phone": f"+15559{phone_suffix}",
+            "age": 33,
             "gender": "other",
             "expiry_date": next_month,
             "messaging_opt_in": True,
@@ -180,6 +181,7 @@ def run() -> None:
     expect_error(409, "POST", "/api/v1/members/", token=token, json_body={
         "name": "Duplicate Smoke",
         "phone": member["phone"],
+        "age": 33,
         "gender": "other",
     })
     checks.append("members CRUD/search/errors")
@@ -190,11 +192,20 @@ def run() -> None:
         "/api/v1/members/families",
         token=token,
         json_body={
+            "parent": {
+                "name": f"Smoke Parent {suffix}",
+                "phone": family_phone,
+                "email": f"parent-{suffix}@example.com",
+                "address": "100 Smoke Test Ave",
+                "relationship": "parent",
+                "notes": "Created by smoke test",
+            },
             "members": [
                 {
                     "name": f"Smoke Family A {suffix}",
                     "phone": f"+15557{phone_suffix}",
                     "parent_phone": family_phone,
+                    "age": 11,
                     "gender": "female",
                     "expiry_date": tomorrow,
                 },
@@ -202,6 +213,7 @@ def run() -> None:
                     "name": f"Smoke Family B {suffix}",
                     "phone": f"+15556{phone_suffix}",
                     "parent_phone": family_phone,
+                    "age": 9,
                     "gender": "male",
                     "expiry_date": tomorrow,
                 },
@@ -209,7 +221,7 @@ def run() -> None:
         },
     )
     request("GET", f"/api/v1/members/families?parent_phone={family_phone}", token=token)
-    request("PATCH", f"/api/v1/members/families/{family_phone}/freeze", token=token, json_body={"is_frozen": True})
+    request("PATCH", f"/api/v1/members/families/{family['id']}/freeze", token=token, json_body={"is_frozen": True})
     checks.append("family create/list/freeze")
 
     enrollment = request(
@@ -220,7 +232,7 @@ def run() -> None:
     )
     request("GET", "/api/v1/enrollments/", token=token)
     expect_error(409, "POST", "/api/v1/enrollments/", token=token, json_body={"member_id": member["id"], "template_id": template["id"]})
-    expect_error(400, "POST", "/api/v1/enrollments/", token=token, json_body={"member_id": family[0]["id"], "template_id": template["id"]})
+    expect_error(400, "POST", "/api/v1/enrollments/", token=token, json_body={"member_id": family["members"][0]["id"], "template_id": template["id"]})
     request("DELETE", f"/api/v1/enrollments/{enrollment['id']}", token=token)
     checks.append("enrollments create/list/duplicate/delete/frozen-error")
 

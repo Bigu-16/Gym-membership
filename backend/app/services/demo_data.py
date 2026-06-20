@@ -9,6 +9,7 @@ from app.models import (
     AppUser,
     CheckIn,
     Enrollment,
+    Family,
     Member,
     MembershipPlan,
     NotificationJob,
@@ -88,10 +89,23 @@ async def seed_plans(session: AsyncSession) -> dict[str, MembershipPlan]:
 
 async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) -> dict[str, Member]:
     today = date.today()
+    carter_family = await get_or_create(
+        session,
+        Family,
+        {"parent_phone": "+15559990001"},
+        {
+            "parent_name": "Olivia Carter",
+            "parent_email": "olivia.carter@example.com",
+            "parent_address": "42 Harbor Street",
+            "parent_relationship": "mother",
+            "notes": "Primary contact for Carter family membership",
+        },
+    )
     member_rows = [
         {
             "name": "Alexander Rossi",
             "phone": "+15550001001",
+            "age": 34,
             "gender": Gender.male,
             "plan": "Elite Performance",
             "expiry_date": today + timedelta(days=21),
@@ -99,6 +113,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
         {
             "name": "Elena Vance",
             "phone": "+15550001002",
+            "age": 29,
             "gender": Gender.female,
             "plan": "Wellness Pro",
             "expiry_date": today + timedelta(days=7),
@@ -106,6 +121,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
         {
             "name": "Marcus Thorne",
             "phone": "+15550001003",
+            "age": 41,
             "gender": Gender.male,
             "plan": "Elite Performance",
             "expiry_date": today + timedelta(days=2),
@@ -113,6 +129,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
         {
             "name": "Sophia Chen",
             "phone": "+15550001004",
+            "age": 26,
             "gender": Gender.female,
             "plan": "Starter Access",
             "expiry_date": today - timedelta(days=4),
@@ -120,6 +137,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
         {
             "name": "Julian Drax",
             "phone": "+15550001005",
+            "age": 38,
             "gender": Gender.other,
             "plan": "Wellness Pro",
             "expiry_date": today + timedelta(days=32),
@@ -128,6 +146,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
         {
             "name": "Maya Johnson",
             "phone": "+15550001006",
+            "age": 31,
             "gender": Gender.female,
             "plan": "Elite Performance",
             "expiry_date": today + timedelta(days=50),
@@ -136,6 +155,8 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "name": "Noah Carter",
             "phone": "+15550002001",
             "parent_phone": "+15559990001",
+            "family_id": carter_family.id,
+            "age": 14,
             "gender": Gender.male,
             "plan": "Family Group",
             "expiry_date": today + timedelta(days=45),
@@ -144,6 +165,8 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "name": "Ava Carter",
             "phone": "+15550002002",
             "parent_phone": "+15559990001",
+            "family_id": carter_family.id,
+            "age": 12,
             "gender": Gender.female,
             "plan": "Family Group",
             "expiry_date": today + timedelta(days=45),
@@ -160,8 +183,10 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             {
                 "name": row["name"],
                 "parent_phone": row.get("parent_phone"),
+                "family_id": row.get("family_id"),
                 "gender": row["gender"],
                 "medical_issues": row.get("medical_issues"),
+                "age": row["age"],
                 "plan_id": plan.id,
                 "expiry_date": row["expiry_date"],
                 "is_frozen": row.get("is_frozen", False),

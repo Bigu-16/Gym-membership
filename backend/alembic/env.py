@@ -11,6 +11,7 @@ from app.models import (
     app_user,
     check_in,
     enrollment,
+    family,
     member,
     membership_plan,
     notification_job,
