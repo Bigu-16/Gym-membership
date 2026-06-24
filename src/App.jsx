@@ -16,6 +16,7 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedMember, setSelectedMember] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState('all'); // 'all' or 'expiring'
 
   const [members, setMembers] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -188,6 +189,14 @@ const App = () => {
     }
   };
 
+  const calculateDaysRemaining = (date) => {
+    if (!date) return 9999; // Standard high number for no expiry
+    const today = new Date();
+    const expiry = new Date(date);
+    const diffTime = expiry - today;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
   const getProcessedMembers = () => {
     const groups = new Map();
     const result = [];
@@ -222,15 +231,31 @@ const App = () => {
       result.push(g);
     });
 
-    if (!searchQuery) return result;
+    let filtered = result;
+
+    if (filterType === 'expiring') {
+      filtered = filtered.filter(item => {
+        if (item.isGroup) {
+          return item.trainees.some(t => {
+            const days = calculateDaysRemaining(t.expiryDate);
+            return days >= 0 && days < 7;
+          });
+        } else {
+          const days = calculateDaysRemaining(item.expiryDate);
+          return days >= 0 && days < 7;
+        }
+      });
+    }
+
+    if (!searchQuery) return filtered;
     
     const lowerQ = searchQuery.toLowerCase();
-    return result.filter(item => {
+    return filtered.filter(item => {
       if (item.isGroup) {
         if (item.name.toLowerCase().includes(lowerQ) || item.parentPhone.includes(lowerQ)) return true;
-        return item.trainees.some(t => t.name.toLowerCase().includes(lowerQ));
+        return item.trainees.some(t => t.name.toLowerCase().includes(lowerQ) || (t.phone && t.phone.toLowerCase().includes(lowerQ)));
       } else {
-        return item.name.toLowerCase().includes(lowerQ);
+        return item.name.toLowerCase().includes(lowerQ) || (item.phone && item.phone.toLowerCase().includes(lowerQ));
       }
     });
   };
@@ -363,8 +388,26 @@ const App = () => {
                           </svg>
                         </div>
                         <div className="flex gap-2 shrink-0">
-                          <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold">All</button>
-                          <button className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)] transition-all">Expiring</button>
+                          <button 
+                            onClick={() => setFilterType('all')}
+                            className={`px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury transition-all ${
+                              filterType === 'all' 
+                                ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold' 
+                                : 'glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)]'
+                            }`}
+                          >
+                            All
+                          </button>
+                          <button 
+                            onClick={() => setFilterType('expiring')}
+                            className={`px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury transition-all ${
+                              filterType === 'expiring' 
+                                ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold' 
+                                : 'glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)]'
+                            }`}
+                          >
+                            Expiring
+                          </button>
                         </div>
                       </div>
                     </div>

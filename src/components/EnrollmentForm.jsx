@@ -110,15 +110,19 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
     const allSessions = [];
     
     families.forEach(family => {
-      family.trainees.forEach(t => {
+      family.trainees.forEach((t, tIndex) => {
         const monthsToAdd = 
           payment.duration === '3 Months' ? 3 :
           payment.duration === '6 Months' ? 6 :
           payment.duration === '1 Year' ? 12 : 1;
 
+        const basePhone = (family.parentInfo.phone || '').replace(/\s+/g, '');
+        const traineePhone = tIndex === 0 ? basePhone : `${basePhone}-${tIndex}`;
+
         const newMember = {
           id: Math.random(),
           name: t.name,
+          phone: traineePhone,
           age: t.age,
           gender: t.gender,
           medicalIssues: t.medicalIssues,

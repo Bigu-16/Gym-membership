@@ -174,8 +174,15 @@ export const apiService = {
   },
 
   // Members API
-  async getMembers() {
-    const response = await fetch(`${API_BASE_URL}/members/`, {
+  async getMembers(params = {}) {
+    const url = new URL(`${API_BASE_URL}/members/`);
+    Object.keys(params).forEach(key => {
+      if (params[key] !== undefined && params[key] !== null) {
+        url.searchParams.append(key, params[key]);
+      }
+    });
+
+    const response = await fetch(url.toString(), {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to load members');
