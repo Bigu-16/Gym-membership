@@ -42,6 +42,33 @@ const App = () => {
       // 2. Fetch members
       const membersData = await apiService.getMembers();
       setMembers(membersData);
+      setSelectedMember(prev => {
+        if (!prev) return null;
+        if (prev.isGroup) {
+          const familyMembers = membersData.filter(m => m.parentPhone === prev.parentPhone);
+          if (familyMembers.length === 0) return null;
+          
+          const firstName = familyMembers[0].name.split(' ')[0];
+          const isFrozen = familyMembers.some(m => m.isFrozen);
+          const expiryDate = familyMembers[0].expiryDate;
+          
+          return {
+            isGroup: true,
+            id: prev.parentPhone,
+            parentName: prev.parentPhone,
+            parentPhone: prev.parentPhone,
+            trainees: familyMembers,
+            name: `${firstName}'s Family`,
+            plan: `Family Group (${familyMembers.length} Kids)`,
+            image: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=random&color=fff`,
+            expiryDate: expiryDate,
+            isFrozen: isFrozen
+          };
+        } else {
+          const fresh = membersData.find(m => m.id === prev.id);
+          return fresh || null;
+        }
+      });
 
       // 3. Fetch enrollments to compute enrolled count for each template dynamically
       const enrollments = await apiService.getEnrollments();
@@ -176,12 +203,23 @@ const App = () => {
           }
           return m;
         }));
+        setSelectedMember(updatedMember);
       } else {
         const saved = await apiService.updateMember(updatedMember.id, updatedMember);
         await apiService.freezeMember(updatedMember.id, updatedMember.isFrozen);
         setMembers(prev => prev.map(m => m.id === updatedMember.id ? saved : m));
+        
+        if (updatedMember.parentPhone) {
+          setSelectedMember(prev => {
+            if (prev && prev.isGroup && prev.parentPhone === updatedMember.parentPhone) {
+              return prev; // keep the current family group selected
+            }
+            return saved;
+          });
+        } else {
+          setSelectedMember(saved);
+        }
       }
-      setSelectedMember(updatedMember);
       await loadData();
     } catch (err) {
       console.error(err);

@@ -62,17 +62,27 @@ const mapMemberToFrontend = (m) => ({
 });
 
 // Map member to backend schema
-const mapMemberToBackend = (m) => ({
-  name: m.name,
-  phone: m.phone,
-  parent_phone: m.parentPhone || null,
-  gender: m.gender ? m.gender.toLowerCase() : null,
-  medical_issues: m.medicalIssues || null,
-  plan_id: m.planId || 3, // Default to Elite Performance
-  expiry_date: m.expiryDate ? m.expiryDate.split('T')[0] : null,
-  messaging_opt_in: m.messagingOptIn !== undefined ? m.messagingOptIn : true,
-  is_frozen: m.isFrozen || false
-});
+const mapMemberToBackend = (m) => {
+  let expiryDate = null;
+  if (m.expiryDate) {
+    if (m.expiryDate instanceof Date) {
+      expiryDate = m.expiryDate.toISOString().split('T')[0];
+    } else if (typeof m.expiryDate === 'string') {
+      expiryDate = m.expiryDate.split('T')[0];
+    }
+  }
+  return {
+    name: m.name,
+    phone: m.phone,
+    parent_phone: m.parentPhone || null,
+    gender: m.gender ? m.gender.toLowerCase() : null,
+    medical_issues: m.medicalIssues || null,
+    plan_id: m.planId || 3, // Default to Elite Performance
+    expiry_date: expiryDate,
+    messaging_opt_in: m.messagingOptIn !== undefined ? m.messagingOptIn : true,
+    is_frozen: m.isFrozen || false
+  };
+};
 
 // Map session to frontend schema
 const mapSessionToFrontend = (s, templates = []) => {
@@ -188,6 +198,45 @@ export const apiService = {
     if (!response.ok) throw new Error('Failed to load members');
     const data = await response.json();
     return data.map(mapMemberToFrontend);
+  },
+
+  async getMember(memberId) {
+    const response = await fetch(`${API_BASE_URL}/members/${memberId}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to load member details');
+    const data = await response.json();
+    return mapMemberToFrontend(data);
+  },
+
+  async getFamilies(parentPhone = null) {
+    const url = new URL(`${API_BASE_URL}/members/families`);
+    if (parentPhone) {
+      url.searchParams.append('parent_phone', parentPhone);
+    }
+    const response = await fetch(url.toString(), {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to load families');
+    const data = await response.json();
+    return data.map(f => {
+      const trainees = f.members.map(mapMemberToFrontend);
+      const firstName = trainees.length > 0 ? trainees[0].name.split(' ')[0] : 'Family';
+      const isFrozen = trainees.some(t => t.isFrozen);
+      const expiryDate = trainees.length > 0 ? trainees[0].expiryDate : null;
+      return {
+        isGroup: true,
+        id: f.parent_phone,
+        parentName: f.parent_phone,
+        parentPhone: f.parent_phone,
+        trainees: trainees,
+        name: `${firstName}'s Family`,
+        plan: `Family Group (${trainees.length} Kids)`,
+        image: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=random&color=fff`,
+        expiryDate: expiryDate,
+        isFrozen: isFrozen
+      };
+    });
   },
 
   async enrollMembers(membersList) {
