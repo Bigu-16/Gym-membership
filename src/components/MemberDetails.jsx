@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 
-const MemberDetails = ({ member, onBack, onUpdateMember }) => {
+const MemberDetails = ({ member, onBack, onUpdateMember, onDeleteMember }) => {
   const [localMember, setLocalMember] = useState(member);
   const [loading, setLoading] = useState(false);
   const [showFreezeModal, setShowFreezeModal] = useState(false);
   const [freezeDuration, setFreezeDuration] = useState(1);
+  const [showDeleteConfirmId, setShowDeleteConfirmId] = useState(null);
   const [editingMemberId, setEditingMemberId] = useState(null);
   const [editForm, setEditForm] = useState({
     name: '',
@@ -17,6 +18,19 @@ const MemberDetails = ({ member, onBack, onUpdateMember }) => {
     expiryDate: '',
     messagingOptIn: true,
   });
+
+  const handleDeleteConfirm = async (memberId) => {
+    try {
+      setLoading(true);
+      await onDeleteMember(memberId);
+      setShowDeleteConfirmId(null);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete member: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchFreshDetails = async () => {
     if (!member) return;
@@ -215,13 +229,44 @@ const MemberDetails = ({ member, onBack, onUpdateMember }) => {
               {localMember.isFrozen ? 'Unfreeze Membership' : 'Freeze Membership'}
             </button>
 
-            {!localMember.isGroup && (
-              <button 
-                onClick={() => startEditing(localMember)}
-                className="w-full mt-2 py-3 rounded-xl border border-[var(--glass-border)] bg-transparent text-[10px] uppercase tracking-luxury font-bold hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)] transition-all"
-              >
-                Edit Profile
-              </button>
+            {showDeleteConfirmId === localMember.id ? (
+              <div className="w-full mt-2 p-4 glass-card border border-rose-500/30 rounded-xl animate-in fade-in zoom-in duration-300 text-left">
+                <h4 className="text-[10px] uppercase tracking-luxury font-bold text-rose-500 mb-2">Confirm Deletion</h4>
+                <p className="text-[10px] text-[var(--text-secondary)] mb-4">Are you sure you want to delete this member? This action cannot be undone.</p>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setShowDeleteConfirmId(null)}
+                    className="flex-1 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--glass-border)] text-[10px] uppercase tracking-luxury hover:bg-[var(--glass-border)] transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteConfirm(localMember.id)}
+                    className="flex-1 py-2 rounded-lg bg-rose-500 text-white text-[10px] uppercase tracking-luxury font-bold hover:bg-rose-600 transition-all shadow-[0_0_10px_rgba(239,68,68,0.3)]"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {!localMember.isGroup && (
+                  <>
+                    <button 
+                      onClick={() => startEditing(localMember)}
+                      className="w-full mt-2 py-3 rounded-xl border border-[var(--glass-border)] bg-transparent text-[10px] uppercase tracking-luxury font-bold hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)] transition-all"
+                    >
+                      Edit Profile
+                    </button>
+                    <button 
+                      onClick={() => setShowDeleteConfirmId(localMember.id)}
+                      className="w-full mt-2 py-3 rounded-xl border border-rose-500/30 bg-transparent text-[10px] uppercase tracking-luxury font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
+                    >
+                      Delete Member
+                    </button>
+                  </>
+                )}
+              </>
             )}
 
             {showFreezeModal && !localMember.isFrozen && (
@@ -432,13 +477,46 @@ const MemberDetails = ({ member, onBack, onUpdateMember }) => {
                          <div className="w-6 h-6 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center text-[10px]">{index + 1}</div>
                          {trainee.name}
                        </h4>
-                       <button 
-                         onClick={() => startEditing(trainee)}
-                         className="px-3 py-1 rounded-lg border border-[var(--glass-border)] text-[8px] uppercase tracking-luxury font-bold hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)] transition-all"
-                       >
-                         Edit Profile
-                       </button>
+                       {showDeleteConfirmId === trainee.id ? (
+                         <span className="text-[10px] uppercase tracking-luxury text-rose-500 font-bold">Confirm Deleting...</span>
+                       ) : (
+                         <div className="flex gap-2">
+                           <button 
+                             onClick={() => startEditing(trainee)}
+                             className="px-3 py-1 rounded-lg border border-[var(--glass-border)] text-[8px] uppercase tracking-luxury font-bold hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)] transition-all"
+                           >
+                             Edit Profile
+                           </button>
+                           <button 
+                             onClick={() => setShowDeleteConfirmId(trainee.id)}
+                             className="px-3 py-1 rounded-lg border border-rose-500/30 text-[8px] uppercase tracking-luxury font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
+                           >
+                             Delete
+                           </button>
+                         </div>
+                       )}
                      </div>
+
+                     {showDeleteConfirmId === trainee.id && (
+                       <div className="mb-6 p-4 glass-card border border-rose-500/30 rounded-xl animate-in fade-in zoom-in duration-300 text-left">
+                         <h4 className="text-[10px] uppercase tracking-luxury font-bold text-rose-500 mb-2">Confirm Deletion</h4>
+                         <p className="text-[10px] text-[var(--text-secondary)] mb-4">Are you sure you want to delete {trainee.name} from this family? This action cannot be undone.</p>
+                         <div className="flex gap-2 justify-end">
+                           <button 
+                             onClick={() => setShowDeleteConfirmId(null)}
+                             className="px-4 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--glass-border)] text-[10px] uppercase tracking-luxury hover:bg-[var(--glass-border)] transition-all"
+                           >
+                             Cancel
+                           </button>
+                           <button 
+                             onClick={() => handleDeleteConfirm(trainee.id)}
+                             className="px-4 py-2 rounded-lg bg-rose-500 text-white text-[10px] uppercase tracking-luxury font-bold hover:bg-rose-600 transition-all shadow-[0_0_10px_rgba(239,68,68,0.3)]"
+                           >
+                             Delete
+                           </button>
+                         </div>
+                       </div>
+                     )}
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                        <div>
                          <p className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Phone Number</p>

@@ -309,6 +309,16 @@ export const apiService = {
     return data.map(mapMemberToFrontend);
   },
 
+  async deleteMember(memberId) {
+    const response = await fetch(`${API_BASE_URL}/members/${memberId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete member');
+    return true;
+  },
+
+
   // Dashboard API
   async getActiveCheckIns() {
     const response = await fetch(`${API_BASE_URL}/dashboard/active-members`, {

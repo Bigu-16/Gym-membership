@@ -227,6 +227,18 @@ const App = () => {
     }
   };
 
+  const handleDeleteMember = async (memberId) => {
+    try {
+      await apiService.deleteMember(memberId);
+      setMembers(prev => prev.filter(m => m.id !== memberId));
+      setSelectedMember(null);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
+
   const calculateDaysRemaining = (date) => {
     if (!date) return 9999; // Standard high number for no expiry
     const today = new Date();
@@ -406,6 +418,7 @@ const App = () => {
                     member={selectedMember} 
                     onBack={() => setSelectedMember(null)} 
                     onUpdateMember={handleUpdateMember} 
+                    onDeleteMember={handleDeleteMember}
                   />
                 ) : (
                   <>
