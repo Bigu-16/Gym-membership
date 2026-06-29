@@ -77,7 +77,7 @@ const Sidebar = ({ activeTab = 'members', onTabChange }) => {
               </svg>
             </div>
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-widest leading-none">Antigravity</h2>
+              <h2 className="text-sm font-bold uppercase tracking-widest leading-none">Azyab</h2>
               <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-luxury">Wellness Systems</span>
             </div>
           </div>

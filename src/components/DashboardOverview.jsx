@@ -1,21 +1,42 @@
 import React, { useState, useEffect } from 'react';
+import { apiService } from '../services/api';
 
-const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates = [], onTabChange, inClubList, setInClubList }) => {
+const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates = [], onTabChange, inClubList, setInClubList, onUpdateSessionStatus }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCheckInSuccess, setShowCheckInSuccess] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [localChecklists, setLocalChecklists] = useState(() => {
-    try {
-      const saved = localStorage.getItem('gym_session_checklists');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [recentActivities, setRecentActivities] = useState([]);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('gym_session_checklists', JSON.stringify(localChecklists));
-  }, [localChecklists]);
+    let isMounted = true;
+    const fetchDashboardData = async () => {
+      try {
+        setLoadingStats(true);
+        const [stats, activities] = await Promise.all([
+          apiService.getDashboardStats(),
+          apiService.getRecentActivities()
+        ]);
+        if (isMounted) {
+          setDashboardStats(stats);
+          setRecentActivities(activities);
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard stats/activities:', err);
+      } finally {
+        if (isMounted) {
+          setLoadingStats(false);
+        }
+      }
+    };
+
+    fetchDashboardData();
+    return () => {
+      isMounted = false;
+    };
+  }, [inClubList, members.length, sessions.length]);
+
 
 
   // Merge custom sessions with mapped schedule templates to represent live scheduled classes (e.g. Muay Thai, Taekwondo, Fitness)
@@ -58,10 +79,10 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
 
       // Assign premium trainer based on class type
       let trainer = "Marcus Thorne";
-      if (templateTitle.includes("yoga")) trainer = "Sophia Chen";
+      if (templateTitle.includes("karate")) trainer = "Coach Somchai";
       if (templateTitle.includes("taekwondo")) trainer = "Master Kim";
-      if (templateTitle.includes("muay") || templateTitle.includes("thai")) trainer = "Coach Somchai";
-      if (templateTitle.includes("fitness")) trainer = "Elena Vance";
+      if (templateTitle.includes("kickboxing")) trainer = "Elena Vance";
+      if (templateTitle.includes("fitness") || templateTitle.includes("zumba")) trainer = "Marcus Thorne";
 
       return {
         id: `template-${template.id}`,
@@ -88,9 +109,11 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
     if (!session) return 'General';
     const title = (session.title || '').toLowerCase();
     if (title.includes('taekwondo')) return 'Taekwondo';
+    if (title.includes('karate')) return 'Karate';
+    if (title.includes('kickboxing')) return 'Kickboxing';
+    if (title.includes('kung fu')) return 'Kung Fu';
     if (title.includes('yoga')) return 'Yoga';
-    if (title.includes('muay') || title.includes('thai')) return 'Muay Thai';
-    if (title.includes('fitness')) return 'Fitness';
+    if (title.includes('zumba') || title.includes('fitness')) return 'Fitness';
     if (title.includes('personal') || title.includes('trainer')) return 'Personal Training';
     if (title.includes('elite') || title.includes('performance')) return 'Elite Performance';
     return 'General';
@@ -138,76 +161,164 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
     return uniqueMembers;
   }, [filteredSessionsByCat, members]);
 
+  // Materialize template session helper
+  const materializeSession = async (sessionId) => {
+    if (String(sessionId).startsWith('template-')) {
+      const tempId = parseInt(String(sessionId).split('-')[1], 10);
+      const template = scheduleTemplates.find(t => t.id === tempId);
+      
+      const newDbSession = await apiService.createSession({
+        templateId: tempId,
+        start: new Date(),
+        trainer: template?.trainer || 'Master Kim',
+        status: 'in-progress',
+        checklist: [
+          { id: 1, text: 'Safety warm-up completed', checked: false },
+          { id: 2, text: 'Core group training sequence', checked: false },
+          { id: 3, text: 'Assisted stretching session', checked: false }
+        ]
+      });
+
+      const mapped = {
+        id: newDbSession.id,
+        title: template.className,
+        trainer: newDbSession.trainer_name,
+        location: template.className.toLowerCase().includes('yoga') ? 'Zen Garden' : 'Studio B - Group Floor',
+        start: new Date(),
+        end: new Date(Date.now() + 60 * 60 * 1000),
+        status: 'in-progress',
+        type: 'group',
+        checklist: newDbSession.checklist_data?.items || [],
+        templateId: tempId
+      };
+
+      setSessions(prev => [mapped, ...prev]);
+      return mapped;
+    }
+    return allSessions.find(s => s.id === sessionId);
+  };
+
+  // Toggle status of a session
+  const handleToggleSessionStatus = async (session) => {
+    try {
+      if (String(session.id).startsWith('template-')) {
+        // Materialize session (creates it with 'in-progress' status)
+        await materializeSession(session.id);
+      } else {
+        const newStatus = session.status === 'in-progress' ? 'upcoming' : 'in-progress';
+        if (onUpdateSessionStatus) {
+          await onUpdateSessionStatus(session.id, newStatus);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to toggle session status:', err);
+    }
+  };
+
   // Toggle checklist item for sessions
-  const handleToggleChecklist = (sessionId, itemId) => {
-    setLocalChecklists(prev => {
-      const currentList = prev[sessionId] || (allSessions.find(s => s.id === sessionId)?.checklist || []);
-      const updatedList = currentList.map(item => 
+  const handleToggleChecklist = async (sessionId, itemId) => {
+    try {
+      const targetSession = await materializeSession(sessionId);
+      if (!targetSession) return;
+
+      const updatedList = targetSession.checklist.map(item => 
         item.id === itemId ? { ...item, checked: !item.checked } : item
       );
-      return {
-        ...prev,
-        [sessionId]: updatedList
-      };
-    });
+
+      // Optimistic state update
+      setSessions(prev => prev.map(s => s.id === targetSession.id ? { ...s, checklist: updatedList } : s));
+
+      // Persist to backend
+      await apiService.updateSession(targetSession.id, { checklist: updatedList });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to toggle checklist task: ' + err.message);
+    }
   };
 
   // Add dynamic custom checklist item to a specific session
-  const handleAddChecklistItem = (sessionId, text) => {
+  const handleAddChecklistItem = async (sessionId, text) => {
     if (!text.trim()) return;
-    setLocalChecklists(prev => {
-      const currentList = prev[sessionId] || (allSessions.find(s => s.id === sessionId)?.checklist || []);
+    try {
+      const targetSession = await materializeSession(sessionId);
+      if (!targetSession) return;
+
       const newItem = {
         id: Date.now(),
         text: text.trim(),
         checked: false
       };
-      return {
-        ...prev,
-        [sessionId]: [...currentList, newItem]
-      };
-    });
+      const updatedList = [...targetSession.checklist, newItem];
+
+      // Optimistic state update
+      setSessions(prev => prev.map(s => s.id === targetSession.id ? { ...s, checklist: updatedList } : s));
+
+      // Persist to backend
+      await apiService.updateSession(targetSession.id, { checklist: updatedList });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add checklist task: ' + err.message);
+    }
   };
 
   // Remove dynamic custom checklist item from a specific session
-  const handleDeleteChecklistItem = (sessionId, itemId) => {
+  const handleDeleteChecklistItem = async (sessionId, itemId) => {
     const isConfirmed = window.confirm("Are you sure you want to delete this task from the checklist?");
     if (!isConfirmed) return;
 
-    setLocalChecklists(prev => {
-      const currentList = prev[sessionId] || (allSessions.find(s => s.id === sessionId)?.checklist || []);
-      const updatedList = currentList.filter(item => item.id !== itemId);
-      return {
-        ...prev,
-        [sessionId]: updatedList
-      };
-    });
+    try {
+      const targetSession = await materializeSession(sessionId);
+      if (!targetSession) return;
+
+      const updatedList = targetSession.checklist.filter(item => item.id !== itemId);
+
+      // Optimistic state update
+      setSessions(prev => prev.map(s => s.id === targetSession.id ? { ...s, checklist: updatedList } : s));
+
+      // Persist to backend
+      await apiService.updateSession(targetSession.id, { checklist: updatedList });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete checklist task: ' + err.message);
+    }
   };
 
   // Check in a member
-  const handleCheckIn = (memberId) => {
+  const handleCheckIn = async (memberId) => {
     if (inClubList.includes(memberId)) {
-      // Already checked in, show notification but don't duplicate
       const member = members.find(m => m.id === memberId);
       setShowCheckInSuccess(`${member.name} is already checked in.`);
       setTimeout(() => setShowCheckInSuccess(null), 3000);
       return;
     }
     
-    setInClubList(prev => [...prev, memberId]);
-    const member = members.find(m => m.id === memberId);
-    setShowCheckInSuccess(`Successfully checked in ${member.name}!`);
-    setSearchTerm('');
-    setTimeout(() => setShowCheckInSuccess(null), 3000);
+    try {
+      await apiService.checkInMember(memberId);
+      setInClubList(prev => [...prev, memberId]);
+      const member = members.find(m => m.id === memberId);
+      setShowCheckInSuccess(`Successfully checked in ${member.name}!`);
+      setSearchTerm('');
+      setTimeout(() => setShowCheckInSuccess(null), 3000);
+    } catch (err) {
+      console.error(err);
+      alert('Check-in failed: ' + err.message);
+    }
   };
 
   // Check out a member
-  const handleCheckOut = (memberId) => {
-    setInClubList(prev => prev.filter(id => id !== memberId));
-    const member = members.find(m => m.id === memberId);
-    setShowCheckInSuccess(`${member.name} has been checked out.`);
-    setTimeout(() => setShowCheckInSuccess(null), 3000);
+  const handleCheckOut = async (memberId) => {
+    try {
+      await apiService.checkOutMember(memberId);
+      setInClubList(prev => prev.filter(id => id !== memberId));
+      const member = members.find(m => m.id === memberId);
+      setShowCheckInSuccess(`${member.name} has been checked out.`);
+      setTimeout(() => setShowCheckInSuccess(null), 3000);
+    } catch (err) {
+      console.error(err);
+      alert('Check-out failed: ' + err.message);
+    }
   };
+
 
   // Filter members for the search dropdown
   const filteredMembers = searchTerm.trim() === '' 
@@ -240,7 +351,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           <div className="flex justify-between items-start mb-4">
             <div>
               <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Active Directory</span>
-              <span className="text-3xl font-light tracking-wide">{members.length} <span className="text-xs text-[var(--text-secondary)]">Registered</span></span>
+              <span className="text-3xl font-light tracking-wide">{dashboardStats?.total_members !== undefined ? dashboardStats.total_members : members.length} <span className="text-xs text-[var(--text-secondary)]">Registered</span></span>
             </div>
             <div className="p-3 bg-[var(--card-hover)] rounded-xl group-hover:bg-[var(--text-primary)] group-hover:text-[var(--bg-primary)] transition-all duration-300">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -267,7 +378,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           <div className="flex justify-between items-start mb-4">
             <div>
               <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Live Occupancy</span>
-              <span className="text-3xl font-light tracking-wide">{inClubList.length} <span className="text-xs text-[var(--text-secondary)]">In Club</span></span>
+              <span className="text-3xl font-light tracking-wide">{dashboardStats?.active_members !== undefined ? dashboardStats.active_members : inClubList.length} <span className="text-xs text-[var(--text-secondary)]">In Club</span></span>
             </div>
             <div className="p-3 bg-[var(--card-hover)] rounded-xl flex items-center justify-center">
               <div className="relative flex h-3 w-3">
@@ -278,7 +389,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           </div>
           <div className="flex items-center gap-2 mt-2">
             <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] font-medium">
-              ~{Math.round((inClubList.length / 30) * 100)}% Capacity reached
+              ~{Math.round(((dashboardStats?.active_members !== undefined ? dashboardStats.active_members : inClubList.length) / 30) * 100)}% Capacity reached
             </span>
           </div>
           <div className="absolute bottom-0 left-0 w-full h-8 opacity-20 pointer-events-none">
@@ -296,7 +407,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           <div className="flex justify-between items-start mb-4">
             <div>
               <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Today's Sessions</span>
-              <span className="text-3xl font-light tracking-wide">{allSessions.length} <span className="text-xs text-[var(--text-secondary)]">Scheduled</span></span>
+              <span className="text-3xl font-light tracking-wide">{dashboardStats?.today_sessions !== undefined ? dashboardStats.today_sessions : allSessions.length} <span className="text-xs text-[var(--text-secondary)]">Scheduled</span></span>
             </div>
             <div className="p-3 bg-[var(--card-hover)] rounded-xl group-hover:bg-[var(--text-primary)] group-hover:text-[var(--bg-primary)] transition-all duration-300">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -315,8 +426,6 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
             </svg>
           </div>
         </div>
-
-
       </div>
 
       {/* Main Two-Column Layout */}
@@ -341,7 +450,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
           <div className="space-y-6">
             {allSessions.map((session) => {
               const isProgress = session.status === 'in-progress';
-              const sessionChecklist = localChecklists[session.id] || session.checklist || [];
+              const sessionChecklist = session.checklist || [];
               const totalTasks = sessionChecklist.length;
               const completedTasks = sessionChecklist.filter(item => item.checked).length;
               const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
@@ -372,11 +481,38 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
                       </p>
                     </div>
                     
-                    <div className="text-right">
-                      <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block">Session Slot</span>
-                      <span className="text-xs font-semibold">
-                        {new Date(session.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(session.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                      </span>
+                    <div className="text-right flex flex-col items-end gap-2">
+                      <div>
+                        <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block">Session Slot</span>
+                        <span className="text-xs font-semibold">
+                          {new Date(session.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(session.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleToggleSessionStatus(session)}
+                        className={`px-3.5 py-1.5 rounded-xl text-[9px] uppercase tracking-luxury font-bold transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-1.5 border ${
+                          isProgress
+                            ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500 hover:text-white'
+                            : 'bg-[var(--text-primary)] text-[var(--bg-primary)] border-transparent hover:opacity-90'
+                        }`}
+                      >
+                        {isProgress ? (
+                          <>
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Pause Session
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Start Session
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
 
@@ -387,12 +523,12 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
                       <span className="text-[10px] font-semibold text-[var(--text-secondary)]">{completedTasks}/{totalTasks} Completed</span>
                     </div>
                     
-                    {totalTasks > 0 ? (
+                     {totalTasks > 0 ? (
                       /* Interactive Checkboxes */
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                        {sessionChecklist.map((item) => (
+                        {sessionChecklist.map((item, index) => (
                           <div 
-                            key={item.id} 
+                            key={`${item.id || index}-${index}`} 
                             className={`flex items-center justify-between px-4 py-2.5 rounded-xl border text-xs transition-all duration-300 group/item ${
                               item.checked 
                                 ? 'bg-[var(--card-hover)] border-emerald-500/20 text-[var(--text-primary)] opacity-70' 
@@ -678,6 +814,56 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
             </div>
           </div>
 
+          {/* Recent Activity Log Widget */}
+          <div className="glass-card p-6 border border-[var(--glass-border)] relative overflow-hidden">
+            <h3 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4 text-[var(--text-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Recent Activity Log
+              {loadingStats && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-primary)] animate-ping ml-auto"></span>
+              )}
+            </h3>
+            
+            {recentActivities.length === 0 ? (
+              <p className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] italic text-center py-4">
+                No recent activity recorded today.
+              </p>
+            ) : (
+              <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
+                {recentActivities.map((act, index) => {
+                  const isCheckIn = act.action?.toLowerCase() === 'check-in' || act.action?.toLowerCase() === 'check_in';
+                  return (
+                    <div key={`${act.check_in_id || 'act'}-${act.timestamp || index}-${index}`} className="flex items-start gap-3 text-xs border-b border-[var(--glass-border)] border-dashed pb-3 last:border-b-0 last:pb-0">
+                      <div className={`p-1.5 rounded-lg ${isCheckIn ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'} shrink-0`}>
+                        {isCheckIn ? (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l-4-4m4 4h-14m5-4v-1a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-grow">
+                        <div className="font-semibold text-[var(--text-primary)]">
+                          {act.member_name}
+                        </div>
+                        <div className="text-[10px] text-[var(--text-secondary)] opacity-85">
+                          {isCheckIn ? 'Checked in' : 'Checked out'}
+                        </div>
+                      </div>
+                      <div className="text-[9px] text-[var(--text-secondary)] whitespace-nowrap pt-0.5 font-mono">
+                        {act.timestamp ? new Date(act.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
         </div>
       </div>

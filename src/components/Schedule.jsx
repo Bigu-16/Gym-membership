@@ -38,6 +38,8 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { ACTIVITIES } from '../config/scheduleConfig';
+import { apiService } from '../services/api';
 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
@@ -46,24 +48,29 @@ const Schedule = ({
   scheduleTemplates = [], 
   members = [], 
   onAddTemplate, 
-  onDeleteTemplate 
+  onDeleteTemplate,
+  onUpdateTemplate,
+  onUpdateSessionStatus
 }) => {
   const [view, setView] = useState('week'); // 'day', 'week', 'month', 'templates'
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('All');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedSession, setSelectedSession] = useState(null);
-  const [localChecklists, setLocalChecklists] = useState(() => {
-    try {
-      const saved = localStorage.getItem('gym_session_checklists');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
+  const [localChecklists, setLocalChecklists] = useState({});
 
   useEffect(() => {
-    localStorage.setItem('gym_session_checklists', JSON.stringify(localChecklists));
-  }, [localChecklists]);
+    if (sessions && sessions.length > 0) {
+      setLocalChecklists(prev => {
+        const updated = { ...prev };
+        sessions.forEach(s => {
+          if (s.checklist) {
+            updated[s.id] = s.checklist;
+          }
+        });
+        return updated;
+      });
+    }
+  }, [sessions]);
 
   const handleToggleChecklist = (sessionId, itemId) => {
     setLocalChecklists(prev => {
@@ -71,6 +78,10 @@ const Schedule = ({
       const updatedList = currentList.map(item => 
         item.id === itemId ? { ...item, checked: !item.checked } : item
       );
+      
+      // Persist to backend
+      apiService.updateSession(sessionId, { checklist: updatedList }).catch(console.error);
+      
       return {
         ...prev,
         [sessionId]: updatedList
@@ -87,9 +98,14 @@ const Schedule = ({
         text: text.trim(),
         checked: false
       };
+      const updatedList = [...currentList, newItem];
+      
+      // Persist to backend
+      apiService.updateSession(sessionId, { checklist: updatedList }).catch(console.error);
+      
       return {
         ...prev,
-        [sessionId]: [...currentList, newItem]
+        [sessionId]: updatedList
       };
     });
   };
@@ -101,6 +117,10 @@ const Schedule = ({
     setLocalChecklists(prev => {
       const currentList = prev[sessionId] || (sessions.find(s => s.id === sessionId)?.checklist || []);
       const updatedList = currentList.filter(item => item.id !== itemId);
+      
+      // Persist to backend
+      apiService.updateSession(sessionId, { checklist: updatedList }).catch(console.error);
+      
       return {
         ...prev,
         [sessionId]: updatedList
@@ -112,16 +132,83 @@ const Schedule = ({
 
   // Create Template form state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedClassOption, setSelectedClassOption] = useState('Taekwondo');
+  const [selectedClassOption, setSelectedClassOption] = useState('Kids Taekwondo');
   const [selectedDays, setSelectedDays] = useState([]);
   const [startTime, setStartTime] = useState('16:00');
   const [endTime, setEndTime] = useState('17:00');
   const [capacity, setCapacity] = useState(15);
   const [deleteTemplateId, setDeleteTemplateId] = useState(null);
+  const [editingTemplate, setEditingTemplate] = useState(null);
+
+  const handleCloseModal = () => {
+    setIsCreateModalOpen(false);
+    setEditingTemplate(null);
+    setSelectedClassOption('Kids Taekwondo');
+    setSelectedDays([]);
+    setStartTime('16:00');
+    setEndTime('17:00');
+    setCapacity(15);
+  };
+
+  const handleEditClick = (template) => {
+    setEditingTemplate(template);
+    setSelectedClassOption(template.className || 'Kids Taekwondo');
+    
+    const dayMap = {
+      'Mon': 'Monday',
+      'Tue': 'Tuesday',
+      'Wed': 'Wednesday',
+      'Thu': 'Thursday',
+      'Fri': 'Friday',
+      'Sat': 'Saturday',
+      'Sun': 'Sunday'
+    };
+    if (template.days) {
+      const shortDays = template.days.split(', ').map(d => d.trim());
+      setSelectedDays(shortDays.map(sd => dayMap[sd]).filter(Boolean));
+    } else {
+      setSelectedDays([]);
+    }
+    
+    const parseTime12hTo24h = (t12) => {
+      const parts12 = t12.trim().split(' ');
+      const timeStrPart = parts12[0];
+      const modifier = parts12[1];
+      let [hours, minutes] = timeStrPart.split(':');
+      if (hours === '12') hours = '00';
+      if (modifier === 'PM') hours = String(parseInt(hours, 10) + 12);
+      return `${hours.padStart(2, '0')}:${minutes}`;
+    };
+    
+    try {
+      if (template.time && template.time.includes(' - ')) {
+        const [startStr, endStr] = template.time.split(' - ');
+        setStartTime(parseTime12hTo24h(startStr));
+        setEndTime(parseTime12hTo24h(endStr));
+      } else {
+        setStartTime('16:00');
+        setEndTime('17:00');
+      }
+    } catch (e) {
+      setStartTime('16:00');
+      setEndTime('17:00');
+    }
+    
+    setCapacity(template.capacity || 15);
+    setIsCreateModalOpen(true);
+  };
 
   // Derive unique existing class names for selector dropdown
   const existingClassNames = Array.from(new Set(scheduleTemplates.map(t => t.className).filter(Boolean)));
-  const defaultClassNames = ['Taekwondo', 'Muay Thai', 'Kickboxing', 'Fitness' ];
+  const defaultClassNames = [
+    'Kids Taekwondo',
+    'Little Kids Karate',
+    'Kids Karate',
+    'Adult Karate',
+    'Adult Kickboxing',
+    'Kung Fu',
+    'Zumba Fitness'
+  ];
   const uniqueClassNames = Array.from(new Set([...defaultClassNames, ...existingClassNames]));
 
   // Update time left for in-progress session
@@ -599,14 +686,26 @@ const Schedule = ({
                         <span className="text-[9px] uppercase tracking-luxury px-3 py-1 rounded-full bg-[var(--glass-border)] font-bold text-[var(--text-secondary)]">
                           Slot #{template.id}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTemplateId(template.id)}
-                          className="p-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 duration-300"
-                          title="Delete Template"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <button
+                            type="button"
+                            onClick={() => handleEditClick(template)}
+                            className="p-2 rounded-xl bg-[var(--text-primary)]/10 text-[var(--text-primary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)] transition-all"
+                            title="Edit Template"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTemplateId(template.id)}
+                            className="p-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
+                            title="Delete Template"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Main Time & Days */}
@@ -732,12 +831,7 @@ const Schedule = ({
           <div className="w-full max-w-md h-full glass-card p-8 shadow-2xl relative flex flex-col animate-in slide-in-from-right duration-500 border-[var(--glass-border)] bg-[var(--bg-secondary)]">
             <button 
               type="button"
-              onClick={() => {
-                setIsCreateModalOpen(false);
-                setSelectedDays([]);
-                setTime('16:00');
-                setCapacity(15);
-              }}
+              onClick={handleCloseModal}
               className="absolute top-6 right-6 p-2 rounded-full hover:bg-[var(--glass-border)] transition-all text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
               <X size={18} />
@@ -747,8 +841,12 @@ const Schedule = ({
               <span className="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury font-bold mb-4 inline-block bg-[var(--text-primary)]/10 text-[var(--text-primary)]">
                 Configuration Panel
               </span>
-              <h2 className="text-3xl font-light tracking-luxury uppercase mb-2">New Template</h2>
-              <p className="text-[var(--text-secondary)] text-xs">Define a recurring training session for group classes.</p>
+              <h2 className="text-3xl font-light tracking-luxury uppercase mb-2">
+                {editingTemplate ? 'Edit Template' : 'New Template'}
+              </h2>
+              <p className="text-[var(--text-secondary)] text-xs">
+                {editingTemplate ? 'Modify this recurring training session template.' : 'Define a recurring training session for group classes.'}
+              </p>
             </div>
 
             <form 
@@ -783,20 +881,23 @@ const Schedule = ({
                   return `${h12}:${mStr} ${ampm}`;
                 };
 
-                onAddTemplate({
+                const templateData = {
                   className: selectedClassOption.trim() || 'General Class',
                   days: formattedDaysStr,
                   time: `${formatTime12h(startTime)} - ${formatTime12h(endTime)}`,
                   capacity: parseInt(capacity, 10)
-                });
+                };
 
-                // Reset and close
-                setIsCreateModalOpen(false);
-                setSelectedClassOption('Taekwondo');
-                setSelectedDays([]);
-                setStartTime('16:00');
-                setEndTime('17:00');
-                setCapacity(15);
+                if (editingTemplate) {
+                  onUpdateTemplate({
+                    ...editingTemplate,
+                    ...templateData
+                  });
+                } else {
+                  onAddTemplate(templateData);
+                }
+
+                handleCloseModal();
               }}
               className="space-y-6 flex-grow flex flex-col justify-between"
             >
@@ -906,17 +1007,11 @@ const Schedule = ({
                   type="submit"
                   className="flex-grow py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:opacity-90 transition-all"
                 >
-                  Create Template
+                  {editingTemplate ? 'Save Changes' : 'Create Template'}
                 </button>
                 <button 
                   type="button"
-                  onClick={() => {
-                    setIsCreateModalOpen(false);
-                    setSelectedDays([]);
-                    setStartTime('16:00');
-                    setEndTime('17:00');
-                    setCapacity(15);
-                  }}
+                  onClick={handleCloseModal}
                   className="px-8 py-4 rounded-2xl glass-card text-[10px] uppercase tracking-luxury font-bold border-[var(--glass-border)] hover:bg-[var(--card-hover)]"
                 >
                   Cancel
@@ -1041,7 +1136,16 @@ const Schedule = ({
             </div>
 
             <div className="mt-8 flex gap-4">
-              <button className="flex-grow py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:opacity-90 transition-all">
+              <button 
+                onClick={() => {
+                  const newStatus = selectedSession.status === 'in-progress' ? 'upcoming' : 'in-progress';
+                  if (onUpdateSessionStatus) {
+                    onUpdateSessionStatus(selectedSession.id, newStatus);
+                  }
+                  setSelectedSession(prev => ({ ...prev, status: newStatus }));
+                }}
+                className="flex-grow py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:opacity-90 transition-all"
+              >
                 {selectedSession.status === 'in-progress' ? 'Pause Session' : 'Start Session'}
               </button>
               <button 
