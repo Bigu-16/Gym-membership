@@ -192,6 +192,17 @@ const App = () => {
     setScheduleTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t));
   };
 
+  const handleUpdateSessionStatus = async (sessionId, newStatus) => {
+    try {
+      await apiService.updateSessionStatus(sessionId, newStatus);
+      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: newStatus } : s));
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update session status: ' + err.message);
+    }
+  };
+
   const handleUpdateMember = async (updatedMember) => {
     try {
       if (updatedMember.isGroup) {
@@ -475,6 +486,7 @@ const App = () => {
                   onAddTemplate={handleAddTemplate}
                   onDeleteTemplate={handleDeleteTemplate}
                   onUpdateTemplate={handleUpdateTemplate}
+                  onUpdateSessionStatus={handleUpdateSessionStatus}
                 />
               ) : activeTab === 'dashboard' ? (
                 <DashboardOverview 
@@ -485,6 +497,7 @@ const App = () => {
                   onTabChange={(tab) => { setActiveTab(tab); setSelectedMember(null); }}
                   inClubList={inClubList}
                   setInClubList={setInClubList}
+                  onUpdateSessionStatus={handleUpdateSessionStatus}
                 />
               ) : activeTab === 'analytics' ? (
                 <Analytics members={members} scheduleTemplates={scheduleTemplates} />

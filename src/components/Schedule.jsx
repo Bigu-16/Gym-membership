@@ -49,7 +49,8 @@ const Schedule = ({
   members = [], 
   onAddTemplate, 
   onDeleteTemplate,
-  onUpdateTemplate
+  onUpdateTemplate,
+  onUpdateSessionStatus
 }) => {
   const [view, setView] = useState('week'); // 'day', 'week', 'month', 'templates'
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('All');
@@ -1135,7 +1136,16 @@ const Schedule = ({
             </div>
 
             <div className="mt-8 flex gap-4">
-              <button className="flex-grow py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:opacity-90 transition-all">
+              <button 
+                onClick={() => {
+                  const newStatus = selectedSession.status === 'in-progress' ? 'upcoming' : 'in-progress';
+                  if (onUpdateSessionStatus) {
+                    onUpdateSessionStatus(selectedSession.id, newStatus);
+                  }
+                  setSelectedSession(prev => ({ ...prev, status: newStatus }));
+                }}
+                className="flex-grow py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:opacity-90 transition-all"
+              >
                 {selectedSession.status === 'in-progress' ? 'Pause Session' : 'Start Session'}
               </button>
               <button 

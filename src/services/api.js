@@ -90,8 +90,8 @@ const mapSessionToFrontend = (s, templates = []) => {
   const title = template ? (template.className || template.title || 'Group Class') : 'Personal Training';
   const timeStr = (template && template.time) || '10:00 AM - 11:30 AM';
   
-  let startTimeStr = '10:00';
-  let endTimeStr = '11:30';
+  let startTimeStr;
+  let endTimeStr;
   
   if (timeStr.includes(' - ')) {
     const parts = timeStr.split(' - ');
@@ -106,7 +106,7 @@ const mapSessionToFrontend = (s, templates = []) => {
   }
   
   const parseTime = (tStr) => {
-    let hours = 10, minutes = 0;
+    let hours, minutes;
     if (tStr.includes(' ')) {
       const [timePart, ampm] = tStr.split(' ');
       const [h, m] = timePart.split(':').map(Number);
@@ -125,10 +125,16 @@ const mapSessionToFrontend = (s, templates = []) => {
   const startObj = parseTime(startTimeStr);
   const endObj = parseTime(endTimeStr);
 
-  const startDate = new Date(s.date);
+  const parseLocalDate = (dateStr) => {
+    if (!dateStr) return new Date();
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const startDate = parseLocalDate(s.date);
   startDate.setHours(startObj.hours, startObj.minutes, 0, 0);
 
-  const endDate = new Date(s.date);
+  const endDate = parseLocalDate(s.date);
   endDate.setHours(endObj.hours, endObj.minutes, 0, 0);
 
   const checklist = s.checklist_data?.items || [];
@@ -464,6 +470,18 @@ export const apiService = {
       body: JSON.stringify(payload),
     });
     if (!response.ok) throw new Error('Failed to update session');
+    return response.json();
+  },
+
+  async updateSessionStatus(sessionId, status) {
+    const response = await fetch(`${API_BASE_URL}/schedule/sessions/${sessionId}/status`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        status: status === 'in-progress' ? 'in_progress' : status
+      }),
+    });
+    if (!response.ok) throw new Error('Failed to update session status');
     return response.json();
   },
 
