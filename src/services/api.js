@@ -1,4 +1,4 @@
-export const API_BASE_URL = "https://gym-membership-f3ua.onrender.com/api/v1";
+export const API_BASE_URL = localStorage.getItem('gym_api_base_url') || import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 // Helpers to get/set tokens
 const getAuthHeaders = () => {
