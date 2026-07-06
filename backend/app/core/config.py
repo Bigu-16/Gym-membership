@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     postgres_host: str = "db"
     postgres_port: int = 5432
     database_url_override: str | None = Field(default=None, validation_alias="DATABASE_URL")
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://preeminent-licorice-9a24fd.netlify.app"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://preeminent-licorice-9a24fd.netlify.app,https://gym-membership-beta.vercel.app"
 
     model_config = SettingsConfigDict(
         env_file=".env",
