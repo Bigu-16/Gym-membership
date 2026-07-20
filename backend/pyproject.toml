@@ -19,4 +19,17 @@ dependencies = [
     "python-multipart>=0.0.20",
     "redis>=6.2.0",
     "uvicorn>=0.38.0",
+    "httpx>=0.28.1",
+    "aiosmtplib>=5.1.2",
 ]
+
+[dependency-groups]
+dev = [
+    "aiosqlite>=0.22.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

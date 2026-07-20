@@ -20,6 +20,10 @@ celery_app.conf.update(
             "task": "app.tasks.send_membership_expiry_reminders",
             "schedule": 60 * 60 * 24,
         },
+        "process-notification-jobs-every-minute": {
+            "task": "app.tasks.process_pending_notification_jobs",
+            "schedule": 60,
+        },
     },
 )
 

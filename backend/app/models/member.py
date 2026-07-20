@@ -14,6 +14,8 @@ class Member(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     phone: Mapped[str] = mapped_column(String(30), nullable=False, unique=True, index=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     parent_phone: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)
     family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True, index=True)
     gender: Mapped[Gender | None] = mapped_column(Enum(Gender, name="gender_enum"), nullable=True)

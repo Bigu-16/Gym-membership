@@ -20,7 +20,7 @@ from app.schemas.member import (
     MemberResponse,
     MemberUpdate,
 )
-from app.tasks.notifications import queue_welcome_message
+from app.tasks.notifications import queue_enrollment_confirmation
 
 router = APIRouter(prefix="/members", tags=["members"])
 logger = logging.getLogger(__name__)
@@ -89,9 +89,9 @@ async def create_member(
     await db.refresh(member)
     if member.messaging_opt_in:
         try:
-            queue_welcome_message.delay(member.id, member.name, member.phone)
+            queue_enrollment_confirmation.delay(member.id)
         except Exception:
-            logger.exception("Failed to queue welcome notification for member_id=%s", member.id)
+            logger.exception("Failed to queue enrollment notification for member_id=%s", member.id)
     return MemberResponse.model_validate(member)
 
 
@@ -138,9 +138,9 @@ async def create_family(
         await db.refresh(member)
         if member.messaging_opt_in:
             try:
-                queue_welcome_message.delay(member.id, member.name, member.phone)
+                queue_enrollment_confirmation.delay(member.id)
             except Exception:
-                logger.exception("Failed to queue welcome notification for member_id=%s", member.id)
+                logger.exception("Failed to queue enrollment notification for member_id=%s", member.id)
     return family_response(family, members)
 
 

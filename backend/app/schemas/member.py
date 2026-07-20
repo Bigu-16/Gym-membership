@@ -8,6 +8,8 @@ from app.models.enums import Gender
 class MemberBase(BaseModel):
     name: str
     phone: str
+    email: str | None = None
+    telegram_chat_id: str | None = None
     parent_phone: str | None = None
     family_id: int | None = None
     gender: Gender | None = None
@@ -25,6 +27,8 @@ class MemberCreate(MemberBase):
 class MemberUpdate(BaseModel):
     name: str | None = None
     phone: str | None = None
+    email: str | None = None
+    telegram_chat_id: str | None = None
     parent_phone: str | None = None
     family_id: int | None = None
     gender: Gender | None = None
