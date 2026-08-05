@@ -130,28 +130,7 @@ const Notifications = ({ jobs = [], members = [], onTriggerTask }) => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button
-            onClick={() => handleRunTask('seed', () => apiService.triggerSeedDemoData())}
-            disabled={runningTask !== null}
-            className="glass-card hover:bg-[var(--card-hover)] active:scale-95 transition-all py-4 px-6 text-left flex flex-col justify-between h-28 group relative overflow-hidden disabled:opacity-50 disabled:pointer-events-none"
-          >
-            <div>
-              <span className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Database Seeder</span>
-              <span className="text-xs font-semibold block text-[var(--text-primary)]">Populate Sandbox Logs</span>
-            </div>
-            <div className="flex justify-between items-center w-full mt-auto">
-              <span className="text-[10px] text-emerald-500 font-medium">Seed Demo Data</span>
-              {runningTask === 'seed' ? (
-                <span className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></span>
-              ) : (
-                <svg className="w-4 h-4 text-[var(--text-secondary)] group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              )}
-            </div>
-          </button>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <button
             onClick={() => handleRunTask('expiry', () => apiService.triggerMembershipExpiryReminders())}
             disabled={runningTask !== null}

@@ -122,20 +122,6 @@ describe('Notifications Component', () => {
     expect(screen.queryByText('Notification Audit Inspector')).not.toBeInTheDocument();
   });
 
-  it('triggers database seeder task', async () => {
-    apiService.triggerSeedDemoData.mockResolvedValueOnce({ status: 'seeded' });
-    render(<Notifications jobs={mockJobs} members={mockMembers} onTriggerTask={mockOnTriggerTask} />);
-
-    const seedBtn = screen.getByText('Seed Demo Data');
-    fireEvent.click(seedBtn);
-
-    expect(apiService.triggerSeedDemoData).toHaveBeenCalled();
-    await waitFor(() => {
-      expect(screen.getByText('Demo data seeded successfully!')).toBeInTheDocument();
-    });
-    expect(mockOnTriggerTask).toHaveBeenCalled();
-  });
-
   it('triggers process notification jobs task', async () => {
     apiService.triggerProcessNotificationJobs.mockResolvedValueOnce({ task_id: 'task-abc-123' });
     render(<Notifications jobs={mockJobs} members={mockMembers} onTriggerTask={mockOnTriggerTask} />);
