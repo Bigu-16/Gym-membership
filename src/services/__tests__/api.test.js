@@ -318,4 +318,128 @@ describe('apiService', () => {
       );
     });
   });
+
+  describe('Plans API', () => {
+    const mockPlan = {
+      id: 1,
+      name: 'Elite Performance',
+      program: 'General',
+      duration_label: 'One Month',
+      duration_months: 1,
+      classes_per_week: 3,
+      price: '149.00',
+      currency: 'AED',
+      included_items: ['Unlimited Gym', 'Sauna Access'],
+      description: 'Full access plan',
+      duration_days: 30,
+      sort_order: 1,
+      is_active: true,
+      created_at: '2026-07-20T11:00:00.000Z',
+      updated_at: '2026-07-20T11:00:00.000Z'
+    };
+
+    it('getPlans fetches plans list with query parameters', async () => {
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockPlan],
+      });
+
+      const plans = await apiService.getPlans({ program: 'General', is_active: true });
+      expect(plans).toHaveLength(1);
+      expect(plans[0]).toEqual(mockPlan);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/plans/?program=General&is_active=true`,
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'Content-Type': 'application/json' })
+        })
+      );
+    });
+
+    it('createPlan posts new plan payload', async () => {
+      const planPayload = {
+        name: 'Starter Access',
+        program: 'General',
+        duration_label: 'One Month',
+        duration_months: 1,
+        classes_per_week: 1,
+        price: 49,
+        currency: 'AED',
+        included_items: ['Gym Access'],
+        description: 'Basic plan',
+        duration_days: 30,
+        sort_order: 0,
+        is_active: true
+      };
+
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...planPayload, price: '49.00', id: 2 }),
+      });
+
+      const result = await apiService.createPlan(planPayload);
+      expect(result.id).toBe(2);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/plans/`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify(planPayload)
+        })
+      );
+    });
+
+    it('getPlan fetches a single plan by ID', async () => {
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockPlan,
+      });
+
+      const plan = await apiService.getPlan(1);
+      expect(plan).toEqual(mockPlan);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/plans/1`,
+        expect.anything()
+      );
+    });
+
+    it('updatePlan sends PUT request with updated plan data', async () => {
+      const updateData = { name: 'Elite Performance Pro', price: 179 };
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...mockPlan, ...updateData, price: '179.00' }),
+      });
+
+      const updated = await apiService.updatePlan(1, updateData);
+      expect(updated.name).toBe('Elite Performance Pro');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/plans/1`,
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify(updateData)
+        })
+      );
+    });
+
+    it('deletePlan sends DELETE request', async () => {
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      });
+
+      const res = await apiService.deletePlan(1);
+      expect(res).toBe(true);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/plans/1`,
+        expect.objectContaining({ method: 'DELETE' })
+      );
+    });
+
+    it('throws custom error on request failure', async () => {
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ detail: 'Plan not found' }),
+      });
+
+      await expect(apiService.getPlan(999)).rejects.toThrow('Plan not found');
+    });
+  });
 });

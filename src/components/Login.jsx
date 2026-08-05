@@ -51,6 +51,9 @@ const Login = ({ onLoginSuccess }) => {
 
       <div className="w-full max-w-md glass-card p-8 sm:p-10 border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-md relative z-10 animate-in fade-in zoom-in-95 duration-500">
         <div className="text-center mb-8">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl overflow-hidden flex items-center justify-center bg-[#0d0f14] border border-white/15 shadow-xl">
+            <img src="/logo.png" alt="Azyab Logo" className="w-full h-full object-cover" />
+          </div>
           <h1 className="text-3xl font-light uppercase tracking-luxury text-white mb-2">
             Azyab <span className="font-bold">Wellness</span>
           </h1>

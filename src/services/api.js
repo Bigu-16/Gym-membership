@@ -505,5 +505,72 @@ export const apiService = {
     });
     if (!response.ok) throw new Error('Failed to enroll member in class');
     return response.json();
+  },
+
+  // Plans API
+  async getPlans(params = {}) {
+    const url = new URL(`${API_BASE_URL}/plans/`);
+    Object.keys(params).forEach(key => {
+      if (params[key] !== undefined && params[key] !== null) {
+        url.searchParams.append(key, params[key]);
+      }
+    });
+    const response = await fetch(url.toString(), {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to load plans');
+    }
+    return response.json();
+  },
+
+  async createPlan(planData) {
+    const response = await fetch(`${API_BASE_URL}/plans/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(planData),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to create plan');
+    }
+    return response.json();
+  },
+
+  async getPlan(planId) {
+    const response = await fetch(`${API_BASE_URL}/plans/${planId}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to load plan');
+    }
+    return response.json();
+  },
+
+  async updatePlan(planId, planData) {
+    const response = await fetch(`${API_BASE_URL}/plans/${planId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(planData),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to update plan');
+    }
+    return response.json();
+  },
+
+  async deletePlan(planId) {
+    const response = await fetch(`${API_BASE_URL}/plans/${planId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to delete plan');
+    }
+    return true;
   }
 };

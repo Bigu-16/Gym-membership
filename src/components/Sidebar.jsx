@@ -71,10 +71,8 @@ const Sidebar = ({ activeTab = 'members', onTabChange }) => {
       <aside className="w-64 h-[calc(100vh-4rem)] sticky top-8 hidden lg:flex flex-col gap-8">
         <div className="px-4">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center bg-[#0d0f14] border border-white/15">
+              <img src="/logo.png" alt="Azyab Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h2 className="text-sm font-bold uppercase tracking-widest leading-none">Azyab</h2>
