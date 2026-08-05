@@ -7,7 +7,9 @@ import Schedule from './components/Schedule';
 import DashboardOverview from './components/DashboardOverview';
 import Analytics from './components/Analytics';
 import Login from './components/Login';
+import Notifications from './components/Notifications';
 import { apiService } from './services/api';
+
 
 const App = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
@@ -24,6 +26,7 @@ const App = () => {
   const [scheduleTemplates, setScheduleTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notificationJobs, setNotificationJobs] = useState([]);
 
   // Fetch all data from backend
   const loadData = async () => {
@@ -85,6 +88,10 @@ const App = () => {
       // 5. Fetch sessions
       const sessionsData = await apiService.getSessions(templatesData);
       setSessions(sessionsData);
+
+      // 6. Fetch notification jobs
+      const jobsData = await apiService.getNotificationJobs();
+      setNotificationJobs(jobsData);
     } catch (err) {
       console.error(err);
       if (err.message === 'Unauthenticated' || err.message.includes('401')) {
@@ -129,6 +136,7 @@ const App = () => {
     setSessions([]);
     setInClubList([]);
     setScheduleTemplates([]);
+    setNotificationJobs([]);
   };
 
   const handleEnroll = async (newMembers, newSessions) => {
@@ -501,6 +509,15 @@ const App = () => {
                 />
               ) : activeTab === 'analytics' ? (
                 <Analytics members={members} scheduleTemplates={scheduleTemplates} />
+              ) : activeTab === 'notifications' ? (
+                <Notifications 
+                  jobs={notificationJobs} 
+                  members={members} 
+                  onTriggerTask={async () => {
+                    const jobsData = await apiService.getNotificationJobs();
+                    setNotificationJobs(jobsData);
+                  }}
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center min-h-[50vh] glass-card p-12 text-center">
                   <div className="w-16 h-16 mb-6 rounded-full bg-[var(--glass-border)] flex items-center justify-center animate-pulse-soft">

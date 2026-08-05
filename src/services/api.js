@@ -572,5 +572,52 @@ export const apiService = {
       throw new Error(data.detail || 'Failed to delete plan');
     }
     return true;
+  },
+
+  async getNotificationJobs() {
+    const response = await fetch(`${API_BASE_URL}/notifications/jobs`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to load notification jobs');
+    }
+    return response.json();
+  },
+
+  async triggerMembershipExpiryReminders() {
+    const response = await fetch(`${API_BASE_URL}/tasks/membership-expiry-reminders`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to trigger expiry reminders');
+    }
+    return response.json();
+  },
+
+  async triggerProcessNotificationJobs() {
+    const response = await fetch(`${API_BASE_URL}/tasks/process-notification-jobs`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to trigger processing notification jobs');
+    }
+    return response.json();
+  },
+
+  async triggerSeedDemoData() {
+    const response = await fetch(`${API_BASE_URL}/tasks/seed-demo-data`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to seed demo data');
+    }
+    return response.json();
   }
 };

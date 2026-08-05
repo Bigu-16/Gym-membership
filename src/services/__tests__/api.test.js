@@ -442,4 +442,75 @@ describe('apiService', () => {
       await expect(apiService.getPlan(999)).rejects.toThrow('Plan not found');
     });
   });
+
+  describe('Notifications & Tasks API', () => {
+    it('getNotificationJobs fetches jobs successfully', async () => {
+      const mockJobs = [
+        {
+          id: 1,
+          member_id: 10,
+          notification_type: 'welcome',
+          status: 'pending',
+          scheduled_for: '2026-08-05T15:28:49.980Z',
+          processed_at: null,
+          payload: { name: 'John Doe' },
+          provider: 'internal',
+          error_message: null
+        }
+      ];
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockJobs,
+      });
+
+      const result = await apiService.getNotificationJobs();
+      expect(result).toEqual(mockJobs);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/notifications/jobs`,
+        expect.objectContaining({ headers: expect.any(Object) })
+      );
+    });
+
+    it('triggerMembershipExpiryReminders triggers task successfully', async () => {
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ task_id: 'task-123', status: 'queued' }),
+      });
+
+      const result = await apiService.triggerMembershipExpiryReminders();
+      expect(result).toEqual({ task_id: 'task-123', status: 'queued' });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/tasks/membership-expiry-reminders`,
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    it('triggerProcessNotificationJobs triggers task successfully', async () => {
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ task_id: 'task-456', status: 'queued' }),
+      });
+
+      const result = await apiService.triggerProcessNotificationJobs();
+      expect(result).toEqual({ task_id: 'task-456', status: 'queued' });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/tasks/process-notification-jobs`,
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    it('triggerSeedDemoData triggers task successfully', async () => {
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'seeded' }),
+      });
+
+      const result = await apiService.triggerSeedDemoData();
+      expect(result).toEqual({ status: 'seeded' });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/tasks/seed-demo-data`,
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+  });
 });

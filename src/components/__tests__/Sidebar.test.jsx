@@ -26,6 +26,9 @@ describe('Sidebar Component', () => {
     const enrollmentBtns = screen.getAllByRole('button', { name: /Enrollment/i });
     expect(enrollmentBtns.length).toBeGreaterThanOrEqual(2);
 
+    const notificationsBtns = screen.getAllByRole('button', { name: /Notifications/i });
+    expect(notificationsBtns.length).toBeGreaterThanOrEqual(2);
+
     // Also check current shift text displays
     expect(screen.getByText(/Current Shift/i)).toBeInTheDocument();
     expect(screen.getByText(/Morning Session/i)).toBeInTheDocument();
