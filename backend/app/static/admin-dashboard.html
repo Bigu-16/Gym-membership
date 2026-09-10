@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gym Backend Console</title>
+    <link rel="stylesheet" href="/static/admin-dashboard.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="rail">
+        <div class="brand">
+          <div class="brand-mark">GM</div>
+          <div>
+            <strong>Backend Console</strong>
+            <span>API operator dashboard</span>
+          </div>
+        </div>
+        <nav>
+          <button class="nav-item active" data-section="overview">Overview</button>
+          <button class="nav-item" data-section="members">Members</button>
+          <button class="nav-item" data-section="plans">Plans</button>
+          <button class="nav-item" data-section="schedule">Schedule</button>
+          <button class="nav-item" data-section="checkins">Check-ins</button>
+          <button class="nav-item" data-section="users">Users</button>
+          <button class="nav-item" data-section="notifications">Notifications</button>
+          <button class="nav-item" data-section="tester">API Tester</button>
+        </nav>
+        <div class="rail-footer">
+          <span id="serviceStatus" class="status-dot muted"></span>
+          <span id="serviceStatusText">Checking API</span>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">localhost backend</p>
+            <h1>Gym Management Control Room</h1>
+          </div>
+          <div class="auth-card">
+            <input id="emailInput" type="email" value="admin@example.com" autocomplete="username" />
+            <input id="passwordInput" type="password" value="ChangeMe123!" autocomplete="current-password" />
+            <button id="loginBtn">Login</button>
+            <button id="refreshBtn" class="secondary">Refresh</button>
+          </div>
+        </header>
+
+        <div id="toast" class="toast" hidden></div>
+
+        <section id="overview" class="section active">
+          <div class="metric-grid">
+            <article class="metric">
+              <span>Total members</span>
+              <strong id="totalMembers">-</strong>
+            </article>
+            <article class="metric">
+              <span>In club now</span>
+              <strong id="activeMembers">-</strong>
+            </article>
+            <article class="metric">
+              <span>Today sessions</span>
+              <strong id="todaySessions">-</strong>
+            </article>
+            <article class="metric">
+              <span>Today activity</span>
+              <strong id="recentActivities">-</strong>
+            </article>
+          </div>
+
+          <div class="split">
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Active Members</h2>
+                <button data-action="refresh-active" class="secondary small">Reload</button>
+              </div>
+              <div id="activeMembersList" class="list"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Recent Activity</h2>
+                <button data-action="refresh-activity" class="secondary small">Reload</button>
+              </div>
+              <div id="recentActivityList" class="list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="members" class="section">
+          <div class="two-col">
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Member Directory</h2>
+                <input id="memberSearch" placeholder="Search name or phone" />
+              </div>
+              <div id="memberList" class="table-list"></div>
+              <hr />
+              <div class="panel-head">
+                <h2>Families</h2>
+                <button data-action="load-families" class="secondary small">Reload</button>
+              </div>
+              <div id="familyList" class="table-list"></div>
+            </article>
+            <article class="panel">
+              <h2>Create Member</h2>
+              <form id="memberForm" class="form-grid">
+                <input name="name" placeholder="Full name" required />
+                <input name="phone" placeholder="+15550001234" required />
+                <input name="age" type="number" min="0" max="130" placeholder="Age" required />
+                <select name="gender">
+                  <option value="">Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+                <select name="plan_id" id="memberPlanSelect"></select>
+                <input name="expiry_date" type="date" />
+                <label class="check"><input name="messaging_opt_in" type="checkbox" checked /> Messaging opt-in</label>
+                <button>Create member</button>
+              </form>
+              <hr />
+              <h2>Family Tools</h2>
+              <form id="familyForm" class="form-grid">
+                <input name="parent_name" placeholder="Parent/guardian name" required />
+                <input name="parent_phone" placeholder="Parent/guardian phone" required />
+                <input name="parent_email" type="email" placeholder="Parent/guardian email" />
+                <input name="parent_address" placeholder="Address" />
+                <input name="parent_relationship" placeholder="Relationship" value="parent" required />
+                <input name="notes" placeholder="Family notes" />
+                <input name="child_a" placeholder="Child A name" required />
+                <input name="child_a_phone" placeholder="Child A phone" required />
+                <input name="child_a_age" type="number" min="0" max="130" placeholder="Child A age" required />
+                <input name="child_b" placeholder="Child B name" required />
+                <input name="child_b_phone" placeholder="Child B phone" required />
+                <input name="child_b_age" type="number" min="0" max="130" placeholder="Child B age" required />
+                <button>Create family</button>
+              </form>
+            </article>
+          </div>
+        </section>
+
+        <section id="plans" class="section">
+          <div class="two-col">
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Plan Catalog</h2>
+                <button data-action="load-plans" class="secondary small">Reload</button>
+              </div>
+              <div id="planList" class="table-list"></div>
+            </article>
+            <article class="panel">
+              <h2>Create Plan</h2>
+              <form id="planForm" class="form-grid">
+                <input name="name" placeholder="Plan name" required />
+                <input name="program" placeholder="Program e.g. Taekwondo" required />
+                <input name="duration_label" placeholder="Duration label" value="One Month" required />
+                <input name="duration_months" type="number" min="1" value="1" required />
+                <input name="duration_days" type="number" min="1" value="30" required />
+                <input name="classes_per_week" type="number" min="1" max="14" placeholder="Classes per week" />
+                <input name="price" type="number" min="0" step="0.01" placeholder="Price" required />
+                <input name="currency" maxlength="3" value="AED" required />
+                <input name="included_items" placeholder="Included items, comma separated" />
+                <input name="description" placeholder="Description" />
+                <input name="sort_order" type="number" value="0" />
+                <label class="check"><input name="is_active" type="checkbox" checked /> Active</label>
+                <button>Create plan</button>
+              </form>
+            </article>
+          </div>
+        </section>
+
+        <section id="schedule" class="section">
+          <div class="two-col">
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Templates</h2>
+                <button data-action="load-schedule" class="secondary small">Reload</button>
+              </div>
+              <div id="templateList" class="table-list"></div>
+            </article>
+            <article class="panel">
+              <h2>Create Template</h2>
+              <form id="templateForm" class="form-grid">
+                <input name="title" placeholder="Class title" required />
+                <select name="type">
+                  <option value="group">Group</option>
+                  <option value="personal">Personal</option>
+                </select>
+                <input name="days" placeholder="Monday,Wednesday,Friday" required />
+                <input name="time" placeholder="18:00" required />
+                <input name="capacity" type="number" min="1" value="10" required />
+                <button>Create template</button>
+              </form>
+              <hr />
+              <h2>Create Session</h2>
+              <form id="sessionForm" class="form-grid">
+                <select name="template_id" id="sessionTemplateSelect"></select>
+                <input name="date" type="date" required />
+                <input name="trainer_name" placeholder="Trainer name" required />
+                <select name="status">
+                  <option value="upcoming">Upcoming</option>
+                  <option value="in_progress">In progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+                <button>Create session</button>
+              </form>
+            </article>
+          </div>
+          <article class="panel">
+            <h2>Sessions</h2>
+            <div id="sessionList" class="table-list"></div>
+          </article>
+        </section>
+
+        <section id="checkins" class="section">
+          <div class="two-col">
+            <article class="panel">
+              <h2>Check Member In</h2>
+              <form id="checkInForm" class="form-grid">
+                <select id="checkInMemberSelect" name="member_id"></select>
+                <button>Check in</button>
+              </form>
+              <div id="checkInList" class="table-list spaced"></div>
+            </article>
+            <article class="panel">
+              <h2>Enroll Member</h2>
+              <form id="enrollmentForm" class="form-grid">
+                <select id="enrollMemberSelect" name="member_id"></select>
+                <select id="enrollTemplateSelect" name="template_id"></select>
+                <button>Enroll in template</button>
+              </form>
+              <div id="enrollmentList" class="table-list spaced"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="users" class="section">
+          <div class="two-col">
+            <article class="panel">
+              <h2>Users</h2>
+              <div id="userList" class="table-list"></div>
+            </article>
+            <article class="panel">
+              <h2>Create Staff/Admin</h2>
+              <form id="userForm" class="form-grid">
+                <input name="full_name" placeholder="Full name" required />
+                <input name="email" type="email" placeholder="email@example.com" required />
+                <input name="password" type="password" value="ChangeMe123!" required />
+                <select name="role">
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <label class="check"><input name="is_active" type="checkbox" checked /> Active</label>
+                <button>Create user</button>
+              </form>
+            </article>
+          </div>
+        </section>
+
+        <section id="notifications" class="section">
+          <div class="split">
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Notification Jobs</h2>
+                <button data-action="load-notifications" class="secondary small">Reload</button>
+              </div>
+              <div id="notificationList" class="table-list"></div>
+            </article>
+            <article class="panel">
+              <h2>Task Controls</h2>
+              <div class="button-stack">
+                <button data-action="seed-demo">Seed demo data</button>
+                <button data-action="expiry-reminders">Queue expiry reminders</button>
+                <button data-action="process-notifications" class="secondary">Process pending jobs</button>
+              </div>
+              <pre id="taskOutput" class="codebox"></pre>
+            </article>
+          </div>
+        </section>
+
+        <section id="tester" class="section">
+          <article class="panel">
+            <div class="panel-head">
+              <h2>Raw API Tester</h2>
+              <button id="sendRequestBtn">Send</button>
+            </div>
+            <div class="request-row">
+              <select id="methodSelect">
+                <option>GET</option>
+                <option>POST</option>
+                <option>PUT</option>
+                <option>PATCH</option>
+                <option>DELETE</option>
+              </select>
+              <input id="pathInput" value="/api/v1/dashboard/stats" />
+            </div>
+            <textarea id="bodyInput" spellcheck="false" placeholder='{"name":"Example"}'></textarea>
+            <pre id="responseOutput" class="codebox large"></pre>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script src="/static/admin-dashboard.js"></script>
+  </body>
+</html>
