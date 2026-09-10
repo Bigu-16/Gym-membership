@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     postgres_host: str = "db"
     postgres_port: int = 5432
     database_url_override: str | None = Field(default=None, validation_alias="DATABASE_URL")
+    frontend_origin: str = "https://gym-membership-beta.vercel.app"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://gym-membership-beta.vercel.app"
 
     # --- Messaging / notifications ---
@@ -70,7 +71,13 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        configured = [self.frontend_origin, *self.cors_origins.split(",")]
+        normalized: list[str] = []
+        for origin in configured:
+            value = origin.strip().rstrip("/")
+            if value and value not in normalized:
+                normalized.append(value)
+        return normalized
 
     @property
     def redis_url(self) -> str:
