@@ -18,10 +18,18 @@ depends_on: str | Sequence[str] | None = None
 
 
 notification_channel_enum = postgresql.ENUM(
-    "whatsapp", "telegram", "email", name="notification_channel_enum"
+    "whatsapp",
+    "telegram",
+    "email",
+    name="notification_channel_enum",
+    create_type=False,
 )
 announcement_status_enum = postgresql.ENUM(
-    "draft", "queued", "sent", name="announcement_status_enum"
+    "draft",
+    "queued",
+    "sent",
+    name="announcement_status_enum",
+    create_type=False,
 )
 
 
