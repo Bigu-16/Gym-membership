@@ -20,9 +20,11 @@ from app.schemas.notification import NotificationJobResponse
 from app.schemas.schedule import (
     ScheduleTemplateCreate,
     ScheduleTemplateResponse,
+    ScheduleTemplateUpdate,
     SessionCreate,
     SessionResponse,
     SessionStatusUpdate,
+    SessionUpdate,
 )
 
 __all__ = [
@@ -53,9 +55,11 @@ __all__ = [
     "RecentActivityResponse",
     "ScheduleTemplateCreate",
     "ScheduleTemplateResponse",
+    "ScheduleTemplateUpdate",
     "SessionCreate",
     "SessionResponse",
     "SessionStatusUpdate",
+    "SessionUpdate",
     "UserResponse",
     "UserCreateRequest",
     "UserPasswordResetRequest",

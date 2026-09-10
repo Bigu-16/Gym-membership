@@ -1,5 +1,6 @@
 from app.models.announcement import Announcement
 from app.models.app_user import AppUser
+from app.models.business_profile import BusinessProfile
 from app.models.check_in import CheckIn
 from app.models.enrollment import Enrollment
 from app.models.family import Family
@@ -12,6 +13,7 @@ from app.models.session import Session
 __all__ = [
     "Announcement",
     "AppUser",
+    "BusinessProfile",
     "CheckIn",
     "Enrollment",
     "Family",

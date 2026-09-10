@@ -1,8 +1,9 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.enums import Gender
+from app.schemas.validation import sanitize_plain_text, validate_person_name
 
 
 class MemberBase(BaseModel):
@@ -18,6 +19,16 @@ class MemberBase(BaseModel):
     plan_id: int | None = None
     expiry_date: date | None = None
     messaging_opt_in: bool = True
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        return validate_person_name(value)
+
+    @field_validator("medical_issues", mode="before")
+    @classmethod
+    def sanitize_medical_issues(cls, value: str | None) -> str | None:
+        return sanitize_plain_text(value) if value is not None else None
 
 
 class MemberCreate(MemberBase):
@@ -38,6 +49,16 @@ class MemberUpdate(BaseModel):
     expiry_date: date | None = None
     is_frozen: bool | None = None
     messaging_opt_in: bool | None = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_name(cls, value: str | None) -> str | None:
+        return validate_person_name(value) if value is not None else None
+
+    @field_validator("medical_issues", mode="before")
+    @classmethod
+    def sanitize_medical_issues(cls, value: str | None) -> str | None:
+        return sanitize_plain_text(value) if value is not None else None
 
     @field_validator("age")
     @classmethod
@@ -72,6 +93,16 @@ class FamilyParentCreate(BaseModel):
     relationship: str = "parent"
     notes: str | None = None
 
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        return validate_person_name(value)
+
+    @field_validator("address", "relationship", "notes", mode="before")
+    @classmethod
+    def sanitize_text(cls, value: str | None) -> str | None:
+        return sanitize_plain_text(value) if value is not None else None
+
 
 class FamilyParentResponse(BaseModel):
     name: str
@@ -85,6 +116,13 @@ class FamilyParentResponse(BaseModel):
 class FamilyCreate(BaseModel):
     parent: FamilyParentCreate
     members: list[MemberCreate]
+
+    @model_validator(mode="after")
+    def validate_child_ages(self) -> "FamilyCreate":
+        for member in self.members:
+            if not 4 <= member.age <= 18:
+                raise ValueError("family child trainee age must be between 4 and 18")
+        return self
 
 
 class FamilyGroupResponse(BaseModel):

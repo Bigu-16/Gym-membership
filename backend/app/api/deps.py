@@ -39,3 +39,9 @@ async def get_current_admin_user(current_user: AppUser = Depends(get_current_use
     if current_user.role != UserRole.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return current_user
+
+
+async def get_current_admin_or_staff_user(current_user: AppUser = Depends(get_current_user)) -> AppUser:
+    if current_user.role not in {UserRole.admin, UserRole.staff}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin or staff access required")
+    return current_user
