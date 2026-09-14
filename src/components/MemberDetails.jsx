@@ -324,6 +324,8 @@ const MemberDetails = ({ member, onBack, onUpdateMember, onDeleteMember }) => {
                     <input 
                       required
                       type="text"
+                      pattern="^[a-zA-Z\s\-']+$"
+                      title="Names should only contain letters, spaces, hyphens, and apostrophes."
                       value={editForm.name}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                       className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)]"

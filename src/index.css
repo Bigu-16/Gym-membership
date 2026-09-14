@@ -95,17 +95,26 @@ body {
   backdrop-filter: blur(16px) !important;
 }
 
-.luxury-phone-input .react-international-phone-country-selector-list-item {
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item {
   color: var(--text-primary) !important;
   padding: 10px !important;
   transition: all 0.2s ease !important;
 }
 
-.luxury-phone-input .react-international-phone-country-selector-list-item:hover {
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item-country-name {
+  color: var(--text-primary) !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item-dial-code {
+  color: var(--text-secondary) !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item:hover,
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item--focused {
   background: var(--card-hover) !important;
 }
 
-.luxury-phone-input .react-international-phone-country-selector-list-item--selected {
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item--selected {
   background: var(--card-hover) !important;
 }
 

@@ -114,13 +114,15 @@ const Login = ({ onLoginSuccess }) => {
         </form>
 
         <div className="mt-8 pt-6 border-t border-white/5 text-center flex flex-col items-center gap-4">
-          <button
-            onClick={useDefaultCredentials}
-            type="button"
-            className="text-[9px] uppercase tracking-luxury text-emerald-400 hover:text-emerald-300 transition-colors border border-emerald-500/20 bg-emerald-500/5 px-4 py-2 rounded-full hover:scale-105"
-          >
-            Use Demo Admin Credentials
-          </button>
+          {!import.meta.env.PROD && (
+            <button
+              onClick={useDefaultCredentials}
+              type="button"
+              className="text-[9px] uppercase tracking-luxury text-emerald-400 hover:text-emerald-300 transition-colors border border-emerald-500/20 bg-emerald-500/5 px-4 py-2 rounded-full hover:scale-105"
+            >
+              Use Demo Admin Credentials
+            </button>
+          )}
 
           <div className="text-[10px] text-white/40 w-full flex flex-col items-center gap-1.5 mt-2">
             {isEditingUrl ? (

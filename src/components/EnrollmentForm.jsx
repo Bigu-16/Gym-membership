@@ -25,7 +25,15 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
   const [scheduleMode, setScheduleMode] = useState('preset'); // 'preset' or 'custom'
   const [customScheduleSlots, setCustomScheduleSlots] = useState([{ day: 'Monday', time: '08:00' }]);
 
-  const [payment, setPayment] = useState({ amount: '', method: 'Cash', status: 'Paid', currency: 'AED', duration: '1 Month' });
+  const [payment, setPayment] = useState({ 
+    amount: '', 
+    method: 'Cash', 
+    status: 'Paid', 
+    currency: 'AED', 
+    duration: '1 Month',
+    durationValue: 1,
+    durationUnit: 'Month'
+  });
   const [isSuccess, setIsSuccess] = useState(false);
 
   const addFamily = () => {
@@ -74,8 +82,47 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
     return `${h}:${m === 0 ? '00' : m}`;
   };
 
+  const getStandardDurationKey = (value, unit) => {
+    const v = parseInt(value, 10);
+    const u = unit.toLowerCase();
+    if (u.startsWith('month')) {
+      if (v === 1) return '1 Month';
+      if (v === 3) return '3 Months';
+      if (v === 6) return '6 Months';
+      if (v === 12) return '1 Year';
+    } else if (u.startsWith('year')) {
+      if (v === 1) return '1 Year';
+    }
+    return '1 Month';
+  };
+
+  const handleDurationValueChange = (val) => {
+    const value = Math.max(0, parseInt(val, 10) || 0);
+    setPayment(prev => {
+      const unit = prev.durationUnit;
+      const durationStr = `${value} ${value === 1 ? unit : unit + 's'}`;
+      return {
+        ...prev,
+        durationValue: value,
+        duration: durationStr
+      };
+    });
+  };
+
+  const handleDurationUnitChange = (unit) => {
+    setPayment(prev => {
+      const value = prev.durationValue;
+      const durationStr = `${value} ${value === 1 ? unit : unit + 's'}`;
+      return {
+        ...prev,
+        durationUnit: unit,
+        duration: durationStr
+      };
+    });
+  };
   // Calculate total amount automatically based on Pricing Matrix
   useEffect(() => {
+    const standardDuration = getStandardDurationKey(payment.durationValue, payment.durationUnit);
     if (trainingType === 'personal') {
       let total = 0;
       families.forEach(family => {
@@ -83,41 +130,51 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
           total += 1000; // Base rate for personal training per trainee
         });
       });
-      const durationMult = payment.duration === '3 Months' ? 2.5 : payment.duration === '6 Months' ? 4.5 : payment.duration === '1 Year' ? 8 : 1;
+      const durationMult = standardDuration === '3 Months' ? 2.5 : standardDuration === '6 Months' ? 4.5 : standardDuration === '1 Year' ? 8 : 1;
       setPayment(prev => ({ ...prev, amount: String(Math.round(total * durationMult)) }));
     } else {
       let total = 0;
       families.forEach(family => {
         family.trainees.forEach(t => {
           const activity = t.service || 'Taekwondo';
-          const duration = payment.duration || '1 Month';
           const freq = t.frequency || '3 classes/week';
           
           const pricing = PRICING_MATRIX[activity] || PRICING_MATRIX['Taekwondo'];
-          const durationPricing = pricing[duration] || pricing['1 Month'];
+          const durationPricing = pricing[standardDuration] || pricing['1 Month'];
           const price = durationPricing[freq] || durationPricing['3 classes/week'] || 300;
           total += price;
         });
       });
       setPayment(prev => ({ ...prev, amount: String(total) }));
     }
-  }, [families, payment.duration, trainingType]);
-
+  }, [families, payment.durationValue, payment.durationUnit, trainingType]);
   const handleSubmit = (e) => {
     e.preventDefault();
     
     const allMembers = [];
     const allSessions = [];
     
+
     families.forEach(family => {
       family.trainees.forEach((t, tIndex) => {
-        const monthsToAdd = 
-          payment.duration === '3 Months' ? 3 :
-          payment.duration === '6 Months' ? 6 :
-          payment.duration === '1 Year' ? 12 : 1;
-
         const basePhone = (family.parentInfo.phone || '').replace(/\s+/g, '');
         const traineePhone = tIndex === 0 ? basePhone : `${basePhone}-${tIndex}`;
+
+        const val = parseInt(payment.durationValue, 10) || 0;
+        const unit = payment.durationUnit.toLowerCase();
+        let expDate = new Date();
+        if (unit.startsWith('day')) {
+          expDate.setDate(expDate.getDate() + val);
+        } else if (unit.startsWith('week')) {
+          expDate.setDate(expDate.getDate() + val * 7);
+        } else if (unit.startsWith('month')) {
+          expDate.setMonth(expDate.getMonth() + val);
+        } else if (unit.startsWith('year')) {
+          expDate.setFullYear(expDate.getFullYear() + val);
+        } else {
+          expDate.setMonth(expDate.getMonth() + 1);
+        }
+        const expiryDateStr = expDate.toISOString();
 
         const newMember = {
           id: Math.random(),
@@ -127,7 +184,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
           gender: t.gender,
           medicalIssues: t.medicalIssues,
           plan: t.service,
-          expiryDate: new Date(new Date().setMonth(new Date().getMonth() + monthsToAdd)).toISOString(),
+          expiryDate: expiryDateStr,
           image: `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=random&color=fff`,
           parentName: family.parentInfo.name,
           parentPhone: family.parentInfo.phone,
@@ -210,13 +267,21 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
     setTimeout(() => {
       setIsSuccess(false);
       setTrainingType('group');
-      setPersonalType('individual');
       setFamilies([{
         id: Date.now(),
         parentInfo: { name: '', phone: '', email: '' },
         trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Taekwondo', frequency: '3 classes/week' }]
       }]);
-      setPayment({ amount: '', method: 'Cash', status: 'Paid', currency: 'AED', duration: '1 Month' });
+      setPayment({
+        amount: '',
+        method: 'Cash',
+        status: 'Paid',
+        currency: 'AED',
+        duration: '1 Month',
+        durationValue: 1,
+        durationUnit: 'Month'
+      });
+      setPersonalType('individual');
     }, 3000);
   };
 
@@ -350,6 +415,8 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
                   <input 
                     required
                     type="text" 
+                    pattern="^[a-zA-Z\s\-']+$"
+                    title="Names should only contain letters, spaces, hyphens, and apostrophes."
                     value={family.parentInfo.name}
                     onChange={(e) => handleParentChange(fIndex, 'name', e.target.value)}
                     className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
@@ -418,6 +485,8 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
                             <input 
                               required
                               type="text" 
+                              pattern="^[a-zA-Z\s\-']+$"
+                              title="Names should only contain letters, spaces, hyphens, and apostrophes."
                               value={trainee.name}
                               onChange={(e) => handleTraineeChange(fIndex, tIndex, 'name', e.target.value)}
                               className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
@@ -795,31 +864,65 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           <div className="space-y-2">
             <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Duration</label>
-            <div className="relative">
-              <select 
-                value={payment.duration}
-                onChange={(e) => setPayment({...payment, duration: e.target.value})}
-                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10"
-              >
-                <option>1 Month</option>
-                <option>3 Months</option>
-                <option>6 Months</option>
-                <option>1 Year</option>
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+            <div className="flex gap-2">
+              {/* Stepper Input Button */}
+              <div className="flex items-center bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl overflow-hidden shadow-sm hover:border-[var(--text-primary)]/30 transition-all">
+                <button
+                  type="button"
+                  onClick={() => handleDurationValueChange(payment.durationValue - 1)}
+                  className="px-3 py-3 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--text-primary)]/5 transition-colors border-r border-[var(--glass-border)]"
+                  aria-label="Decrease duration"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12H4" />
+                  </svg>
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  value={payment.durationValue}
+                  onChange={(e) => handleDurationValueChange(e.target.value)}
+                  className="w-12 bg-transparent text-center text-sm focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-bold text-[var(--text-primary)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleDurationValueChange(payment.durationValue + 1)}
+                  className="px-3 py-3 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--text-primary)]/5 transition-colors border-l border-[var(--glass-border)]"
+                  aria-label="Increase duration"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Unit Selector */}
+              <div className="relative flex-grow min-w-[100px]">
+                <select
+                  value={payment.durationUnit}
+                  onChange={(e) => handleDurationUnitChange(e.target.value)}
+                  className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10 text-[var(--text-primary)]"
+                >
+                  <option value="Day">Days</option>
+                  <option value="Month">Months</option>
+                  <option value="Year">Years</option>
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
+
           <div className="space-y-2">
             <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Currency</label>
             <div className="relative">
               <select 
                 value={payment.currency}
                 onChange={(e) => setPayment({...payment, currency: e.target.value})}
-                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10"
+                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10 text-[var(--text-primary)]"
               >
                 <option>AED</option>
                 <option>USD</option>
@@ -831,6 +934,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
               </div>
             </div>
           </div>
+
           <div className="space-y-2">
             <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Total Amount</label>
             <div className="flex flex-col gap-3">

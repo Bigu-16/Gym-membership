@@ -137,7 +137,15 @@ const mapSessionToFrontend = (s, templates = []) => {
   const endDate = parseLocalDate(s.date);
   endDate.setHours(endObj.hours, endObj.minutes, 0, 0);
 
-  const checklist = s.checklist_data?.items || [];
+  let checklist = s.checklist_data?.items || [];
+  try {
+    const localSaved = localStorage.getItem(`gym_session_checklist_${s.id}`);
+    if (localSaved) {
+      checklist = JSON.parse(localSaved);
+    }
+  } catch (e) {
+    console.error('Error reading local checklist state:', e);
+  }
 
   return {
     id: s.id,
@@ -456,21 +464,22 @@ export const apiService = {
   },
 
   async updateSession(sessionId, updates) {
-    const payload = {};
-    if (updates.status) {
-      payload.status = updates.status === 'in-progress' ? 'in_progress' : updates.status;
-    }
     if (updates.checklist) {
-      payload.checklist_data = { items: updates.checklist };
+      try {
+        localStorage.setItem(`gym_session_checklist_${sessionId}`, JSON.stringify(updates.checklist));
+      } catch (e) {
+        console.error('Error writing local checklist state:', e);
+      }
     }
 
-    const response = await fetch(`${API_BASE_URL}/schedule/sessions/${sessionId}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) throw new Error('Failed to update session');
-    return response.json();
+    if (updates.status) {
+      return this.updateSessionStatus(sessionId, updates.status);
+    }
+
+    return {
+      id: sessionId,
+      checklist_data: { items: updates.checklist || [] }
+    };
   },
 
   async updateSessionStatus(sessionId, status) {
