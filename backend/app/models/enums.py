@@ -28,9 +28,24 @@ class NotificationType(StrEnum):
     welcome = "welcome"
     membership_expiry = "membership_expiry"
     session_reminder = "session_reminder"
+    enrollment = "enrollment"
+    class_enrollment = "class_enrollment"
+    announcement = "announcement"
 
 
 class NotificationStatus(StrEnum):
     pending = "pending"
     processed = "processed"
     failed = "failed"
+
+
+class NotificationChannel(StrEnum):
+    whatsapp = "whatsapp"
+    telegram = "telegram"
+    email = "email"
+
+
+class AnnouncementStatus(StrEnum):
+    draft = "draft"
+    queued = "queued"
+    sent = "sent"

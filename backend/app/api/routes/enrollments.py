@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,8 +9,10 @@ from app.db import get_db_session
 from app.models import AppUser
 from app.models import Enrollment, Member, ScheduleTemplate, Session
 from app.schemas.enrollment import EnrollmentCreate, EnrollmentResponse
+from app.tasks.notifications import queue_class_enrollment_confirmation
 
 router = APIRouter(prefix="/enrollments", tags=["enrollments"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=list[EnrollmentResponse])
@@ -36,6 +40,8 @@ async def create_enrollment(
             detail="Frozen members cannot be enrolled",
         )
 
+    class_label = "your class"
+
     target_filter = (
         Enrollment.template_id == payload.template_id
         if payload.template_id is not None
@@ -62,12 +68,14 @@ async def create_enrollment(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Schedule template is at capacity",
             )
+        class_label = f"{template.title} at {template.time}"
 
     if payload.session_id is not None:
         session = await db.scalar(select(Session).where(Session.id == payload.session_id).with_for_update())
         if session is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
+        class_label = f"session on {session.date.isoformat()} with {session.trainer_name}"
         template = None
         if session.template_id is not None:
             template = await db.scalar(
@@ -88,6 +96,13 @@ async def create_enrollment(
     db.add(enrollment)
     await db.commit()
     await db.refresh(enrollment)
+
+    if member.messaging_opt_in:
+        try:
+            queue_class_enrollment_confirmation.delay(member.id, class_label)
+        except Exception:
+            logger.exception("Failed to queue class enrollment notification for member_id=%s", member.id)
+
     return EnrollmentResponse.model_validate(enrollment)
 
 

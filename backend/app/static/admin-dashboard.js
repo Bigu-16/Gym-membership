@@ -1,6 +1,8 @@
 const state = {
   token: localStorage.getItem("gym_api_token") || "",
   members: [],
+  families: [],
+  plans: [],
   templates: [],
   sessions: [],
   checkIns: [],
@@ -127,10 +129,38 @@ async function loadMembers() {
   state.members = await api(`/api/v1/members/${query ? `?search=${encodeURIComponent(query)}` : ""}`);
   renderList("#memberList", state.members.map((m) => {
     const status = m.is_frozen ? ["frozen", "warn"] : [m.expiry_date && new Date(m.expiry_date) < new Date() ? "expired" : "active", m.expiry_date && new Date(m.expiry_date) < new Date() ? "bad" : "good"];
-    return row(m.name, `${m.phone} | expires ${m.expiry_date || "not set"}`, status[0], status[1]);
+    return row(m.name, `${m.phone} | age ${m.age} | expires ${m.expiry_date || "not set"}`, status[0], status[1]);
   }).join(""));
   fillSelect("#checkInMemberSelect", state.members, (m) => `${m.name} (${m.phone})`);
   fillSelect("#enrollMemberSelect", state.members.filter((m) => !m.is_frozen), (m) => `${m.name} (${m.phone})`);
+}
+
+async function loadPlans() {
+  state.plans = await api("/api/v1/plans/");
+  renderList("#planList", state.plans.map((plan) => {
+    const classes = plan.classes_per_week ? `${plan.classes_per_week} classes/week` : "custom schedule";
+    const included = plan.included_items.length ? ` | ${plan.included_items.join(", ")}` : "";
+    return row(`${plan.program} - ${plan.duration_label}`, `${plan.name} | ${classes} | ${plan.price} ${plan.currency}${included}`, plan.is_active ? "active" : "inactive", plan.is_active ? "good" : "warn");
+  }).join(""));
+  fillSelect("#memberPlanSelect", [{ id: "", name: "No plan" }, ...state.plans.filter((plan) => plan.is_active)], (plan) => plan.name);
+}
+
+async function loadFamilies() {
+  state.families = await api("/api/v1/members/families");
+  renderList("#familyList", state.families.map((family) => {
+    const frozenCount = family.members.filter((member) => member.is_frozen).length;
+    const allFrozen = family.members.length > 0 && frozenCount === family.members.length;
+    const parent = family.parent;
+    return `
+      <div class="row">
+        <div>
+          <strong>${escapeHtml(parent.name)}</strong>
+          <span>${escapeHtml(parent.phone)}${parent.email ? ` | ${escapeHtml(parent.email)}` : ""} | ${family.members.length} members</span>
+        </div>
+        <button class="small secondary" data-family-freeze="${family.id}" data-frozen="${allFrozen ? "false" : "true"}">${allFrozen ? "Unfreeze" : "Freeze"}</button>
+      </div>
+    `;
+  }).join(""));
 }
 
 async function loadSchedule() {
@@ -177,7 +207,7 @@ async function loadNotifications() {
 }
 
 async function loadAll() {
-  await Promise.all([checkHealth(), loadOverview(), loadMembers(), loadSchedule(), loadUsers(), loadNotifications()]);
+  await Promise.all([checkHealth(), loadOverview(), loadPlans(), loadMembers(), loadFamilies(), loadSchedule(), loadUsers(), loadNotifications()]);
   await Promise.all([loadCheckIns(), loadEnrollments()]);
 }
 
@@ -210,7 +240,9 @@ function bindForms() {
       body: JSON.stringify({
         name: data.name,
         phone: data.phone,
+        age: Number(data.age),
         gender: data.gender || null,
+        plan_id: data.plan_id ? Number(data.plan_id) : null,
         expiry_date: data.expiry_date || null,
         messaging_opt_in: Boolean(data.messaging_opt_in),
       }),
@@ -226,15 +258,48 @@ function bindForms() {
     await api("/api/v1/members/families", {
       method: "POST",
       body: JSON.stringify({
+        parent: {
+          name: data.parent_name,
+          phone: data.parent_phone,
+          email: data.parent_email || null,
+          address: data.parent_address || null,
+          relationship: data.parent_relationship || "parent",
+          notes: data.notes || null,
+        },
         members: [
-          { name: data.child_a, phone: data.child_a_phone, parent_phone: data.parent_phone },
-          { name: data.child_b, phone: data.child_b_phone, parent_phone: data.parent_phone },
+          { name: data.child_a, phone: data.child_a_phone, age: Number(data.child_a_age), parent_phone: data.parent_phone },
+          { name: data.child_b, phone: data.child_b_phone, age: Number(data.child_b_age), parent_phone: data.parent_phone },
         ],
       }),
     });
     event.currentTarget.reset();
     toast("Family created");
     await loadAll();
+  });
+
+  $("#planForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = formData(event.currentTarget);
+    await api("/api/v1/plans/", {
+      method: "POST",
+      body: JSON.stringify({
+        name: data.name,
+        program: data.program,
+        duration_label: data.duration_label,
+        duration_months: Number(data.duration_months),
+        duration_days: Number(data.duration_days),
+        classes_per_week: data.classes_per_week ? Number(data.classes_per_week) : null,
+        price: Number(data.price),
+        currency: data.currency,
+        included_items: data.included_items ? data.included_items.split(",").map((item) => item.trim()).filter(Boolean) : [],
+        description: data.description || null,
+        sort_order: Number(data.sort_order || 0),
+        is_active: Boolean(data.is_active),
+      }),
+    });
+    event.currentTarget.reset();
+    toast("Plan created");
+    await loadPlans();
   });
 
   $("#templateForm").addEventListener("submit", async (event) => {
@@ -323,8 +388,18 @@ function bindForms() {
       toast("Checked out");
       await Promise.all([loadOverview(), loadCheckIns()]);
     }
+    if (event.target.dataset.familyFreeze) {
+      await api(`/api/v1/members/families/${event.target.dataset.familyFreeze}/freeze`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_frozen: event.target.dataset.frozen === "true" }),
+      });
+      toast("Family updated");
+      await Promise.all([loadMembers(), loadFamilies()]);
+    }
     if (action === "refresh-active" || action === "refresh-activity") await loadOverview();
+    if (action === "load-plans") await loadPlans();
     if (action === "load-schedule") await loadSchedule();
+    if (action === "load-families") await loadFamilies();
     if (action === "load-notifications") await loadNotifications();
     if (action === "seed-demo") {
       await runTask("/api/v1/tasks/seed-demo-data");

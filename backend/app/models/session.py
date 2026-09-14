@@ -20,7 +20,7 @@ class Session(TimestampMixin, Base):
         nullable=False,
         default=SessionStatus.upcoming,
     )
-    checklist_data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    checklist_data: Mapped[dict | list] = mapped_column(JSON, nullable=False, default=dict)
 
     template = relationship("ScheduleTemplate", back_populates="sessions")
     enrollments = relationship("Enrollment", back_populates="session")

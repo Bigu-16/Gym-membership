@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin_user
+from app.core.config import settings
 from app.db import get_db_session
 from app.models import AppUser
 from app.services.demo_data import ADMIN_EMAIL, ADMIN_PASSWORD, STAFF_EMAIL, STAFF_PASSWORD, seed_demo_data
@@ -35,6 +36,9 @@ async def seed_demo_data_endpoint(
     db: AsyncSession = Depends(get_db_session),
     _: AppUser = Depends(get_current_admin_user),
 ) -> dict:
+    if not settings.allows_development_endpoints:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
     counts = await seed_demo_data(db)
     return {
         "status": "seeded",
