@@ -72,12 +72,15 @@ const Schedule = ({
     }
   }, [sessions]);
 
-  const handleToggleChecklist = (sessionId, itemId) => {
+  const handleToggleChecklist = (sessionId, itemId, itemIndex) => {
     setLocalChecklists(prev => {
       const currentList = prev[sessionId] || (sessions.find(s => s.id === sessionId)?.checklist || []);
-      const updatedList = currentList.map(item => 
-        item.id === itemId ? { ...item, checked: !item.checked } : item
-      );
+      const updatedList = currentList.map((item, idx) => {
+        const matches = (itemId !== undefined && itemId !== null && item.id !== undefined && item.id !== null)
+          ? item.id === itemId
+          : idx === itemIndex;
+        return matches ? { ...item, checked: !item.checked } : item;
+      });
       
       // Persist to backend
       apiService.updateSession(sessionId, { checklist: updatedList }).catch(console.error);
@@ -110,13 +113,18 @@ const Schedule = ({
     });
   };
 
-  const handleDeleteChecklistItem = (sessionId, itemId) => {
+  const handleDeleteChecklistItem = (sessionId, itemId, itemIndex) => {
     const isConfirmed = window.confirm("Are you sure you want to delete this task from the checklist?");
     if (!isConfirmed) return;
 
     setLocalChecklists(prev => {
       const currentList = prev[sessionId] || (sessions.find(s => s.id === sessionId)?.checklist || []);
-      const updatedList = currentList.filter(item => item.id !== itemId);
+      const updatedList = currentList.filter((item, idx) => {
+        if (itemId !== undefined && itemId !== null && item.id !== undefined && item.id !== null) {
+          return item.id !== itemId;
+        }
+        return idx !== itemIndex;
+      });
       
       // Persist to backend
       apiService.updateSession(sessionId, { checklist: updatedList }).catch(console.error);
@@ -1061,10 +1069,10 @@ const Schedule = ({
                       </span>
                     </div>
                     <div className="space-y-3 mb-4">
-                      {sessionChecklist.length > 0 ? sessionChecklist.map(item => (
-                        <div key={item.id} className="flex items-center justify-between group cursor-pointer">
+                      {sessionChecklist.length > 0 ? sessionChecklist.map((item, index) => (
+                        <div key={item.id ?? index} className="flex items-center justify-between group cursor-pointer">
                           <div 
-                            onClick={() => handleToggleChecklist(selectedSession.id, item.id)}
+                            onClick={() => handleToggleChecklist(selectedSession.id, item.id, index)}
                             className="flex items-center gap-3 flex-grow"
                           >
                             <div className={cn(
@@ -1082,7 +1090,7 @@ const Schedule = ({
                           </div>
                           <button 
                             type="button"
-                            onClick={() => handleDeleteChecklistItem(selectedSession.id, item.id)}
+                            onClick={() => handleDeleteChecklistItem(selectedSession.id, item.id, index)}
                             className="text-[var(--text-secondary)] hover:text-rose-500 transition-colors p-1 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100"
                             title="Delete task"
                           >

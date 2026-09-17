@@ -216,14 +216,17 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
   };
 
   // Toggle checklist item for sessions
-  const handleToggleChecklist = async (sessionId, itemId) => {
+  const handleToggleChecklist = async (sessionId, itemId, itemIndex) => {
     try {
       const targetSession = await materializeSession(sessionId);
       if (!targetSession) return;
 
-      const updatedList = targetSession.checklist.map(item => 
-        item.id === itemId ? { ...item, checked: !item.checked } : item
-      );
+      const updatedList = targetSession.checklist.map((item, idx) => {
+        const matches = (itemId !== undefined && itemId !== null && item.id !== undefined && item.id !== null)
+          ? item.id === itemId
+          : idx === itemIndex;
+        return matches ? { ...item, checked: !item.checked } : item;
+      });
 
       // Optimistic state update
       setSessions(prev => prev.map(s => s.id === targetSession.id ? { ...s, checklist: updatedList } : s));
@@ -262,7 +265,7 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
   };
 
   // Remove dynamic custom checklist item from a specific session
-  const handleDeleteChecklistItem = async (sessionId, itemId) => {
+  const handleDeleteChecklistItem = async (sessionId, itemId, itemIndex) => {
     const isConfirmed = window.confirm("Are you sure you want to delete this task from the checklist?");
     if (!isConfirmed) return;
 
@@ -270,7 +273,12 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
       const targetSession = await materializeSession(sessionId);
       if (!targetSession) return;
 
-      const updatedList = targetSession.checklist.filter(item => item.id !== itemId);
+      const updatedList = targetSession.checklist.filter((item, idx) => {
+        if (itemId !== undefined && itemId !== null && item.id !== undefined && item.id !== null) {
+          return item.id !== itemId;
+        }
+        return idx !== itemIndex;
+      });
 
       // Optimistic state update
       setSessions(prev => prev.map(s => s.id === targetSession.id ? { ...s, checklist: updatedList } : s));
@@ -539,14 +547,14 @@ const DashboardOverview = ({ members, sessions, setSessions, scheduleTemplates =
                               <input 
                                 type="checkbox" 
                                 checked={item.checked} 
-                                onChange={() => handleToggleChecklist(session.id, item.id)}
+                                onChange={() => handleToggleChecklist(session.id, item.id, index)}
                                 className="w-4 h-4 rounded border-[var(--glass-border)] accent-[var(--text-primary)] bg-transparent cursor-pointer"
                               />
                               <span className={item.checked ? 'line-through' : ''}>{item.text}</span>
                             </label>
                             <button 
                               type="button"
-                              onClick={() => handleDeleteChecklistItem(session.id, item.id)}
+                              onClick={() => handleDeleteChecklistItem(session.id, item.id, index)}
                               className="text-[var(--text-secondary)] hover:text-rose-500 transition-colors p-1 rounded-md opacity-0 group-hover/item:opacity-100 focus:opacity-100"
                               title="Delete task"
                             >

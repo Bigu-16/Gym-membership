@@ -199,4 +199,59 @@ describe('DashboardOverview Component', () => {
     // Check category pills exist
     expect(screen.getByRole('button', { name: 'Fitness' })).toBeInTheDocument();
   });
+
+  it('toggles checklist items individually even when items lack explicit IDs', async () => {
+    apiService.updateSession.mockResolvedValueOnce({ id: 10 });
+
+    const sessionWithChecklist = [{
+      id: 10,
+      title: 'Zumba Fitness',
+      trainer: 'Elena Vance',
+      location: 'Studio B',
+      start: new Date(Date.now() - 30 * 60 * 1000),
+      end: new Date(Date.now() + 30 * 60 * 1000),
+      status: 'in-progress',
+      type: 'group',
+      checklist: [
+        { text: 'Warm up', checked: true },
+        { text: 'Cardio routine', checked: false },
+        { text: 'Cool down', checked: false }
+      ]
+    }];
+
+    render(
+      <DashboardOverview
+        members={mockMembers}
+        sessions={sessionWithChecklist}
+        setSessions={mockSetSessions}
+        scheduleTemplates={[]}
+        onTabChange={mockOnTabChange}
+        inClubList={[]}
+        setInClubList={mockSetInClubList}
+        onUpdateSessionStatus={mockOnUpdateSessionStatus}
+      />
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    expect(checkboxes).toHaveLength(3);
+    expect(checkboxes[0]).toBeChecked();
+    expect(checkboxes[1]).not.toBeChecked();
+    expect(checkboxes[2]).not.toBeChecked();
+
+    // Toggle the second checkbox (Cardio routine)
+    fireEvent.click(checkboxes[1]);
+
+    await waitFor(() => {
+      expect(apiService.updateSession).toHaveBeenCalledWith(
+        10,
+        expect.objectContaining({
+          checklist: [
+            { text: 'Warm up', checked: true },
+            { text: 'Cardio routine', checked: true },
+            { text: 'Cool down', checked: false }
+          ]
+        })
+      );
+    });
+  });
 });

@@ -190,14 +190,28 @@ const App = () => {
     }
   };
 
-  const handleDeleteTemplate = (id) => {
-    // Local delete for templates (backend doesn't support delete)
-    setScheduleTemplates(prev => prev.filter(t => t.id !== id));
+  const handleDeleteTemplate = async (id) => {
+    try {
+      await apiService.deleteTemplate(id);
+      setScheduleTemplates(prev => prev.filter(t => t.id !== id));
+      await loadData();
+    } catch (err) {
+      console.error('Failed to delete template from backend:', err);
+      // Fallback to local state if backend call encounters error
+      setScheduleTemplates(prev => prev.filter(t => t.id !== id));
+    }
   };
 
-  const handleUpdateTemplate = (updatedTemplate) => {
-    // Local update for templates (backend doesn't support update)
-    setScheduleTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t));
+  const handleUpdateTemplate = async (updatedTemplate) => {
+    try {
+      await apiService.updateTemplate(updatedTemplate.id, updatedTemplate);
+      setScheduleTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t));
+      await loadData();
+    } catch (err) {
+      console.error('Failed to update template on backend:', err);
+      // Fallback to local state if backend call encounters error
+      setScheduleTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t));
+    }
   };
 
   const handleUpdateSessionStatus = async (sessionId, newStatus) => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { apiService, API_BASE_URL } from '../api';
+import { apiService, API_BASE_URL, mapSessionToFrontend } from '../api';
 
 describe('apiService', () => {
   beforeEach(() => {
@@ -181,6 +181,7 @@ describe('apiService', () => {
           body: JSON.stringify({
             name: 'Alice',
             phone: '111222',
+            age: 25,
             parent_phone: null,
             gender: 'female',
             medical_issues: 'None',
@@ -195,15 +196,15 @@ describe('apiService', () => {
 
     it('enrollMembers posts family group registration payload when multiple members exist', async () => {
       const familyInput = [
-        { name: 'Kid 1', phone: '123', parentPhone: '999', planId: 4 },
-        { name: 'Kid 2', phone: '456', parentPhone: '999', planId: 4 }
+        { name: 'Kid 1', phone: '123', parentPhone: '999', planId: 4, age: 10 },
+        { name: 'Kid 2', phone: '456', parentPhone: '999', planId: 4, age: 12 }
       ];
 
       globalThis.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => [
-          { id: 30, name: 'Kid 1', phone: '123', parent_phone: '999', plan_id: 4 },
-          { id: 31, name: 'Kid 2', phone: '456', parent_phone: '999', plan_id: 4 }
+          { id: 30, name: 'Kid 1', phone: '123', parent_phone: '999', plan_id: 4, age: 10 },
+          { id: 31, name: 'Kid 2', phone: '456', parent_phone: '999', plan_id: 4, age: 12 }
         ],
       });
 
@@ -214,9 +215,13 @@ describe('apiService', () => {
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({
+            parent: {
+              name: 'Parent Contact',
+              phone: '999'
+            },
             members: [
-              { name: 'Kid 1', phone: '123', parent_phone: '999', gender: null, medical_issues: null, plan_id: 4, expiry_date: null, messaging_opt_in: true, is_frozen: false },
-              { name: 'Kid 2', phone: '456', parent_phone: '999', gender: null, medical_issues: null, plan_id: 4, expiry_date: null, messaging_opt_in: true, is_frozen: false }
+              { name: 'Kid 1', phone: '123', age: 10, parent_phone: '999', gender: null, medical_issues: null, plan_id: 4, expiry_date: null, messaging_opt_in: true, is_frozen: false },
+              { name: 'Kid 2', phone: '456', age: 12, parent_phone: '999', gender: null, medical_issues: null, plan_id: 4, expiry_date: null, messaging_opt_in: true, is_frozen: false }
             ]
           })
         })
@@ -316,6 +321,99 @@ describe('apiService', () => {
           })
         })
       );
+    });
+
+    it('updateTemplate sends PATCH with updated fields', async () => {
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 5,
+          title: 'Advanced Spinning',
+          days: ['Tuesday', 'Thursday'],
+          time: '07:00 PM',
+          capacity: 25
+        })
+      });
+
+      const result = await apiService.updateTemplate(5, {
+        className: 'Advanced Spinning',
+        time: '07:00 PM',
+        capacity: 25
+      });
+
+      expect(result.className).toBe('Advanced Spinning');
+      expect(result.time).toBe('07:00 PM');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/schedule/templates/5`,
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({
+            title: 'Advanced Spinning',
+            time: '07:00 PM',
+            capacity: 25
+          })
+        })
+      );
+    });
+
+    it('deleteTemplate sends DELETE request', async () => {
+      globalThis.fetch.mockResolvedValueOnce({ ok: true, status: 204 });
+
+      const result = await apiService.deleteTemplate(5);
+      expect(result).toBe(true);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/schedule/templates/5`,
+        expect.objectContaining({ method: 'DELETE' })
+      );
+    });
+
+    it('updateSession persists checklist and status to backend PATCH', async () => {
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 12,
+          checklist_data: { items: [{ id: 1, text: 'Warm up', checked: true }] },
+          status: 'in_progress'
+        })
+      });
+
+      const checklist = [{ id: 1, text: 'Warm up', checked: true }];
+      await apiService.updateSession(12, { checklist, status: 'in-progress' });
+
+      expect(localStorage.getItem('gym_session_checklist_12')).toBe(JSON.stringify(checklist));
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/schedule/sessions/12`,
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({
+            checklist_data: { items: checklist },
+            status: 'in_progress'
+          })
+        })
+      );
+    });
+
+    it('mapSessionToFrontend normalizes checklist items ensuring each has unique id and boolean checked', () => {
+      const rawSession = {
+        id: 15,
+        template_id: null,
+        trainer_name: 'Coach Marcus',
+        date: '2026-09-17',
+        status: 'in_progress',
+        checklist_data: {
+          items: [
+            { text: 'Warm up', checked: true },
+            { text: 'Cardio', checked: false },
+            { text: 'Stretching', checked: false }
+          ]
+        }
+      };
+
+      const mapped = mapSessionToFrontend(rawSession, []);
+      expect(mapped.checklist).toHaveLength(3);
+      expect(mapped.checklist[0]).toEqual({ id: 1, text: 'Warm up', checked: true });
+      expect(mapped.checklist[1]).toEqual({ id: 2, text: 'Cardio', checked: false });
+      expect(mapped.checklist[2]).toEqual({ id: 3, text: 'Stretching', checked: false });
     });
   });
 

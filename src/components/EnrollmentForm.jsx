@@ -188,6 +188,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
           image: `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=random&color=fff`,
           parentName: family.parentInfo.name,
           parentPhone: family.parentInfo.phone,
+          parentEmail: family.parentInfo.email,
           trainingType,
           schedule: {
             ...schedule,

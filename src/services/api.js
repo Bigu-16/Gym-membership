@@ -74,6 +74,7 @@ const mapMemberToBackend = (m) => {
   return {
     name: m.name,
     phone: m.phone,
+    age: m.age ? parseInt(m.age, 10) : 25,
     parent_phone: m.parentPhone || null,
     gender: m.gender ? m.gender.toLowerCase() : null,
     medical_issues: m.medicalIssues || null,
@@ -85,7 +86,7 @@ const mapMemberToBackend = (m) => {
 };
 
 // Map session to frontend schema
-const mapSessionToFrontend = (s, templates = []) => {
+export const mapSessionToFrontend = (s, templates = []) => {
   const template = Array.isArray(templates) ? templates.find(t => t.id === s.template_id) : null;
   const title = template ? (template.className || template.title || 'Group Class') : 'Personal Training';
   const timeStr = (template && template.time) || '10:00 AM - 11:30 AM';
@@ -137,7 +138,7 @@ const mapSessionToFrontend = (s, templates = []) => {
   const endDate = parseLocalDate(s.date);
   endDate.setHours(endObj.hours, endObj.minutes, 0, 0);
 
-  let checklist = s.checklist_data?.items || [];
+  let checklist = Array.isArray(s.checklist_data) ? s.checklist_data : (s.checklist_data?.items || []);
   try {
     const localSaved = localStorage.getItem(`gym_session_checklist_${s.id}`);
     if (localSaved) {
@@ -146,6 +147,13 @@ const mapSessionToFrontend = (s, templates = []) => {
   } catch (e) {
     console.error('Error reading local checklist state:', e);
   }
+
+  // Ensure every checklist item has a stable, unique id and valid checked boolean
+  checklist = checklist.map((item, idx) => ({
+    id: item.id !== undefined && item.id !== null ? item.id : (idx + 1),
+    text: item.text || '',
+    checked: Boolean(item.checked)
+  }));
 
   return {
     id: s.id,
@@ -259,7 +267,15 @@ export const apiService = {
     
     if (isFamily) {
       const payload = {
-        members: membersList.map(mapMemberToBackend)
+        parent: {
+          name: membersList[0].parentName || 'Parent Contact',
+          phone: membersList[0].parentPhone,
+          email: membersList[0].parentEmail || undefined,
+        },
+        members: membersList.map(m => ({
+          ...mapMemberToBackend(m),
+          age: m.age ? Math.min(18, Math.max(4, parseInt(m.age, 10))) : 10
+        }))
       };
       const response = await fetch(`${API_BASE_URL}/members/families`, {
         method: 'POST',
@@ -271,7 +287,8 @@ export const apiService = {
         throw new Error(err.detail || 'Family registration failed');
       }
       const data = await response.json();
-      return data.map(mapMemberToFrontend);
+      const list = data.members || (Array.isArray(data) ? data : [data]);
+      return list.map(mapMemberToFrontend);
     } else {
       // Register single member
       const payload = mapMemberToBackend(membersList[0]);
@@ -436,6 +453,39 @@ export const apiService = {
     };
   },
 
+  async updateTemplate(templateId, templateData) {
+    const payload = {};
+    if (templateData.className !== undefined) payload.title = templateData.className;
+    if (templateData.days !== undefined) payload.days = mapDaysToBackend(templateData.days);
+    if (templateData.time !== undefined) payload.time = templateData.time;
+    if (templateData.capacity !== undefined) payload.capacity = Number(templateData.capacity);
+
+    const response = await fetch(`${API_BASE_URL}/schedule/templates/${templateId}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error('Failed to update class template');
+    const t = await response.json();
+    return {
+      id: t.id,
+      className: t.title,
+      days: mapDaysToFrontend(t.days),
+      time: t.time,
+      capacity: t.capacity,
+      enrolled: templateData.enrolled || 0
+    };
+  },
+
+  async deleteTemplate(templateId) {
+    const response = await fetch(`${API_BASE_URL}/schedule/templates/${templateId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete class template');
+    return true;
+  },
+
   // Sessions API
   async getSessions(templates) {
     const response = await fetch(`${API_BASE_URL}/schedule/sessions`, {
@@ -470,6 +520,30 @@ export const apiService = {
       } catch (e) {
         console.error('Error writing local checklist state:', e);
       }
+    }
+
+    const payload = {};
+    if (updates.checklist) {
+      payload.checklist_data = { items: updates.checklist };
+    }
+    if (updates.status) {
+      payload.status = updates.status === 'in-progress' ? 'in_progress' : updates.status;
+    }
+    if (updates.trainer) {
+      payload.trainer_name = updates.trainer;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/schedule/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.warn('Backend update failed, using local/fallback status:', e);
     }
 
     if (updates.status) {
