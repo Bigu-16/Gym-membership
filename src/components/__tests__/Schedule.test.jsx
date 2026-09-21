@@ -161,4 +161,31 @@ describe('Schedule Component', () => {
       expect(mockOnDeleteTemplate).toHaveBeenCalledWith(1);
     });
   });
+
+  it('projects recurring templates onto calendar days and shows enrolled trainees when selected', async () => {
+    render(
+      <Schedule
+        sessions={[]}
+        scheduleTemplates={mockTemplates}
+        members={mockMembers}
+        onAddTemplate={mockOnAddTemplate}
+        onDeleteTemplate={mockOnDeleteTemplate}
+        onUpdateTemplate={mockOnUpdateTemplate}
+        onUpdateSessionStatus={mockOnUpdateSessionStatus}
+      />
+    );
+
+    // Switch to month view
+    fireEvent.click(screen.getByText('Month'));
+    const classBadges = await screen.findAllByText(/Kids Taekwondo/i);
+    expect(classBadges.length).toBeGreaterThan(0);
+
+    // Click on the projected session badge to open drawer
+    fireEvent.click(classBadges[0]);
+
+    // Drawer should show details, checklist, and enrolled trainees
+    expect(screen.getByText('Session Checklist')).toBeInTheDocument();
+    expect(screen.getByText('Enrolled Trainees')).toBeInTheDocument();
+    expect(screen.getByText('Bran Stark')).toBeInTheDocument();
+  });
 });

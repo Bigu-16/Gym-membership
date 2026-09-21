@@ -250,8 +250,98 @@ const Schedule = ({
 
   const hours = Array.from({ length: 15 }, (_, i) => i + 7); // 7 AM to 9 PM
 
+  const parseTimeToDay = (targetDay, timeStr) => {
+    let start = new Date(targetDay);
+    start.setHours(10, 0, 0, 0);
+    let end = new Date(targetDay);
+    end.setHours(11, 0, 0, 0);
+
+    if (timeStr && timeStr.includes(' - ')) {
+      const [startStr, endStr] = timeStr.split(' - ');
+      const parsePart = (str, baseDate) => {
+        const trimmed = str.trim();
+        const parts = trimmed.split(' ');
+        const [h, m] = (parts[0] || '10:00').split(':').map(Number);
+        const ampm = (parts[1] || 'AM').toUpperCase();
+        let hours = h % 12;
+        if (ampm === 'PM') hours += 12;
+        const d = new Date(baseDate);
+        d.setHours(hours, m || 0, 0, 0);
+        return d;
+      };
+      try {
+        start = parsePart(startStr, targetDay);
+        end = parsePart(endStr, targetDay);
+      } catch (e) {}
+    }
+    return { start, end };
+  };
+
   const getSessionsForDay = (day) => {
-    return sessions.filter(session => isSameDay(session.start, day));
+    const directSessions = (sessions || []).filter(session => isSameDay(session.start, day));
+    
+    // Project weekly scheduleTemplates matching day-of-week
+    const dayNameShort = format(day, 'EEE'); // 'Mon', 'Tue', etc.
+    const dayNameFull = format(day, 'EEEE'); // 'Monday', 'Tuesday', etc.
+
+    const projectedSessions = (scheduleTemplates || []).map(template => {
+      if (!template) return null;
+      const tDays = Array.isArray(template.days)
+        ? template.days
+        : (typeof template.days === 'string' ? template.days.split(',').map(s => s.trim()) : []);
+
+      const matchesDay = tDays.some(d => {
+        const dl = d.toLowerCase();
+        const shortL = dayNameShort.toLowerCase();
+        const fullL = dayNameFull.toLowerCase();
+        return dl.startsWith(shortL) || shortL.startsWith(dl) || dl === fullL;
+      });
+
+      if (!matchesDay) return null;
+
+      // Avoid duplicating an existing explicit session
+      const exists = directSessions.some(s => 
+        s.template_id === template.id || 
+        (s.title && s.title.toLowerCase() === (template.className || template.title || '').toLowerCase())
+      );
+      if (exists) return null;
+
+      const { start, end } = parseTimeToDay(day, template.time);
+      const now = new Date();
+      let status = 'upcoming';
+      if (isSameDay(day, now)) {
+        if (now >= start && now <= end) {
+          status = 'in-progress';
+        } else if (now > end) {
+          status = 'completed';
+        }
+      } else if (day < startOfDay(now)) {
+        status = 'completed';
+      }
+
+      return {
+        id: `template-${template.id}-${format(day, 'yyyy-MM-dd')}`,
+        template_id: template.id,
+        title: template.className || template.title || 'Group Class',
+        trainer: template.trainer || 'Coach',
+        location: template.location || 'Main Studio',
+        start,
+        end,
+        status,
+        type: 'group',
+        capacity: template.capacity || 20,
+        enrolled: template.enrolled || 0,
+        checklist: [
+          { id: 1, text: 'Roll call & attendance check', checked: false },
+          { id: 2, text: 'Warm-up & stretching sequence', checked: false },
+          { id: 3, text: 'Curriculum instruction & drills', checked: false },
+          { id: 4, text: 'Cool down & progress logging', checked: false }
+        ]
+      };
+    }).filter(Boolean);
+
+    const combined = [...directSessions, ...projectedSessions];
+    return combined.sort((a, b) => new Date(a.start) - new Date(b.start));
   };
 
   const renderHeader = () => (
@@ -1125,6 +1215,58 @@ const Schedule = ({
                         Add
                       </button>
                     </form>
+                  </div>
+                );
+              })()}
+
+              {(() => {
+                const sTitle = (selectedSession.title || '').toLowerCase();
+                const enrolledTrainees = (members || []).filter(m => {
+                  if (selectedSession.template_id && m.enrolledClass?.id === selectedSession.template_id) return true;
+                  if (m.enrolledClass?.className && m.enrolledClass.className.toLowerCase() === sTitle) return true;
+                  if (m.schedule?.slot && m.schedule.slot.toLowerCase().includes(sTitle)) return true;
+                  if (m.plan && m.plan.toLowerCase() === sTitle) return true;
+                  return false;
+                });
+
+                return (
+                  <div className="bg-[var(--bg-primary)] p-6 rounded-[32px] border border-[var(--glass-border)]">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex items-center gap-2">
+                        <Users size={16} className="text-[var(--text-secondary)]" />
+                        <h3 className="text-xs uppercase tracking-luxury font-bold">Enrolled Trainees</h3>
+                      </div>
+                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[var(--glass-border)] text-[var(--text-primary)]">
+                        {enrolledTrainees.length} {selectedSession.capacity ? `/ ${selectedSession.capacity}` : ''}
+                      </span>
+                    </div>
+
+                    {enrolledTrainees.length === 0 ? (
+                      <p className="text-[11px] text-[var(--text-secondary)] italic">No trainees enrolled in this class yet.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                        {enrolledTrainees.map(trainee => (
+                          <div key={trainee.id} className="flex items-center justify-between p-2.5 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)]">
+                            <div className="flex items-center gap-3">
+                              <img 
+                                src={trainee.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(trainee.name)}&background=random&color=fff`} 
+                                alt={trainee.name} 
+                                className="w-8 h-8 rounded-full object-cover border border-[var(--glass-border)]" 
+                              />
+                              <div>
+                                <p className="text-xs font-semibold text-[var(--text-primary)] leading-tight">{trainee.name}</p>
+                                <p className="text-[9px] text-[var(--text-secondary)]">
+                                  {trainee.parentName ? `Parent: ${trainee.parentName}` : trainee.phone}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-[9px] uppercase tracking-luxury px-2 py-0.5 rounded-md font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                              Enrolled
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })()}

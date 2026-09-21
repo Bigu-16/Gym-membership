@@ -198,4 +198,44 @@ describe('MemberDetails Component', () => {
 
     expect(mockOnDeleteMember).toHaveBeenCalledWith(101);
   });
+
+  it('opens renewal modal, displays payment anchor, and triggers onRenewMember on confirm', async () => {
+    const mockOnRenewMember = vi.fn();
+    const expiredMember = {
+      ...mockMember,
+      expiryDate: '2026-08-01T00:00:00.000Z'
+    };
+    apiService.getMember.mockResolvedValue(expiredMember);
+
+    render(
+      <MemberDetails 
+        member={expiredMember}
+        onBack={mockOnBack}
+        onUpdateMember={mockOnUpdateMember}
+        onDeleteMember={mockOnDeleteMember}
+        onRenewMember={mockOnRenewMember}
+      />
+    );
+
+    await screen.findAllByText('Robert Stark');
+
+    // Click Renew Membership button
+    const renewBtn = screen.getByRole('button', { name: /Renew Membership/i });
+    fireEvent.click(renewBtn);
+
+    // Modal elements should be visible
+    expect(screen.getByText('Select Renewal Duration')).toBeInTheDocument();
+    expect(screen.getByText(/Anchored to/i)).toBeInTheDocument();
+    expect(screen.getByText(/Calculated New Expiry Date/i)).toBeInTheDocument();
+
+    // Click Confirm & Renew button
+    const confirmRenewBtn = screen.getByRole('button', { name: /Confirm & Renew/i });
+    fireEvent.click(confirmRenewBtn);
+
+    expect(mockOnRenewMember).toHaveBeenCalledTimes(1);
+    expect(mockOnRenewMember).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 101 }),
+      expect.any(String)
+    );
+  });
 });

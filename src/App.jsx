@@ -38,14 +38,12 @@ const App = () => {
       const userProfile = await apiService.getMe();
       setCurrentUser(userProfile);
 
-      // 1. Fetch templates
-      const templatesData = await apiService.getTemplates();
-      setScheduleTemplates(templatesData);
-
-      // 2. Fetch members & families
-      const [membersData, familiesData] = await Promise.all([
+      // 1. Fetch templates, members, families & enrollments in parallel
+      const [templatesData, membersData, familiesData, enrollmentsData] = await Promise.all([
+        apiService.getTemplates(),
         apiService.getMembers(),
-        apiService.getFamilies().catch(() => [])
+        apiService.getFamilies().catch(() => []),
+        apiService.getEnrollments().catch(() => [])
       ]);
 
       const familyParentMap = new Map();
@@ -57,7 +55,33 @@ const App = () => {
 
       const enrichedMembers = membersData.map(m => {
         const parentName = m.parentName || (m.parentPhone ? familyParentMap.get(m.parentPhone) : null);
-        return parentName ? { ...m, parentName } : m;
+        const userEnrollment = enrollmentsData.find(e => e.member_id === m.id);
+        const enrolledTemplate = userEnrollment ? templatesData.find(t => t.id === userEnrollment.template_id) : null;
+        const fallbackTemplate = !enrolledTemplate && m.plan 
+          ? templatesData.find(t => t.className && (m.plan.toLowerCase().includes(t.className.toLowerCase()) || t.className.toLowerCase().includes(m.plan.toLowerCase()))) 
+          : null;
+        const resolvedTemplate = enrolledTemplate || fallbackTemplate;
+
+        const enrolledClass = resolvedTemplate ? {
+          id: resolvedTemplate.id,
+          className: resolvedTemplate.className || resolvedTemplate.title,
+          days: Array.isArray(resolvedTemplate.days) ? resolvedTemplate.days.join(', ') : resolvedTemplate.days,
+          time: resolvedTemplate.time,
+          location: resolvedTemplate.location || 'Main Studio',
+          slot: `${resolvedTemplate.className || resolvedTemplate.title}: ${Array.isArray(resolvedTemplate.days) ? resolvedTemplate.days.join(', ') : resolvedTemplate.days} @ ${resolvedTemplate.time}`
+        } : (m.schedule?.slot ? {
+          className: m.plan || 'General Class',
+          slot: m.schedule.slot,
+          days: m.schedule.slot.includes(' @ ') ? m.schedule.slot.split(' @ ')[0] : 'Scheduled',
+          time: m.schedule.slot.includes(' @ ') ? m.schedule.slot.split(' @ ')[1] : '',
+          location: m.schedule.location || 'Main Studio'
+        } : null);
+
+        return {
+          ...m,
+          ...(parentName ? { parentName } : {}),
+          ...(enrolledClass ? { enrolledClass } : {})
+        };
       });
 
       setMembers(enrichedMembers);
@@ -92,11 +116,10 @@ const App = () => {
         }
       });
 
-      // 3. Fetch enrollments to compute enrolled count for each template dynamically
-      const enrollments = await apiService.getEnrollments();
+      // 3. Compute enrolled count for each template dynamically
       const templatesWithEnrolled = templatesData.map(t => ({
         ...t,
-        enrolled: enrollments.filter(e => e.template_id === t.id).length
+        enrolled: enrollmentsData.filter(e => e.template_id === t.id).length
       }));
       setScheduleTemplates(templatesWithEnrolled);
 
@@ -168,8 +191,16 @@ const App = () => {
         const mem = newMembers[i];
         if (mem.trainingType === 'group' && mem.schedule?.slot) {
           const template = scheduleTemplates.find(t => {
-            const slotText = `${t.className || 'General Class'}: ${t.days} @ ${t.time}`;
-            return slotText === mem.schedule.slot;
+            const daysStr = Array.isArray(t.days) ? t.days.join(', ') : (t.days || '');
+            const slotText = `${t.className || 'General Class'}: ${daysStr} @ ${t.time}`;
+            if (slotText === mem.schedule.slot) return true;
+            if (mem.schedule?.slot) {
+              const nameMatch = t.className && mem.schedule.slot.toLowerCase().includes(t.className.toLowerCase());
+              const timeMatch = t.time && mem.schedule.slot.includes(t.time);
+              if (nameMatch && timeMatch) return true;
+              if (nameMatch) return true;
+            }
+            return false;
           });
           if (template) {
             const backendMember = enrolled.find(em => em.phone === mem.phone);
@@ -180,15 +211,17 @@ const App = () => {
         }
       }
 
-      // 3. For sessions, if personal training, we create a session on backend
+      // 3. Create sessions for scheduled sessions so they appear on calendar
       for (const sess of newSessions) {
-        if (sess.type === 'personal') {
+        try {
           await apiService.createSession({
             start: sess.start,
-            trainer: sess.trainer,
-            status: sess.status,
-            checklist: sess.checklist
+            trainer: sess.trainer || 'Coach',
+            status: sess.status || 'upcoming',
+            checklist: sess.checklist || []
           });
+        } catch (e) {
+          console.warn('Session creation note:', e);
         }
       }
 
@@ -276,6 +309,33 @@ const App = () => {
     } catch (err) {
       console.error(err);
       alert('Failed to update member: ' + err.message);
+    }
+  };
+
+  const handleRenewMember = async (target, newExpiryDate, planId = null) => {
+    try {
+      if (target.isGroup && target.trainees) {
+        await Promise.all(
+          target.trainees.map(t =>
+            apiService.updateMember(t.id, {
+              ...t,
+              expiryDate: newExpiryDate,
+              ...(planId ? { planId } : {})
+            })
+          )
+        );
+      } else {
+        await apiService.updateMember(target.id, {
+          ...target,
+          expiryDate: newExpiryDate,
+          ...(planId ? { planId } : {})
+        });
+      }
+      await loadData();
+    } catch (err) {
+      console.error('Renewal error:', err);
+      alert('Failed to renew membership: ' + (err.message || 'Unknown error'));
+      throw err;
     }
   };
 
@@ -481,6 +541,8 @@ const App = () => {
                     onBack={() => setSelectedMember(null)} 
                     onUpdateMember={handleUpdateMember} 
                     onDeleteMember={handleDeleteMember}
+                    onRenewMember={handleRenewMember}
+                    scheduleTemplates={scheduleTemplates}
                   />
                 ) : (
                   <>
