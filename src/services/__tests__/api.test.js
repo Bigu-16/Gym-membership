@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { apiService, API_BASE_URL, mapSessionToFrontend } from '../api';
+import { apiService, API_BASE_URL, mapSessionToFrontend, mapMemberToFrontend, getStoredParentName, setStoredParentInfo } from '../api';
 
 describe('apiService', () => {
   beforeEach(() => {
@@ -226,6 +226,90 @@ describe('apiService', () => {
           })
         })
       );
+    });
+
+    it('enrollMembers preserves parentName for single child trainee with parent info', async () => {
+      const singleChildInput = [
+        { name: 'Bruce Wayne Jr', phone: '+971501111111', parentName: 'Thomas Wayne', parentPhone: '+971509999999', parentEmail: 'thomas@wayne.com', planId: 3, age: 10 }
+      ];
+
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 50,
+          parent: {
+            name: 'Thomas Wayne',
+            phone: '+971509999999',
+            email: 'thomas@wayne.com'
+          },
+          members: [
+            { id: 101, name: 'Bruce Wayne Jr', phone: '+971501111111', parent_phone: '+971509999999', plan_id: 3, age: 10 }
+          ]
+        }),
+      });
+
+      const result = await apiService.enrollMembers(singleChildInput);
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Bruce Wayne Jr');
+      expect(result[0].parentName).toBe('Thomas Wayne');
+      expect(result[0].parentPhone).toBe('+971509999999');
+
+      // Verify cached in client storage
+      expect(getStoredParentName('+971509999999')).toBe('Thomas Wayne');
+      expect(getStoredParentName(null, '+971501111111')).toBe('Thomas Wayne');
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/members/families`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            parent: {
+              name: 'Thomas Wayne',
+              phone: '+971509999999',
+              email: 'thomas@wayne.com'
+            },
+            members: [
+              { name: 'Bruce Wayne Jr', phone: '+971501111111', age: 10, parent_phone: '+971509999999', gender: null, medical_issues: null, plan_id: 3, expiry_date: null, messaging_opt_in: true, is_frozen: false }
+            ]
+          })
+        })
+      );
+    });
+
+    it('getFamilies maps parent name from parent object and enriches trainees', async () => {
+      const backendFamily = {
+        id: 77,
+        parent: {
+          name: 'Sarah Connor',
+          phone: '+15551234567',
+          email: 'sarah@connor.com'
+        },
+        members: [
+          {
+            id: 88,
+            name: 'John Connor',
+            phone: '+15557654321',
+            parent_phone: '+15551234567',
+            gender: 'male',
+            plan_id: 3,
+            plan_name: 'Elite Performance',
+            expiry_date: '2026-10-01',
+            is_frozen: false
+          }
+        ]
+      };
+
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [backendFamily],
+      });
+
+      const families = await apiService.getFamilies('+15551234567');
+      expect(families).toHaveLength(1);
+      expect(families[0].parentName).toBe('Sarah Connor');
+      expect(families[0].parentPhone).toBe('+15551234567');
+      expect(families[0].name).toBe("Sarah's Family");
+      expect(families[0].trainees[0].parentName).toBe('Sarah Connor');
     });
   });
 

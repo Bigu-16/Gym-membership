@@ -44,6 +44,12 @@ const MemberDetails = ({ member, onBack, onUpdateMember, onDeleteMember }) => {
       } else {
         const fresh = await apiService.getMember(member.id);
         if (fresh) {
+          if (fresh.parentPhone && !fresh.parentName) {
+            const families = await apiService.getFamilies(fresh.parentPhone).catch(() => []);
+            if (families && families.length > 0 && families[0].parentName) {
+              fresh.parentName = families[0].parentName;
+            }
+          }
           setLocalMember(fresh);
         }
       }
@@ -124,6 +130,7 @@ const MemberDetails = ({ member, onBack, onUpdateMember, onDeleteMember }) => {
     setEditForm({
       name: m.name || '',
       phone: m.phone || '',
+      parentName: m.parentName || '',
       parentPhone: m.parentPhone || '',
       gender: m.gender || 'Male',
       medicalIssues: m.medicalIssues || '',
@@ -144,6 +151,7 @@ const MemberDetails = ({ member, onBack, onUpdateMember, onDeleteMember }) => {
         id: editingMemberId,
         name: editForm.name,
         phone: editForm.phone,
+        parentName: editForm.parentName || null,
         parentPhone: editForm.parentPhone || null,
         gender: editForm.gender,
         medicalIssues: editForm.medicalIssues || '',
@@ -342,6 +350,17 @@ const MemberDetails = ({ member, onBack, onUpdateMember, onDeleteMember }) => {
                       onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                       className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)]"
                       placeholder="Phone number"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Parent/Guardian Name (Optional)</label>
+                    <input 
+                      type="text"
+                      value={editForm.parentName}
+                      onChange={(e) => setEditForm({ ...editForm, parentName: e.target.value })}
+                      className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)]"
+                      placeholder="Parent/guardian full name"
                     />
                   </div>
 

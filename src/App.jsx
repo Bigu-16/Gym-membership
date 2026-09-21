@@ -42,23 +42,42 @@ const App = () => {
       const templatesData = await apiService.getTemplates();
       setScheduleTemplates(templatesData);
 
-      // 2. Fetch members
-      const membersData = await apiService.getMembers();
-      setMembers(membersData);
+      // 2. Fetch members & families
+      const [membersData, familiesData] = await Promise.all([
+        apiService.getMembers(),
+        apiService.getFamilies().catch(() => [])
+      ]);
+
+      const familyParentMap = new Map();
+      familiesData.forEach(f => {
+        if (f.parentPhone && f.parentName) {
+          familyParentMap.set(f.parentPhone, f.parentName);
+        }
+      });
+
+      const enrichedMembers = membersData.map(m => {
+        const parentName = m.parentName || (m.parentPhone ? familyParentMap.get(m.parentPhone) : null);
+        return parentName ? { ...m, parentName } : m;
+      });
+
+      setMembers(enrichedMembers);
       setSelectedMember(prev => {
         if (!prev) return null;
         if (prev.isGroup) {
-          const familyMembers = membersData.filter(m => m.parentPhone === prev.parentPhone);
+          const familyMembers = enrichedMembers.filter(m => m.parentPhone === prev.parentPhone);
           if (familyMembers.length === 0) return null;
           
-          const firstName = familyMembers[0].name.split(' ')[0];
+          const matchedFamily = familiesData.find(f => f.parentPhone === prev.parentPhone);
+          const parentName = matchedFamily?.parentName || familyMembers.find(m => m.parentName)?.parentName || (prev.parentName !== prev.parentPhone ? prev.parentName : null);
+          const displayName = parentName || familyMembers[0].name.split(' ')[0];
+          const firstName = displayName.split(' ')[0];
           const isFrozen = familyMembers.some(m => m.isFrozen);
           const expiryDate = familyMembers[0].expiryDate;
           
           return {
             isGroup: true,
             id: prev.parentPhone,
-            parentName: prev.parentPhone,
+            parentName: parentName || prev.parentPhone,
             parentPhone: prev.parentPhone,
             trainees: familyMembers,
             name: `${firstName}'s Family`,
@@ -68,7 +87,7 @@ const App = () => {
             isFrozen: isFrozen
           };
         } else {
-          const fresh = membersData.find(m => m.id === prev.id);
+          const fresh = enrichedMembers.find(m => m.id === prev.id);
           return fresh || null;
         }
       });
@@ -287,21 +306,31 @@ const App = () => {
     members.forEach(m => {
       if (m.parentPhone) {
         if (!groups.has(m.parentPhone)) {
+          const parentName = m.parentName || m.parentPhone;
+          const firstName = (m.parentName && m.parentName !== m.parentPhone)
+            ? m.parentName.split(' ')[0]
+            : m.name.split(' ')[0];
           groups.set(m.parentPhone, {
             isGroup: true,
             id: m.parentPhone,
-            parentName: m.parentPhone, // Use parent phone or phone if name is missing
+            parentName: parentName,
             parentPhone: m.parentPhone,
             trainees: [m],
-            name: `${m.name.split(' ')[0]}'s Family`,
+            name: `${firstName}'s Family`,
             plan: 'Family Group',
-            image: `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random&color=fff`,
+            image: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=random&color=fff`,
             expiryDate: m.expiryDate,
             isFrozen: m.isFrozen
           });
         } else {
           const group = groups.get(m.parentPhone);
           group.trainees.push(m);
+          if (m.parentName && (!group.parentName || group.parentName === group.parentPhone)) {
+            group.parentName = m.parentName;
+            const firstName = m.parentName.split(' ')[0];
+            group.name = `${firstName}'s Family`;
+            group.image = `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=random&color=fff`;
+          }
           if (m.isFrozen) group.isFrozen = true;
         }
       } else {

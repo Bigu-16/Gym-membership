@@ -45,21 +45,65 @@ const mapDaysToFrontend = (daysList) => {
   return daysList.map(d => FULL_TO_SHORT_DAYS[d] || d).join(', ');
 };
 
+// Parent info client-side cache helpers
+export const PARENT_NAMES_KEY = 'gym_parent_info_cache';
+
+export const getStoredParentMap = () => {
+  try {
+    return JSON.parse(localStorage.getItem(PARENT_NAMES_KEY) || '{}');
+  } catch {
+    return {};
+  }
+};
+
+export const setStoredParentInfo = (parentPhone, parentName, memberPhone = null, parentEmail = null) => {
+  if (!parentPhone && !memberPhone) return;
+  try {
+    const current = getStoredParentMap();
+    const info = {
+      name: parentName || undefined,
+      email: parentEmail || undefined,
+      phone: parentPhone || undefined
+    };
+    if (parentPhone) {
+      current[parentPhone] = { ...(current[parentPhone] || {}), ...info };
+    }
+    if (memberPhone) {
+      current[memberPhone] = { ...(current[memberPhone] || {}), ...info };
+    }
+    localStorage.setItem(PARENT_NAMES_KEY, JSON.stringify(current));
+  } catch (e) {
+    console.warn('Failed to cache parent info', e);
+  }
+};
+
+export const getStoredParentName = (parentPhone, memberPhone = null) => {
+  const current = getStoredParentMap();
+  if (parentPhone && current[parentPhone]?.name) return current[parentPhone].name;
+  if (memberPhone && current[memberPhone]?.name) return current[memberPhone].name;
+  return null;
+};
+
 // Map member to frontend schema
-const mapMemberToFrontend = (m) => ({
-  id: m.id,
-  name: m.name,
-  phone: m.phone,
-  parentPhone: m.parent_phone,
-  gender: m.gender ? m.gender.charAt(0).toUpperCase() + m.gender.slice(1) : 'Male',
-  medicalIssues: m.medical_issues || '',
-  planId: m.plan_id,
-  plan: m.plan_name || (m.plan_id === 4 ? 'Family Group' : m.plan_id === 3 ? 'Elite Performance' : m.plan_id === 2 ? 'Wellness Pro' : 'Starter Access'),
-  expiryDate: m.expiry_date ? new Date(m.expiry_date).toISOString() : null,
-  isFrozen: m.is_frozen,
-  image: m.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random&color=fff`,
-  messagingOptIn: m.messaging_opt_in
-});
+export const mapMemberToFrontend = (m) => {
+  const parentPhone = m.parent_phone || m.parentPhone || null;
+  const parentName = m.parent_name || m.parentName || getStoredParentName(parentPhone, m.phone) || null;
+  return {
+    id: m.id,
+    name: m.name,
+    phone: m.phone,
+    parentPhone: parentPhone,
+    parentName: parentName,
+    gender: m.gender ? m.gender.charAt(0).toUpperCase() + m.gender.slice(1) : 'Male',
+    medicalIssues: m.medical_issues || m.medicalIssues || '',
+    planId: m.plan_id || m.planId,
+    plan: m.plan_name || m.plan || (m.plan_id === 4 ? 'Family Group' : m.plan_id === 3 ? 'Elite Performance' : m.plan_id === 2 ? 'Wellness Pro' : 'Starter Access'),
+    expiryDate: m.expiry_date ? new Date(m.expiry_date).toISOString() : (m.expiryDate || null),
+    isFrozen: m.is_frozen !== undefined ? m.is_frozen : (m.isFrozen || false),
+    image: m.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random&color=fff`,
+    messagingOptIn: m.messaging_opt_in !== undefined ? m.messaging_opt_in : (m.messagingOptIn !== undefined ? m.messagingOptIn : true)
+  };
+};
 
 // Map member to backend schema
 const mapMemberToBackend = (m) => {
@@ -242,19 +286,42 @@ export const apiService = {
     if (!response.ok) throw new Error('Failed to load families');
     const data = await response.json();
     return data.map(f => {
-      const trainees = f.members.map(mapMemberToFrontend);
-      const firstName = trainees.length > 0 ? trainees[0].name.split(' ')[0] : 'Family';
+      const pPhone = f.parent?.phone || f.parent_phone || null;
+      const pName = f.parent?.name || f.parent_name || (pPhone ? getStoredParentName(pPhone) : null) || 'Parent Contact';
+      const pEmail = f.parent?.email || f.parent_email || null;
+
+      if (pPhone && pName && pName !== 'Parent Contact') {
+        setStoredParentInfo(pPhone, pName, null, pEmail);
+      }
+
+      const trainees = (f.members || []).map(m => {
+        if (m.phone && pName && pName !== 'Parent Contact') {
+          setStoredParentInfo(pPhone, pName, m.phone, pEmail);
+        }
+        return mapMemberToFrontend({
+          ...m,
+          parent_phone: pPhone,
+          parent_name: pName !== 'Parent Contact' ? pName : (m.parent_name || null)
+        });
+      });
+
+      const firstName = trainees.length > 0 ? trainees[0].name.split(' ')[0] : (pName !== 'Parent Contact' ? pName.split(' ')[0] : 'Family');
+      const displayName = (f.parent?.name || f.parent_name)
+        ? `${(f.parent?.name || f.parent_name).split(' ')[0]}'s Family`
+        : `${firstName}'s Family`;
       const isFrozen = trainees.some(t => t.isFrozen);
       const expiryDate = trainees.length > 0 ? trainees[0].expiryDate : null;
+
       return {
         isGroup: true,
-        id: f.parent_phone,
-        parentName: f.parent_phone,
-        parentPhone: f.parent_phone,
+        id: pPhone || f.id,
+        parentName: pName,
+        parentPhone: pPhone,
+        parentEmail: pEmail,
         trainees: trainees,
-        name: `${firstName}'s Family`,
+        name: displayName,
         plan: `Family Group (${trainees.length} Kids)`,
-        image: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=random&color=fff`,
+        image: `https://ui-avatars.com/api/?name=${encodeURIComponent((f.parent?.name || f.parent_name) ? (f.parent?.name || f.parent_name) : firstName)}&background=random&color=fff`,
         expiryDate: expiryDate,
         isFrozen: isFrozen
       };
@@ -262,35 +329,99 @@ export const apiService = {
   },
 
   async enrollMembers(membersList) {
-    // If it's a family (multiple members with parent phone), use create_family
-    const isFamily = membersList.length > 1 && membersList[0].parentPhone;
+    if (!membersList || membersList.length === 0) return [];
+
+    const primary = membersList[0];
+    const parentPhone = primary.parentPhone || null;
+    const parentName = primary.parentName || null;
+    const parentEmail = primary.parentEmail || null;
+
+    if (parentPhone && parentName) {
+      setStoredParentInfo(parentPhone, parentName, primary.phone, parentEmail);
+      membersList.forEach(m => {
+        if (m.phone) {
+          setStoredParentInfo(parentPhone, parentName, m.phone, parentEmail);
+        }
+      });
+    }
+
+    const isFamily = Boolean(parentPhone);
     
     if (isFamily) {
       const payload = {
         parent: {
-          name: membersList[0].parentName || 'Parent Contact',
-          phone: membersList[0].parentPhone,
-          email: membersList[0].parentEmail || undefined,
+          name: parentName || 'Parent Contact',
+          phone: parentPhone,
+          email: parentEmail || undefined,
         },
         members: membersList.map(m => ({
           ...mapMemberToBackend(m),
           age: m.age ? Math.min(18, Math.max(4, parseInt(m.age, 10))) : 10
         }))
       };
-      const response = await fetch(`${API_BASE_URL}/members/families`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || 'Family registration failed');
+
+      try {
+        let response = await fetch(`${API_BASE_URL}/members/families`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        // Retry once on transient 5xx server errors (common with Render database cold starts)
+        if (response.status >= 500) {
+          await new Promise(r => setTimeout(r, 1000));
+          response = await fetch(`${API_BASE_URL}/members/families`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(payload),
+          });
+        }
+
+        if (response.ok) {
+          const data = await response.json();
+          const pName = data.parent?.name || parentName;
+          const pPhone = data.parent?.phone || parentPhone;
+          const list = data.members || (Array.isArray(data) ? data : [data]);
+          return list.map(m => mapMemberToFrontend({
+            ...m,
+            parent_name: pName,
+            parent_phone: pPhone
+          }));
+        }
+
+        const err = await response.json().catch(() => ({}));
+        if (response.status !== 409) {
+          throw new Error(err.detail || 'Family registration failed');
+        }
+      } catch (err) {
+        if (!err.message?.includes('already in use') && !err.message?.includes('Family registration failed')) {
+          throw err;
+        }
       }
-      const data = await response.json();
-      const list = data.members || (Array.isArray(data) ? data : [data]);
-      return list.map(mapMemberToFrontend);
+
+      // Fallback: register members individually if family already existed
+      const enrolledMembers = [];
+      for (const m of membersList) {
+        const payload = mapMemberToBackend(m);
+        const res = await fetch(`${API_BASE_URL}/members/`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || 'Member registration failed');
+        }
+        const data = await res.json();
+        enrolledMembers.push(mapMemberToFrontend({
+          ...data,
+          parent_name: parentName,
+          parent_phone: parentPhone
+        }));
+      }
+      return enrolledMembers;
     } else {
-      // Register single member
+      // Register single member without parent
       const payload = mapMemberToBackend(membersList[0]);
       const response = await fetch(`${API_BASE_URL}/members/`, {
         method: 'POST',
@@ -298,7 +429,7 @@ export const apiService = {
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
-        const err = await response.json();
+        const err = await response.json().catch(() => ({}));
         throw new Error(err.detail || 'Member registration failed');
       }
       const data = await response.json();
@@ -307,6 +438,9 @@ export const apiService = {
   },
 
   async updateMember(memberId, memberData) {
+    if (memberData.parentPhone && memberData.parentName) {
+      setStoredParentInfo(memberData.parentPhone, memberData.parentName, memberData.phone);
+    }
     const payload = mapMemberToBackend(memberData);
     const response = await fetch(`${API_BASE_URL}/members/${memberId}`, {
       method: 'PUT',
@@ -315,7 +449,11 @@ export const apiService = {
     });
     if (!response.ok) throw new Error('Failed to update member');
     const data = await response.json();
-    return mapMemberToFrontend(data);
+    return mapMemberToFrontend({
+      ...data,
+      parent_name: memberData.parentName || undefined,
+      parent_phone: memberData.parentPhone || undefined
+    });
   },
 
   async freezeMember(memberId, isFrozen) {
