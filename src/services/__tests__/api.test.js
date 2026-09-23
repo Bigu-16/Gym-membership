@@ -477,6 +477,15 @@ describe('apiService', () => {
       );
     });
 
+    it('updateSession for virtual template- string ID persists in localStorage without firing POST or PATCH network requests', async () => {
+      const checklist = [{ id: 1, text: 'Warm up', checked: true }];
+      const res = await apiService.updateSession('template-3-2026-09-21', { checklist });
+
+      expect(localStorage.getItem('gym_session_checklist_template-3-2026-09-21')).toBe(JSON.stringify(checklist));
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+      expect(res.id).toBe('template-3-2026-09-21');
+    });
+
     it('mapSessionToFrontend normalizes checklist items ensuring each has unique id and boolean checked', () => {
       const rawSession = {
         id: 15,

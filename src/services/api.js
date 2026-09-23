@@ -660,6 +660,18 @@ export const apiService = {
       }
     }
 
+    // If it's a virtual/projected template placeholder (e.g. 'template-3-2026-09-21'),
+    // it does not exist in the database yet. Ticking a checklist item should NOT send
+    // a POST request (which creates a new session in the DB) nor an invalid string PATCH (which triggers 422).
+    // We persist the checklist in localStorage and return the updated state.
+    if (typeof sessionId === 'string' && sessionId.startsWith('template-')) {
+      return {
+        id: sessionId,
+        checklist_data: { items: updates.checklist || [] },
+        ...updates
+      };
+    }
+
     const payload = {};
     if (updates.checklist) {
       payload.checklist_data = { items: updates.checklist };
@@ -695,6 +707,29 @@ export const apiService = {
   },
 
   async updateSessionStatus(sessionId, status) {
+    // When explicitly starting a virtual template session, materialize it into the DB
+    if (typeof sessionId === 'string' && sessionId.startsWith('template-')) {
+      const parts = sessionId.split('-');
+      const tempId = parseInt(parts[1], 10);
+      const dateStr = parts.length >= 5 
+        ? `${parts[2]}-${parts[3]}-${parts[4]}` 
+        : new Date().toISOString().split('T')[0];
+
+      try {
+        const created = await this.createSession({
+          templateId: isNaN(tempId) ? null : tempId,
+          start: dateStr,
+          trainer: 'Assigned Coach',
+          status: status === 'in-progress' ? 'in_progress' : status,
+          checklist: []
+        });
+        return created;
+      } catch (e) {
+        console.warn('Could not materialize session on status change, falling back:', e);
+        return { id: sessionId, status };
+      }
+    }
+
     const response = await fetch(`${API_BASE_URL}/schedule/sessions/${sessionId}/status`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
