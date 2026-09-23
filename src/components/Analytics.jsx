@@ -1,10 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const Analytics = ({ members = [], scheduleTemplates = [] }) => {
   const [activeZone, setActiveZone] = useState('All');
   const [hoveredMonth, setHoveredMonth] = useState(null);
   const [hoveredRingSegment, setHoveredRingSegment] = useState(null);
   const [hoveredHeatmapCell, setHoveredHeatmapCell] = useState(null);
+
+  // Dismiss tooltip on scroll so it doesn't linger detached if user scrolls
+  useEffect(() => {
+    const handleScroll = () => {
+      if (hoveredHeatmapCell) setHoveredHeatmapCell(null);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [hoveredHeatmapCell]);
 
   // 1. Dynamic Metric Calculations
   const metrics = useMemo(() => {
@@ -527,12 +537,18 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
                                 opacity: opacity < 0.15 ? 0.12 : opacity,
                               }}
                               onMouseEnter={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
                                 setHoveredHeatmapCell({
                                   day: dayData.day,
                                   hour: cell.hour,
                                   intensity,
-                                  clientX: e.clientX,
-                                  clientY: e.clientY
+                                  rect: {
+                                    left: rect.left,
+                                    top: rect.top,
+                                    width: rect.width,
+                                    height: rect.height,
+                                    bottom: rect.bottom,
+                                  },
                                 });
                               }}
                               onMouseLeave={() => setHoveredHeatmapCell(null)}
@@ -546,26 +562,49 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
                 </div>
               </div>
 
-              {/* Dynamic Heatmap Cell Tooltip */}
-              {hoveredHeatmapCell && (
-                <div 
-                  className="fixed z-50 bg-[var(--text-primary)] text-[var(--bg-primary)] rounded-xl px-4 py-3 text-left shadow-2xl pointer-events-none animate-fade-in text-xs"
-                  style={{
-                    left: `${hoveredHeatmapCell.clientX - 100}px`,
-                    top: `${hoveredHeatmapCell.clientY - 100}px`,
-                    transform: 'translate(-100%, -200%)',
-                  }}
-                >
-                  <span className="text-[9px] uppercase tracking-luxury opacity-70 font-bold block mb-0.5">
-                    {hoveredHeatmapCell.day}s @ {hoveredHeatmapCell.hour}
-                  </span>
-                  <div className="font-semibold mb-1">
-                    Avg. Occupancy: <span className="font-light">{hoveredHeatmapCell.intensity}%</span>
-                  </div>
-                  <div className="text-[9px] opacity-70 uppercase tracking-luxury">
-                    Staffing: {hoveredHeatmapCell.intensity > 70 ? '🔥 Double Shift' : '🛡️ Standard Shift'}
-                  </div>
-                </div>
+              {/* Dynamic Heatmap Cell Tooltip (Portaled to document.body to break free from glass-card stacking context & containing block) */}
+              {hoveredHeatmapCell && typeof document !== 'undefined' && createPortal(
+                (() => {
+                  const centerX = hoveredHeatmapCell.rect.left + hoveredHeatmapCell.rect.width / 2;
+                  const isAbove = hoveredHeatmapCell.rect.top > 95;
+                  const tooltipY = isAbove ? hoveredHeatmapCell.rect.top - 8 : hoveredHeatmapCell.rect.bottom + 8;
+                  const tooltipX = Math.max(110, Math.min(window.innerWidth - 110, centerX));
+                  const arrowOffset = centerX - tooltipX;
+
+                  return (
+                    <div 
+                      className="fixed z-[9999] pointer-events-none animate-fade-in text-xs"
+                      style={{
+                        left: `${tooltipX}px`,
+                        top: `${tooltipY}px`,
+                        transform: isAbove ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+                      }}
+                    >
+                      <div className="bg-[var(--text-primary)] text-[var(--bg-primary)] rounded-xl px-4 py-3 text-left shadow-2xl relative">
+                        <span className="text-[9px] uppercase tracking-luxury opacity-70 font-bold block mb-0.5">
+                          {hoveredHeatmapCell.day}s @ {hoveredHeatmapCell.hour}
+                        </span>
+                        <div className="font-semibold mb-1">
+                          Avg. Occupancy: <span className="font-light">{hoveredHeatmapCell.intensity}%</span>
+                        </div>
+                        <div className="text-[9px] opacity-70 uppercase tracking-luxury">
+                          Staffing: {hoveredHeatmapCell.intensity > 70 ? '🔥 Double Shift' : '🛡️ Standard Shift'}
+                        </div>
+
+                        {/* Caret arrow pointing toward the hovered cell */}
+                        <div 
+                          className="absolute w-2.5 h-2.5 bg-[var(--text-primary)] rotate-45"
+                          style={{
+                            left: `calc(50% + ${arrowOffset}px)`,
+                            marginLeft: '-5px',
+                            ...(isAbove ? { bottom: '-5px' } : { top: '-5px' }),
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })(),
+                document.body
               )}
             </div>
           </div>
