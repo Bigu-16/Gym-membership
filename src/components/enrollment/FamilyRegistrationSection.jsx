@@ -1,7 +1,7 @@
 import React from 'react';
 import { PhoneInput } from 'react-international-phone';
 import 'react-international-phone/style.css';
-import { PERSONAL_DEFAULTS, ACTIVITIES } from '../../config/scheduleConfig';
+import { PERSONAL_DEFAULTS, ACTIVITIES, PERSONAL_TRAINING_PROGRAMS } from '../../config/scheduleConfig';
 
 const FamilyRegistrationSection = ({
   trainingType,
@@ -206,12 +206,26 @@ const FamilyRegistrationSection = ({
                         ) : (
                           <div className="space-y-1.5 md:col-span-2">
                             <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Personal Training Program</label>
-                            <input 
-                              disabled
-                              type="text"
-                              value={trainee.service || 'Personal Training'}
-                              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm opacity-60 cursor-not-allowed"
-                            />
+                            <div className="relative">
+                              <select 
+                                value={
+                                  PERSONAL_TRAINING_PROGRAMS.includes(trainee.service)
+                                    ? trainee.service
+                                    : (PERSONAL_TRAINING_PROGRAMS.find(p => p.toLowerCase().includes((trainee.service || '').toLowerCase())) || PERSONAL_TRAINING_PROGRAMS[0])
+                                }
+                                onChange={(e) => handleTraineeChange(fIndex, tIndex, 'service', e.target.value)}
+                                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-8"
+                              >
+                                {PERSONAL_TRAINING_PROGRAMS.map(program => (
+                                  <option key={program} value={program}>{program}</option>
+                                ))}
+                              </select>
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </div>
                           </div>
                         )}
                         <div className="space-y-1.5">

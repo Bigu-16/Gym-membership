@@ -1,4 +1,5 @@
 import React from 'react';
+import { ACTIVITIES, PERSONAL_TRAINING_PROGRAMS } from '../../config/scheduleConfig';
 
 const ProgramTypeSelector = ({
   trainingType,
@@ -24,7 +25,17 @@ const ProgramTypeSelector = ({
           type="button"
           onClick={() => {
             setTrainingType('group');
-            setFamilies([families[0]]); // Reset to one family for group
+            setFamilies([families[0]].map(fam => ({
+              ...fam,
+              trainees: fam.trainees.map(t => {
+                const current = t.service || '';
+                const matchedAct = ACTIVITIES.find(a => current.toLowerCase().includes(a.toLowerCase()));
+                return {
+                  ...t,
+                  service: matchedAct || 'Taekwondo'
+                };
+              })
+            })));
           }}
           className={`training-type-btn ${trainingType === 'group' ? 'active' : ''}`}
         >
@@ -42,7 +53,20 @@ const ProgramTypeSelector = ({
         <div className="space-y-4">
           <button 
             type="button"
-            onClick={() => setTrainingType('personal')}
+            onClick={() => {
+              setTrainingType('personal');
+              setFamilies(prev => prev.map(fam => ({
+                ...fam,
+                trainees: fam.trainees.map(t => {
+                  const current = t.service || 'Taekwondo';
+                  const matchedPT = PERSONAL_TRAINING_PROGRAMS.find(p => p.toLowerCase().includes(current.toLowerCase()));
+                  return {
+                    ...t,
+                    service: matchedPT || PERSONAL_TRAINING_PROGRAMS[0]
+                  };
+                })
+              })));
+            }}
             className={`training-type-btn w-full ${trainingType === 'personal' ? 'active' : ''}`}
           >
             <div className="icon-container">

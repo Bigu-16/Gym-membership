@@ -8,6 +8,15 @@ export const ACTIVITIES = [
   'Zumba Fitness'
 ];
 
+export const PERSONAL_TRAINING_PROGRAMS = [
+  'Personal Taekwondo Training',
+  'Personal Karate Training',
+  'Personal Kickboxing Training',
+  'Personal Kung Fu Training',
+  'Personal Adult Kickboxing',
+  'Personal Fitness & Conditioning'
+];
+
 export const PRICING_MATRIX = {
   'Taekwondo': {
     '1 Month': { '2 classes/week': 300, '3 classes/week': 350 },

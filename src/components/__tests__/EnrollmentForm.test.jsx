@@ -62,4 +62,25 @@ describe('EnrollmentForm Component', () => {
     expect(screen.getByText('Training Location / Preferred Area')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/e.g. Member's Villa/i)).toBeInTheDocument();
   });
+
+  it('allows choosing a personal training program in personal training mode', async () => {
+    render(<EnrollmentForm onEnroll={mockOnEnroll} scheduleTemplates={mockTemplates} />);
+
+    // Switch to Personal Training
+    const ptHeading = screen.getByRole('heading', { name: 'Personal Training' });
+    fireEvent.click(ptHeading.closest('button'));
+
+    // Find the PT program select dropdown
+    const ptProgramOption = screen.getByRole('option', { name: 'Personal Kickboxing Training' });
+    expect(ptProgramOption).toBeInTheDocument();
+
+    const selects = screen.getAllByRole('combobox');
+    const ptSelect = selects.find(s => s.querySelector('option[value="Personal Kickboxing Training"]'));
+    expect(ptSelect).toBeInTheDocument();
+    expect(ptSelect).not.toBeDisabled();
+
+    // Change to Personal Kickboxing Training
+    fireEvent.change(ptSelect, { target: { value: 'Personal Kickboxing Training' } });
+    expect(ptSelect.value).toBe('Personal Kickboxing Training');
+  });
 });
