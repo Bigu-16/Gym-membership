@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { PhoneInput } from 'react-international-phone';
-import 'react-international-phone/style.css';
-import { PERSONAL_DEFAULTS, ACTIVITIES, PRICING_MATRIX } from '../config/scheduleConfig';
+import { PERSONAL_DEFAULTS, PRICING_MATRIX } from '../config/scheduleConfig';
+import ProgramTypeSelector from './enrollment/ProgramTypeSelector';
+import FamilyRegistrationSection from './enrollment/FamilyRegistrationSection';
+import ScheduleSelectorSection from './enrollment/ScheduleSelectorSection';
+import PaymentDetailsSection from './enrollment/PaymentDetailsSection';
+import EnrollmentSuccess from './enrollment/EnrollmentSuccess';
 
 const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
   const [trainingType, setTrainingType] = useState('group'); // 'group' or 'personal'
@@ -52,7 +55,14 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
 
   const addTrainee = (familyIndex) => {
     const newFamilies = [...families];
-    newFamilies[familyIndex].trainees.push({ name: '', age: '', gender: 'Male', medicalIssues: '', service: trainingType === 'group' ? 'Taekwondo' : 'Personal Taekwondo Training', frequency: '3 classes/week' });
+    newFamilies[familyIndex].trainees.push({ 
+      name: '', 
+      age: '', 
+      gender: 'Male', 
+      medicalIssues: '', 
+      service: trainingType === 'group' ? 'Taekwondo' : 'Personal Taekwondo Training', 
+      frequency: '3 classes/week' 
+    });
     setFamilies(newFamilies);
   };
 
@@ -74,12 +84,6 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
     const newFamilies = [...families];
     newFamilies[familyIndex].trainees[traineeIndex][field] = value;
     setFamilies(newFamilies);
-  };
-
-  const formatDuration = (hours) => {
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
-    return `${h}:${m === 0 ? '00' : m}`;
   };
 
   const getStandardDurationKey = (value, unit) => {
@@ -120,6 +124,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
       };
     });
   };
+
   // Calculate total amount automatically based on Pricing Matrix
   useEffect(() => {
     const standardDuration = getStandardDurationKey(payment.durationValue, payment.durationUnit);
@@ -127,7 +132,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
       let total = 0;
       families.forEach(family => {
         family.trainees.forEach(() => {
-          total += 1000; // Base rate for personal training per trainee
+          total += 1000;
         });
       });
       const durationMult = standardDuration === '3 Months' ? 2.5 : standardDuration === '6 Months' ? 4.5 : standardDuration === '1 Year' ? 8 : 1;
@@ -148,12 +153,12 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
       setPayment(prev => ({ ...prev, amount: String(total) }));
     }
   }, [families, payment.durationValue, payment.durationUnit, trainingType]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     
     const allMembers = [];
     const allSessions = [];
-    
 
     families.forEach(family => {
       family.trainees.forEach((t, tIndex) => {
@@ -199,15 +204,13 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
 
         allMembers.push(newMember);
 
-        // Create a schedule entry
         if (trainingType === 'personal') {
-          // For personal training, create a specific session for this person
           allSessions.push({
             id: Math.random(),
             title: `PT: ${t.name}`,
             trainer: 'Assigned Trainer',
             location: schedule.location || 'VIP Zone',
-            start: new Date(new Date().setHours(14, 0, 0, 0)), // Default to 2 PM today for demo
+            start: new Date(new Date().setHours(14, 0, 0, 0)),
             end: new Date(new Date().setHours(15, 30, 0, 0)),
             status: 'upcoming',
             type: 'personal',
@@ -217,7 +220,6 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
             ]
           });
         } else if (schedule.slot) {
-          // Parse slotText, e.g. "Kids Taekwondo: Mon, Wed, Fri @ 4:00 PM - 5:00 PM"
           let title = t.service;
           let startTimeStr = '16:00';
           let endTimeStr = '17:00';
@@ -226,7 +228,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
             const parts = schedule.slot.split(' @ ');
             const headerParts = parts[0].split(': ');
             title = headerParts[0] || t.service;
-            const timeStr = parts[1]; // "4:00 PM - 5:00 PM"
+            const timeStr = parts[1];
             if (timeStr && timeStr.includes(' - ')) {
               const timeParts = timeStr.split(' - ');
               const format12hTo24h = (t12) => {
@@ -287,738 +289,49 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
   };
 
   if (isSuccess) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] glass-card p-12 text-center animate-in fade-in zoom-in duration-500">
-        <div className="w-20 h-20 mb-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-          <svg className="w-10 h-10 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h2 className="text-3xl font-light uppercase tracking-luxury mb-4">Enrollment Successful</h2>
-        <p className="text-[var(--text-secondary)] text-lg max-w-md">
-          The registration for <span className="text-[var(--text-primary)] font-bold">{families[0].parentInfo.name}'s</span> family has been processed.
-        </p>
-      </div>
-    );
+    return <EnrollmentSuccess families={families} />;
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-12 max-w-full animate-in fade-in slide-in-from-bottom-8 duration-700">
-      {/* Training Type Selection */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-4 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <h2 className="text-xs uppercase tracking-luxury font-bold">Select Training Program</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <button 
-            type="button"
-            onClick={() => {
-              setTrainingType('group');
-              setFamilies([families[0]]); // Reset to one family for group
-            }}
-            className={`training-type-btn ${trainingType === 'group' ? 'active' : ''}`}
-          >
-            <div className="icon-container">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider mb-1">Group Training</h3>
-              <p className="text-[10px] opacity-60">Standard classes at the gym facility</p>
-            </div>
-          </button>
+      <ProgramTypeSelector 
+        trainingType={trainingType}
+        setTrainingType={setTrainingType}
+        personalType={personalType}
+        setPersonalType={setPersonalType}
+        families={families}
+        setFamilies={setFamilies}
+      />
 
-          <div className="space-y-4">
-            <button 
-              type="button"
-              onClick={() => setTrainingType('personal')}
-              className={`training-type-btn w-full ${trainingType === 'personal' ? 'active' : ''}`}
-            >
-              <div className="icon-container">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider mb-1">Personal Training</h3>
-                <p className="text-[10px] opacity-60">Tailored sessions and flexible timing</p>
-              </div>
-            </button>
-            
-            {trainingType === 'personal' && (
-              <div className="flex gap-2 p-1 glass-card rounded-xl">
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setPersonalType('individual');
-                    setFamilies([families[0]]);
-                  }}
-                  className={`flex-1 py-2 text-[10px] uppercase tracking-luxury font-bold rounded-lg transition-all ${personalType === 'individual' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'text-[var(--text-secondary)]'}`}
-                >
-                  Individual
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setPersonalType('group')}
-                  className={`flex-1 py-2 text-[10px] uppercase tracking-luxury font-bold rounded-lg transition-all ${personalType === 'group' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'text-[var(--text-secondary)]'}`}
-                >
-                  Group (Multi-Family)
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      <FamilyRegistrationSection 
+        trainingType={trainingType}
+        personalType={personalType}
+        families={families}
+        addFamily={addFamily}
+        removeFamily={removeFamily}
+        addTrainee={addTrainee}
+        removeTrainee={removeTrainee}
+        handleParentChange={handleParentChange}
+        handleTraineeChange={handleTraineeChange}
+      />
 
-      {/* Families Section */}
-      <section className="space-y-8">
-        <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </div>
-            <h2 className="text-xs uppercase tracking-luxury font-bold">
-              {trainingType === 'personal' && personalType === 'group' ? 'Registered Families' : 'Registration Details'}
-            </h2>
-          </div>
-          {trainingType === 'personal' && personalType === 'group' && (
-            <button 
-              type="button"
-              onClick={addFamily}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:scale-105 transition-transform active:scale-95 shadow-lg"
-            >
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Another Family
-            </button>
-          )}
-        </div>
+      <ScheduleSelectorSection 
+        trainingType={trainingType}
+        scheduleMode={scheduleMode}
+        setScheduleMode={setScheduleMode}
+        scheduleTemplates={scheduleTemplates}
+        schedule={schedule}
+        setSchedule={setSchedule}
+        customScheduleSlots={customScheduleSlots}
+        setCustomScheduleSlots={setCustomScheduleSlots}
+      />
 
-        <div className="space-y-12">
-          {families.map((family, fIndex) => (
-            <div key={family.id} className="family-group relative animate-in fade-in slide-in-from-left-8 duration-500">
-              <span className="family-badge">Family #{fIndex + 1}</span>
-              
-              {/* Parent Info */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Parent Full Name</label>
-                  <input 
-                    required
-                    type="text" 
-                    pattern="^[a-zA-Z\s\-']+$"
-                    title="Names should only contain letters, spaces, hyphens, and apostrophes."
-                    value={family.parentInfo.name}
-                    onChange={(e) => handleParentChange(fIndex, 'name', e.target.value)}
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
-                    placeholder="e.g. John Doe"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Phone Number</label>
-                  <div className="luxury-phone-input">
-                    <PhoneInput
-                      defaultCountry="ae"
-                      value={family.parentInfo.phone}
-                      onChange={(phone) => handleParentChange(fIndex, 'phone', phone)}
-                      inputClassName="!w-full !bg-[var(--bg-primary)] !border-[var(--glass-border)] !rounded-r-xl !h-[46px] !text-sm !focus:ring-2 !focus:ring-[var(--text-primary)]/20 !transition-all !text-[var(--text-primary)]"
-                      countrySelectorStyleProps={{
-                        buttonClassName: "!bg-transparent !border-[var(--glass-border)] !rounded-l-xl !px-3",
-                        dropdownClassName: "!bg-[var(--bg-secondary)] !text-[var(--text-primary)] !border-[var(--glass-border)] !rounded-xl !shadow-luxury",
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2 flex flex-row items-end gap-4">
-                  <div className="flex-grow">
-                    <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Email Address</label>
-                    <input 
-                      type="email" 
-                      value={family.parentInfo.email}
-                      onChange={(e) => handleParentChange(fIndex, 'email', e.target.value)}
-                      className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
-                      placeholder="john@example.com"
-                    />
-                  </div>
-                  {families.length > 1 && (
-                    <button 
-                      type="button"
-                      onClick={() => removeFamily(family.id)}
-                      className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all duration-300"
-                    >
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Trainees for this family */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-[9px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">Kids / Trainees</h4>
-                  <button 
-                    type="button"
-                    onClick={() => addTrainee(fIndex)}
-                    className="text-[9px] uppercase tracking-luxury font-bold text-[var(--text-primary)] hover:opacity-60 transition-opacity"
-                  >
-                    + Add Kid
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {family.trainees.map((trainee, tIndex) => (
-                    <div key={tIndex} className="glass-card p-5 flex gap-4 items-center group relative">
-                      <div className="flex-grow flex flex-col gap-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="space-y-1.5">
-                            <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Kid's Full Name</label>
-                            <input 
-                              required
-                              type="text" 
-                              pattern="^[a-zA-Z\s\-']+$"
-                              title="Names should only contain letters, spaces, hyphens, and apostrophes."
-                              value={trainee.name}
-                              onChange={(e) => handleTraineeChange(fIndex, tIndex, 'name', e.target.value)}
-                              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
-                              placeholder="e.g. Leo Smith"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Age</label>
-                            <input 
-                              required
-                              type="number" 
-                              min={PERSONAL_DEFAULTS.minAge}
-                              value={trainee.age}
-                              onChange={(e) => handleTraineeChange(fIndex, tIndex, 'age', e.target.value)}
-                              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
-                              placeholder="Age"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Gender</label>
-                            <div className="relative">
-                              <select 
-                                value={trainee.gender}
-                                onChange={(e) => handleTraineeChange(fIndex, tIndex, 'gender', e.target.value)}
-                                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-8"
-                              >
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                              </select>
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {trainingType === 'group' ? (
-                            <>
-                              <div className="space-y-1.5">
-                                <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Activity / Sport</label>
-                                <div className="relative">
-                                  <select 
-                                    value={trainee.service || 'Taekwondo'}
-                                    onChange={(e) => handleTraineeChange(fIndex, tIndex, 'service', e.target.value)}
-                                    className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-8"
-                                  >
-                                    {ACTIVITIES.map(act => (
-                                      <option key={act} value={act}>{act}</option>
-                                    ))}
-                                  </select>
-                                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="space-y-1.5">
-                                <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Classes per Week</label>
-                                <div className="relative">
-                                  <select 
-                                    value={trainee.frequency || '3 classes/week'}
-                                    onChange={(e) => handleTraineeChange(fIndex, tIndex, 'frequency', e.target.value)}
-                                    className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-8"
-                                  >
-                                    <option value="2 classes/week">2 Classes / Week</option>
-                                    <option value="3 classes/week">3 Classes / Week</option>
-                                  </select>
-                                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                  </div>
-                                </div>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="space-y-1.5 md:col-span-2">
-                              <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Personal Training Program</label>
-                              <input 
-                                disabled
-                                type="text"
-                                value={trainee.service || 'Personal Training'}
-                                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm opacity-60 cursor-not-allowed"
-                              />
-                            </div>
-                          )}
-                          <div className="space-y-1.5">
-                            <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Medical Issues (Optional)</label>
-                            <input 
-                              type="text" 
-                              value={trainee.medicalIssues}
-                              onChange={(e) => handleTraineeChange(fIndex, tIndex, 'medicalIssues', e.target.value)}
-                              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
-                              placeholder="e.g. Asthma, Allergies, or None"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      {family.trainees.length > 1 && (
-                        <button 
-                          type="button"
-                          onClick={() => removeTrainee(fIndex, tIndex)}
-                          className="p-2 rounded-lg text-rose-500/40 group-hover:text-rose-500 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Schedule Selection */}
-      <section className="glass-card p-8 space-y-8">
-        <div className="flex items-center gap-4">
-          <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h2 className="text-xs uppercase tracking-luxury font-bold">Training Schedule</h2>
-        </div>
-
-        {trainingType === 'group' ? (
-          <div className="space-y-8">
-            <div className="flex gap-4 p-1 glass-card rounded-xl max-w-sm">
-              <button 
-                type="button"
-                onClick={() => setScheduleMode('preset')}
-                className={`flex-1 py-2.5 text-[10px] uppercase tracking-luxury font-bold rounded-lg transition-all ${scheduleMode === 'preset' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--text-primary)]/5'}`}
-              >
-                Pre-set Schedule
-              </button>
-              <button 
-                type="button"
-                onClick={() => setScheduleMode('custom')}
-                className={`flex-1 py-2.5 text-[10px] uppercase tracking-luxury font-bold rounded-lg transition-all ${scheduleMode === 'custom' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--text-primary)]/5'}`}
-              >
-                Custom Schedule
-              </button>
-            </div>
-
-            {scheduleMode === 'preset' ? (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Available Pre-set Schedules</label>
-                  <span className="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] opacity-50">Click to select</span>
-                </div>
-                
-                {(() => {
-                  const grouped = scheduleTemplates.reduce((acc, t) => {
-                    const cName = t.className || 'General Classes';
-                    if (!acc[cName]) acc[cName] = [];
-                    acc[cName].push(t);
-                    return acc;
-                  }, {});
-                  
-                  return (
-                    <div className="space-y-8">
-                      {Object.entries(grouped).map(([cName, slots]) => (
-                        <div key={cName} className="space-y-4">
-                          <div className="flex items-center gap-3 mb-2 ml-1">
-                            <div className="w-1.5 h-4 bg-[var(--text-primary)] rounded-full opacity-60"></div>
-                            <h3 className="text-xs uppercase tracking-luxury font-bold text-[var(--text-primary)] opacity-80">{cName}</h3>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {slots.map(slot => {
-                              const isFull = slot.enrolled >= slot.capacity;
-                              const slotText = `${cName}: ${slot.days} @ ${slot.time}`;
-                              return (
-                                <div 
-                                  key={slot.id}
-                                  onClick={() => !isFull && setSchedule({...schedule, slot: slotText})}
-                                  className={`slot-pill flex flex-col items-center justify-center py-4 px-2 relative ${schedule.slot === slotText ? 'active ring-2 ring-[var(--text-primary)]' : ''} ${isFull ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:border-[var(--text-primary)]'}`}
-                                >
-                                  <span className="text-[10px] font-bold mb-1">{slot.days}</span>
-                                  <span className="text-[11px] font-light opacity-80">{slot.time}</span>
-                                  
-                                  <div className="mt-3 flex items-center gap-2 w-full px-4">
-                                    <div className="flex-grow h-1 bg-[var(--glass-border)] rounded-full overflow-hidden">
-                                      <div 
-                                        className="h-full bg-emerald-500 transition-all duration-1000" 
-                                        style={{ width: `${(slot.enrolled / slot.capacity) * 100}%` }}
-                                      ></div>
-                                    </div>
-                                    <span className="text-[8px] font-bold opacity-60">
-                                      {slot.enrolled}/{slot.capacity}
-                                    </span>
-                                  </div>
-                                  {isFull && <span className="absolute inset-0 flex items-center justify-center bg-[var(--bg-primary)]/80 text-rose-500 text-[8px] font-bold tracking-widest uppercase">Full</span>}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            ) : (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Build Custom Schedule</label>
-                  <button 
-                    type="button" 
-                    onClick={() => setCustomScheduleSlots([...customScheduleSlots, { day: 'Monday', time: '12:00' }])}
-                    className="text-[9px] uppercase tracking-widest text-[var(--text-primary)] hover:opacity-70 font-bold flex items-center gap-1"
-                  >
-                    + Add Day
-                  </button>
-                </div>
-                
-                <div className="space-y-4">
-                  {customScheduleSlots.map((slot, index) => (
-                    <div key={index} className="flex items-center gap-4 p-4 glass-card rounded-2xl relative group border border-[var(--glass-border)] hover:border-[var(--text-primary)]/30 transition-all">
-                      <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Day of Week</label>
-                          <select 
-                            value={slot.day}
-                            onChange={(e) => {
-                              const newSlots = [...customScheduleSlots];
-                              newSlots[index].day = e.target.value;
-                              setCustomScheduleSlots(newSlots);
-                            }}
-                            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer"
-                          >
-                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
-                              <option key={d} value={d}>{d}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Time</label>
-                          <input 
-                            type="time" 
-                            value={slot.time}
-                            onChange={(e) => {
-                              const newSlots = [...customScheduleSlots];
-                              newSlots[index].time = e.target.value;
-                              setCustomScheduleSlots(newSlots);
-                            }}
-                            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all cursor-pointer"
-                          />
-                        </div>
-                      </div>
-                      {customScheduleSlots.length > 1 && (
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            const newSlots = customScheduleSlots.filter((_, i) => i !== index);
-                            setCustomScheduleSlots(newSlots);
-                          }}
-                          className="p-2 rounded-lg text-rose-500/40 hover:bg-rose-500 hover:text-white transition-all self-end mb-1"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-12">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-              <div className="space-y-6">
-                <div className="flex justify-between items-center px-1">
-                  <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">Days Per Week</label>
-                  <span className="text-[12px] font-bold text-[var(--text-primary)]">{schedule.daysPerWeek} Days</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <input 
-                    type="range"
-                    min={PERSONAL_DEFAULTS.minDays}
-                    max={PERSONAL_DEFAULTS.maxDays}
-                    step="1"
-                    value={schedule.daysPerWeek}
-                    onChange={(e) => setSchedule({...schedule, daysPerWeek: e.target.value})}
-                    className="flex-grow accent-[var(--text-primary)] cursor-pointer"
-                  />
-                  <input 
-                    type="number"
-                    min={PERSONAL_DEFAULTS.minDays}
-                    max={PERSONAL_DEFAULTS.maxDays}
-                    value={schedule.daysPerWeek}
-                    onChange={(e) => setSchedule({...schedule, daysPerWeek: e.target.value})}
-                    className="w-16 bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-lg px-2 py-2 text-center text-xs focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]/20"
-                  />
-                </div>
-                <div className="flex justify-between text-[8px] uppercase tracking-widest text-[var(--text-secondary)] opacity-40 px-1">
-                  <span>Min: {PERSONAL_DEFAULTS.minDays}</span>
-                  <span>Max: {PERSONAL_DEFAULTS.maxDays}</span>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex justify-between items-center px-1">
-                  <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">Session Duration (Hours)</label>
-                  <span className="text-[12px] font-bold text-[var(--text-primary)]">{formatDuration(schedule.duration)}</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <input 
-                    type="range"
-                    min={PERSONAL_DEFAULTS.minDuration}
-                    max={PERSONAL_DEFAULTS.maxDuration}
-                    step="0.5"
-                    value={schedule.duration}
-                    onChange={(e) => setSchedule({...schedule, duration: parseFloat(e.target.value)})}
-                    className="flex-grow accent-[var(--text-primary)] cursor-pointer"
-                  />
-                  <input 
-                    type="number"
-                    min={PERSONAL_DEFAULTS.minDuration}
-                    max={PERSONAL_DEFAULTS.maxDuration}
-                    step="0.5"
-                    value={schedule.duration}
-                    onChange={(e) => setSchedule({...schedule, duration: parseFloat(e.target.value)})}
-                    className="w-16 bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-lg px-2 py-2 text-center text-xs focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]/20"
-                  />
-                </div>
-                <div className="flex justify-between text-[8px] uppercase tracking-widest text-[var(--text-secondary)] opacity-40 px-1">
-                  <span>Min: {formatDuration(PERSONAL_DEFAULTS.minDuration)}</span>
-                  <span>Max: {formatDuration(PERSONAL_DEFAULTS.maxDuration)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-1">
-                <svg className="w-3.5 h-3.5 text-[var(--text-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">Training Location / Preferred Area</label>
-              </div>
-              <input 
-                required
-                type="text" 
-                value={schedule.location}
-                onChange={(e) => setSchedule({...schedule, location: e.target.value})}
-                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all"
-                placeholder="e.g. Member's Villa, Specific Park, or Gym Facility"
-              />
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Payment */}
-      <section className="glass-card p-8 space-y-6">
-        <div className="flex items-center gap-4 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-          </div>
-          <h2 className="text-xs uppercase tracking-luxury font-bold">Payment Details</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Duration</label>
-            <div className="flex gap-2">
-              {/* Stepper Input Button */}
-              <div className="flex items-center bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl overflow-hidden shadow-sm hover:border-[var(--text-primary)]/30 transition-all">
-                <button
-                  type="button"
-                  onClick={() => handleDurationValueChange(payment.durationValue - 1)}
-                  className="px-3 py-3 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--text-primary)]/5 transition-colors border-r border-[var(--glass-border)]"
-                  aria-label="Decrease duration"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12H4" />
-                  </svg>
-                </button>
-                <input
-                  type="number"
-                  min="0"
-                  value={payment.durationValue}
-                  onChange={(e) => handleDurationValueChange(e.target.value)}
-                  className="w-12 bg-transparent text-center text-sm focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-bold text-[var(--text-primary)]"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleDurationValueChange(payment.durationValue + 1)}
-                  className="px-3 py-3 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--text-primary)]/5 transition-colors border-l border-[var(--glass-border)]"
-                  aria-label="Increase duration"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Unit Selector */}
-              <div className="relative flex-grow min-w-[100px]">
-                <select
-                  value={payment.durationUnit}
-                  onChange={(e) => handleDurationUnitChange(e.target.value)}
-                  className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10 text-[var(--text-primary)]"
-                >
-                  <option value="Day">Days</option>
-                  <option value="Month">Months</option>
-                  <option value="Year">Years</option>
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Currency</label>
-            <div className="relative">
-              <select 
-                value={payment.currency}
-                onChange={(e) => setPayment({...payment, currency: e.target.value})}
-                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10 text-[var(--text-primary)]"
-              >
-                <option>AED</option>
-                <option>USD</option>
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Total Amount</label>
-            <div className="flex flex-col gap-3">
-              <div className="relative group">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--text-secondary)]">
-                  {payment.currency === 'AED' ? 'AED' : '$'}
-                </span>
-                <input 
-                  required
-                  type="text" 
-                  list="amount-presets"
-                  value={payment.amount}
-                  onChange={(e) => setPayment({...payment, amount: e.target.value})}
-                  className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl pl-12 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none"
-                  placeholder="0.00"
-                />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)] opacity-40 group-hover:opacity-100 transition-opacity">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-                <datalist id="amount-presets">
-                  <option value="500" />
-                  <option value="1000" />
-                  <option value="1500" />
-                  <option value="2000" />
-                  <option value="2500" />
-                  <option value="3000" />
-                </datalist>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Method</label>
-            <div className="relative">
-              <select 
-                value={payment.method}
-                onChange={(e) => setPayment({...payment, method: e.target.value})}
-                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10"
-              >
-                <option>Cash</option>
-                <option>Credit Card</option>
-                <option>Bank Transfer</option>
-                <option>Mobile Pay</option>
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Initial Status</label>
-            <div className="relative">
-              <select 
-                value={payment.status}
-                onChange={(e) => setPayment({...payment, status: e.target.value})}
-                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10"
-              >
-                <option>Paid</option>
-                <option>Partial</option>
-                <option>Pending</option>
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="flex justify-end pt-4">
-        <button 
-          type="submit"
-          className="group relative px-12 py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] overflow-hidden transition-all hover:scale-[1.02] active:scale-95 shadow-xl"
-        >
-          <span className="relative z-10 text-xs uppercase tracking-luxury font-bold">Confirm Enrollment</span>
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        </button>
-      </div>
+      <PaymentDetailsSection 
+        payment={payment}
+        setPayment={setPayment}
+        handleDurationValueChange={handleDurationValueChange}
+        handleDurationUnitChange={handleDurationUnitChange}
+      />
     </form>
   );
 };

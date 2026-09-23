@@ -188,4 +188,49 @@ describe('Schedule Component', () => {
     expect(screen.getByText('Enrolled Trainees')).toBeInTheDocument();
     expect(screen.getByText('Bran Stark')).toBeInTheDocument();
   });
+
+  it('correctly handles 24h template times and splits overlapping sessions side-by-side in week view', () => {
+    const multiTemplates = [
+      {
+        id: 1,
+        className: 'Elite Performance',
+        days: 'Mon, Wed, Fri',
+        time: '14:00', // 2:00 PM
+        capacity: 12
+      },
+      {
+        id: 2,
+        className: 'Personal Training',
+        days: 'Mon, Tue, Wed, Thu, Fri',
+        time: '14:00', // Same time to test collision layout
+        capacity: 1
+      }
+    ];
+
+    render(
+      <Schedule
+        sessions={[]}
+        scheduleTemplates={multiTemplates}
+        members={[]}
+        onAddTemplate={mockOnAddTemplate}
+        onDeleteTemplate={mockOnDeleteTemplate}
+        onUpdateTemplate={mockOnUpdateTemplate}
+        onUpdateSessionStatus={mockOnUpdateSessionStatus}
+      />
+    );
+
+    // Both sessions should be rendered
+    const eliteCards = screen.getAllByText('Elite Performance');
+    const ptCards = screen.getAllByText('Personal Training');
+    expect(eliteCards.length).toBeGreaterThan(0);
+    expect(ptCards.length).toBeGreaterThan(0);
+
+    // Verify sub-column collision styling: width should be ~50%
+    const eliteCardContainer = eliteCards[0].closest('.absolute');
+    const ptCardContainer = ptCards[0].closest('.absolute');
+    expect(eliteCardContainer).toBeInTheDocument();
+    expect(ptCardContainer).toBeInTheDocument();
+    expect(eliteCardContainer.style.width).toContain('50%');
+    expect(ptCardContainer.style.width).toContain('50%');
+  });
 });
