@@ -5,6 +5,21 @@ import { twMerge } from 'tailwind-merge';
 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
+const formatTimeDisplay = (timeStr) => {
+  if (!timeStr) return '';
+  if (timeStr.includes(' - ') || timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+    return timeStr;
+  }
+  const [hStr, mStr] = timeStr.split(':');
+  const h = parseInt(hStr, 10);
+  if (!isNaN(h)) {
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${mStr || '00'} ${ampm}`;
+  }
+  return timeStr;
+};
+
 const TemplatesView = ({
   scheduleTemplates = [],
   members = [],
@@ -118,7 +133,7 @@ const TemplatesView = ({
                     <div className="mb-6 relative z-10">
                       <h4 className="text-2xl font-bold tracking-tight mb-1 flex items-center gap-2">
                         <Clock size={18} className="opacity-60 text-[var(--text-primary)]" />
-                        {template.time}
+                        {formatTimeDisplay(template.time)}
                       </h4>
                       <p className="text-sm font-light text-[var(--text-secondary)] tracking-wide">
                         {template.days}

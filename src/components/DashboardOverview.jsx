@@ -21,6 +21,7 @@ const DashboardOverview = ({
   const [dashboardStats, setDashboardStats] = useState(null);
   const [recentActivities, setRecentActivities] = useState([]);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -103,6 +104,26 @@ const DashboardOverview = ({
       if (templateTitle.includes("kickboxing")) trainer = "Elena Vance";
       if (templateTitle.includes("fitness") || templateTitle.includes("zumba")) trainer = "Marcus Thorne";
 
+      let defaultChecklist = [
+        { id: 1, text: 'Safety warm-up completed', checked: false },
+        { id: 2, text: 'Core group training sequence', checked: false },
+        { id: 3, text: 'Assisted stretching session', checked: false }
+      ];
+      try {
+        const saved = localStorage.getItem(`gym_session_checklist_template-${template.id}`);
+        if (saved) {
+          defaultChecklist = JSON.parse(saved);
+        }
+      } catch (e) {}
+
+      let defaultStatus = start < new Date() && end > new Date() ? 'in-progress' : 'upcoming';
+      try {
+        const savedStatus = localStorage.getItem(`gym_session_status_template-${template.id}`);
+        if (savedStatus) {
+          defaultStatus = savedStatus;
+        }
+      } catch (e) {}
+
       return {
         id: `template-${template.id}`,
         title: template.className || 'Group Class',
@@ -110,17 +131,35 @@ const DashboardOverview = ({
         location: templateTitle.includes("yoga") ? 'Zen Garden' : 'Studio B - Group Floor',
         start: start,
         end: end,
-        status: start < new Date() && end > new Date() ? 'in-progress' : 'upcoming',
+        status: defaultStatus,
         type: 'group',
-        checklist: [
-          { id: 1, text: 'Safety warm-up completed', checked: false },
-          { id: 2, text: 'Core group training sequence', checked: false },
-          { id: 3, text: 'Assisted stretching session', checked: false }
-        ]
+        checklist: defaultChecklist
       };
     }).filter(Boolean);
 
-    return [...(sessions || []), ...templateSessions];
+    const enrichedSessions = (sessions || []).map(s => {
+      let checklist = s.checklist;
+      try {
+        const saved = localStorage.getItem(`gym_session_checklist_${s.id}`);
+        if (saved) {
+          checklist = JSON.parse(saved);
+        }
+      } catch (e) {}
+      let status = s.status;
+      try {
+        const savedStatus = localStorage.getItem(`gym_session_status_${s.id}`);
+        if (savedStatus) {
+          status = savedStatus;
+        }
+      } catch (e) {}
+      return {
+        ...s,
+        ...(checklist ? { checklist } : {}),
+        status: status || s.status
+      };
+    });
+
+    return [...enrichedSessions, ...templateSessions];
   }, [sessions, scheduleTemplates]);
 
   const getSessionCategory = (session) => {
@@ -176,119 +215,109 @@ const DashboardOverview = ({
     return uniqueMembers;
   }, [filteredSessionsByCat, members]);
 
-  const materializeSession = async (sessionId) => {
-    if (String(sessionId).startsWith('template-')) {
-      const tempId = parseInt(String(sessionId).split('-')[1], 10);
-      const template = scheduleTemplates.find(t => t.id === tempId);
-      
-      const newDbSession = await apiService.createSession({
-        templateId: tempId,
-        start: new Date(),
-        trainer: template?.trainer || 'Master Kim',
-        status: 'in-progress',
-        checklist: [
-          { id: 1, text: 'Safety warm-up completed', checked: false },
-          { id: 2, text: 'Core group training sequence', checked: false },
-          { id: 3, text: 'Assisted stretching session', checked: false }
-        ]
-      });
-
-      const mapped = {
-        id: newDbSession.id,
-        title: template.className,
-        trainer: newDbSession.trainer_name,
-        location: template.className.toLowerCase().includes('yoga') ? 'Zen Garden' : 'Studio B - Group Floor',
-        start: new Date(),
-        end: new Date(Date.now() + 60 * 60 * 1000),
-        status: 'in-progress',
-        type: 'group',
-        checklist: newDbSession.checklist_data?.items || [],
-        templateId: tempId
-      };
-
-      setSessions(prev => [mapped, ...prev]);
-      return mapped;
-    }
-    return allSessions.find(s => s.id === sessionId);
-  };
-
   const handleToggleSessionStatus = async (session) => {
+    const newStatus = session.status === 'in-progress' ? 'upcoming' : 'in-progress';
     try {
-      if (String(session.id).startsWith('template-')) {
-        await materializeSession(session.id);
+      localStorage.setItem(`gym_session_status_${session.id}`, newStatus);
+    } catch (e) {}
+
+    // 1. Immediately update UI state so button and card status update without delay
+    setSessions(prev => {
+      const exists = prev.some(s => s.id === session.id);
+      if (exists) {
+        return prev.map(s => s.id === session.id ? { ...s, status: newStatus } : s);
       } else {
-        const newStatus = session.status === 'in-progress' ? 'upcoming' : 'in-progress';
-        if (onUpdateSessionStatus) {
-          await onUpdateSessionStatus(session.id, newStatus);
-        }
+        return [{ ...session, status: newStatus }, ...prev];
+      }
+    });
+
+    // 2. Notify backend / parent
+    try {
+      if (onUpdateSessionStatus) {
+        await onUpdateSessionStatus(session.id, newStatus);
+      } else {
+        await apiService.updateSession(session.id, { status: newStatus });
       }
     } catch (err) {
-      console.error('Failed to toggle session status:', err);
+      console.warn('Non-blocking status update error:', err);
+    }
+  };
+
+  const updateSessionChecklist = async (sessionId, updatedList) => {
+    try {
+      localStorage.setItem(`gym_session_checklist_${sessionId}`, JSON.stringify(updatedList));
+    } catch (e) {
+      console.warn('Error saving checklist to localStorage:', e);
+    }
+
+    setSessions(prev => {
+      const exists = prev.some(s => s.id === sessionId);
+      if (exists) {
+        return prev.map(s => s.id === sessionId ? { ...s, checklist: updatedList } : s);
+      } else {
+        const target = allSessions.find(s => s.id === sessionId);
+        if (target) {
+          return [{ ...target, checklist: updatedList }, ...prev];
+        }
+        return prev;
+      }
+    });
+
+    try {
+      await apiService.updateSession(sessionId, { checklist: updatedList });
+    } catch (err) {
+      console.warn('Non-blocking checklist update error:', err);
     }
   };
 
   const handleToggleChecklist = async (sessionId, itemId, itemIndex) => {
-    try {
-      const targetSession = await materializeSession(sessionId);
-      if (!targetSession) return;
+    const targetSession = allSessions.find(s => s.id === sessionId);
+    if (!targetSession) return;
 
-      const updatedList = targetSession.checklist.map((item, idx) => {
-        const matches = (itemId !== undefined && itemId !== null && item.id !== undefined && item.id !== null)
-          ? item.id === itemId
-          : idx === itemIndex;
-        return matches ? { ...item, checked: !item.checked } : item;
-      });
+    const currentChecklist = targetSession.checklist || [];
+    const updatedList = currentChecklist.map((item, idx) => {
+      const matches = (itemId !== undefined && itemId !== null && item.id !== undefined && item.id !== null)
+        ? item.id === itemId
+        : idx === itemIndex;
+      return matches ? { ...item, checked: !item.checked } : item;
+    });
 
-      setSessions(prev => prev.map(s => s.id === targetSession.id ? { ...s, checklist: updatedList } : s));
-      await apiService.updateSession(targetSession.id, { checklist: updatedList });
-    } catch (err) {
-      console.error(err);
-      alert('Failed to toggle checklist task: ' + err.message);
-    }
+    await updateSessionChecklist(sessionId, updatedList);
   };
 
   const handleAddChecklistItem = async (sessionId, text) => {
-    if (!text.trim()) return;
-    try {
-      const targetSession = await materializeSession(sessionId);
-      if (!targetSession) return;
+    if (!text || !text.trim()) return;
+    const targetSession = allSessions.find(s => s.id === sessionId);
+    if (!targetSession) return;
 
-      const newItem = {
-        id: Date.now(),
-        text: text.trim(),
-        checked: false
-      };
-      const updatedList = [...targetSession.checklist, newItem];
+    const currentChecklist = targetSession.checklist || [];
+    const newItem = {
+      id: Date.now(),
+      text: text.trim(),
+      checked: false
+    };
+    const updatedList = [...currentChecklist, newItem];
 
-      setSessions(prev => prev.map(s => s.id === targetSession.id ? { ...s, checklist: updatedList } : s));
-      await apiService.updateSession(targetSession.id, { checklist: updatedList });
-    } catch (err) {
-      console.error(err);
-      alert('Failed to add checklist task: ' + err.message);
-    }
+    await updateSessionChecklist(sessionId, updatedList);
   };
 
-  const handleDeleteChecklistItem = async (sessionId, itemId, itemIndex) => {
-    const isConfirmed = window.confirm("Are you sure you want to delete this task from the checklist?");
-    if (!isConfirmed) return;
+  const executeDeleteChecklistItem = async (sessionId, itemId, itemIndex) => {
+    const targetSession = allSessions.find(s => s.id === sessionId);
+    if (!targetSession) return;
 
-    try {
-      const targetSession = await materializeSession(sessionId);
-      if (!targetSession) return;
+    const currentChecklist = targetSession.checklist || [];
+    const updatedList = currentChecklist.filter((item, idx) => {
+      if (itemId !== undefined && itemId !== null && item.id !== undefined && item.id !== null) {
+        return item.id !== itemId;
+      }
+      return idx !== itemIndex;
+    });
 
-      const updatedList = targetSession.checklist.filter((item, idx) => {
-        if (itemId !== undefined && itemId !== null && item.id !== undefined && item.id !== null) {
-          return item.id !== itemId;
-        }
-        return idx !== itemIndex;
-      });
+    await updateSessionChecklist(sessionId, updatedList);
+  };
 
-      setSessions(prev => prev.map(s => s.id === targetSession.id ? { ...s, checklist: updatedList } : s));
-      await apiService.updateSession(targetSession.id, { checklist: updatedList });
-    } catch (err) {
-      console.error(err);
-      alert('Failed to delete checklist task: ' + err.message);
-    }
+  const handleDeleteChecklistItem = (sessionId, itemId, itemIndex) => {
+    setTaskToDelete({ sessionId, itemId, itemIndex });
   };
 
   const handleCheckIn = async (memberId) => {
@@ -341,6 +370,37 @@ const DashboardOverview = ({
           <span className="text-xs font-semibold uppercase tracking-luxury text-[var(--text-primary)]">
             {showCheckInSuccess}
           </span>
+        </div>
+      )}
+
+      {/* In-app Confirmation Modal for Task Deletion */}
+      {taskToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="glass-card p-6 border border-[var(--glass-border)] max-w-sm w-full shadow-2xl rounded-2xl bg-[var(--bg-secondary)] space-y-4">
+            <h4 className="text-sm uppercase tracking-luxury font-bold text-[var(--text-primary)]">Delete Protocol Task</h4>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Are you sure you want to delete this task from the checklist?
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setTaskToDelete(null)}
+                className="px-4 py-2 rounded-xl text-xs uppercase tracking-luxury border border-[var(--glass-border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  executeDeleteChecklistItem(taskToDelete.sessionId, taskToDelete.itemId, taskToDelete.itemIndex);
+                  setTaskToDelete(null);
+                }}
+                className="px-4 py-2 rounded-xl text-xs uppercase tracking-luxury font-bold bg-rose-500 text-white hover:bg-rose-600 transition-colors shadow-lg"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

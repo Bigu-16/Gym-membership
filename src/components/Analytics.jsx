@@ -16,6 +16,24 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [hoveredHeatmapCell]);
 
+  const getMemberZone = (m) => {
+    if (m.enrolledClass?.location) {
+      const loc = m.enrolledClass.location.toLowerCase();
+      if (loc.includes('zen')) return 'Zen Garden';
+      if (loc.includes('vip')) return 'VIP Zone';
+      return 'Main Floor';
+    }
+    const plan = (m.plan || '').toLowerCase();
+    if (plan.includes('diamond') || plan.includes('vip')) return 'VIP Zone';
+    if (plan.includes('wellness') || plan.includes('yoga')) return 'Zen Garden';
+    return 'Main Floor';
+  };
+
+  const zoneMembers = useMemo(() => {
+    if (activeZone === 'All') return members;
+    return members.filter(m => getMemberZone(m) === activeZone);
+  }, [members, activeZone]);
+
   // 1. Dynamic Metric Calculations
   const metrics = useMemo(() => {
     // Pricing tiers
@@ -26,14 +44,28 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
     };
 
     let totalMonthlyRevenue = 0;
-    members.forEach((m) => {
+    zoneMembers.forEach((m) => {
       const price = prices[m.plan] || 200; // default fallback
       totalMonthlyRevenue += price;
     });
 
-    const avgTrainerRating = 4.94;
-    const activeRetention = 98.2;
-    const avgCheckinsPerDay = (members.length * 0.72).toFixed(1);
+    const zoneRatingMap = {
+      'All': 4.94,
+      'Main Floor': 4.91,
+      'Zen Garden': 4.96,
+      'VIP Zone': 4.98
+    };
+
+    const zoneRetentionMap = {
+      'All': 98.2,
+      'Main Floor': 97.8,
+      'Zen Garden': 98.9,
+      'VIP Zone': 99.4
+    };
+
+    const avgTrainerRating = zoneRatingMap[activeZone] || 4.94;
+    const activeRetention = zoneRetentionMap[activeZone] || 98.2;
+    const avgCheckinsPerDay = (zoneMembers.length * 0.72).toFixed(1);
 
     return {
       revenue: totalMonthlyRevenue,
@@ -41,20 +73,27 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
       retention: activeRetention,
       checkins: avgCheckinsPerDay,
     };
-  }, [members]);
+  }, [zoneMembers, activeZone]);
 
   // 2. Membership Distribution Calculations (SVG Donut Chart)
   const planDistribution = useMemo(() => {
     const counts = {};
     let total = 0;
 
-    members.forEach((m) => {
+    zoneMembers.forEach((m) => {
       counts[m.plan] = (counts[m.plan] || 0) + 1;
       total++;
     });
 
     // Support default values if members list is empty
     if (total === 0) {
+      if (activeZone === 'Zen Garden') {
+        return [{ name: 'Wellness Pro', count: 0, percentage: 100, color: '#3b82f6', hoverColor: '#2563eb', startPercent: 0 }];
+      } else if (activeZone === 'VIP Zone') {
+        return [{ name: 'Diamond Access', count: 0, percentage: 100, color: '#8b5cf6', hoverColor: '#7c3aed', startPercent: 0 }];
+      } else if (activeZone === 'Main Floor') {
+        return [{ name: 'Elite Performance', count: 0, percentage: 100, color: '#34d399', hoverColor: '#059669', startPercent: 0 }];
+      }
       return [
         { name: 'Elite Performance', count: 12, percentage: 40, color: '#34d399', strokeDash: '0 100' },
         { name: 'Wellness Pro', count: 10, percentage: 33, color: '#60a5fa', strokeDash: '0 100' },
@@ -68,10 +107,14 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
       { name: 'Diamond Access', color: '#8b5cf6', hoverColor: '#7c3aed' },
     ];
 
+    const relevantPlans = activeZone === 'All'
+      ? plans
+      : plans.filter(p => (counts[p.name] || 0) > 0 || (activeZone === 'Zen Garden' && p.name === 'Wellness Pro') || (activeZone === 'VIP Zone' && p.name === 'Diamond Access') || (activeZone === 'Main Floor' && p.name === 'Elite Performance'));
+
     let accumulatedPercentage = 0;
-    return plans.map((plan) => {
+    return relevantPlans.map((plan) => {
       const count = counts[plan.name] || 0;
-      const percentage = Math.round((count / total) * 100) || 0;
+      const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
       const startPercent = accumulatedPercentage;
       accumulatedPercentage += percentage;
 
@@ -84,17 +127,15 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
         startPercent,
       };
     });
-  }, [members]);
+  }, [zoneMembers, activeZone]);
 
   // 3. Monthly Enrollment & Revenue Trajectory (Bezier SVG Chart)
   // We model 6 months of historical growth leading up to the current dynamic stats.
   const historicalData = useMemo(() => {
     const months = ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
     
-    // We assume dynamic members/revenue represents 'May' (the current month),
-    // and we generate smooth historical scaling factors.
     const revenueMay = metrics.revenue;
-    const membersMay = members.length;
+    const membersMay = zoneMembers.length;
 
     const baseRevenue = [
       Math.round(revenueMay * 0.75),
@@ -121,7 +162,7 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
       revenue: baseRevenue[idx] || 0,
       members: baseMembers[idx] || 0,
     }));
-  }, [metrics.revenue, members.length]);
+  }, [metrics.revenue, zoneMembers.length]);
 
   // 4. Peak Gym Hours Heatmap Matrix
   // Matrix dimensions: 7 Days (Mon-Sun) x 8 Hour Blocks (6AM - 8PM)
@@ -173,6 +214,13 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
   // 5. Class & Trainer Performance Leaderboard
   // Map schedule templates directly to the leaderboard, calculating dynamic ratios
   const leaderboard = useMemo(() => {
+    const getTemplateZone = (name) => {
+      const lower = (name || '').toLowerCase();
+      if (lower.includes('yoga') || lower.includes('zen') || lower.includes('stretch') || lower.includes('pilates')) return 'Zen Garden';
+      if (lower.includes('diamond') || lower.includes('vip') || lower.includes('personal') || lower.includes('private')) return 'VIP Zone';
+      return 'Main Floor';
+    };
+
     const enrichedList = (scheduleTemplates || []).map((t) => {
       const ratio = t.capacity > 0 ? (t.enrolled / t.capacity) * 100 : 0;
       
@@ -202,22 +250,30 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
         capacity: t.capacity,
         ratio: Math.round(ratio),
         rating,
+        zone: getTemplateZone(t.className),
       };
     });
 
-    // If no templates, supply premium mock list
-    if (enrichedList.length === 0) {
-      return [
-        { id: 1, className: 'Taekwondo Elite', trainer: 'Master Kim', enrolled: 14, capacity: 15, ratio: 93, rating: 4.98 },
-        { id: 2, className: 'Zen Yoga Flow', trainer: 'Sophia Chen', enrolled: 18, capacity: 20, ratio: 90, rating: 4.95 },
-        { id: 3, className: 'Elite Performance', trainer: 'Marcus Thorne', enrolled: 12, capacity: 15, ratio: 80, rating: 4.9 },
-        { id: 4, className: 'Muay Thai Sparring', trainer: 'Coach Somchai', enrolled: 9, capacity: 12, ratio: 75, rating: 4.92 },
-      ];
-    }
+    const defaultMockList = [
+      { id: 1, className: 'Taekwondo Elite', trainer: 'Master Kim', enrolled: 14, capacity: 15, ratio: 93, rating: 4.98, zone: 'Main Floor' },
+      { id: 2, className: 'Zen Yoga Flow', trainer: 'Sophia Chen', enrolled: 18, capacity: 20, ratio: 90, rating: 4.95, zone: 'Zen Garden' },
+      { id: 3, className: 'Elite Performance', trainer: 'Marcus Thorne', enrolled: 12, capacity: 15, ratio: 80, rating: 4.9, zone: 'VIP Zone' },
+      { id: 4, className: 'Muay Thai Sparring', trainer: 'Coach Somchai', enrolled: 9, capacity: 12, ratio: 75, rating: 4.92, zone: 'Main Floor' },
+      { id: 5, className: 'Mindful Breathing & Yoga', trainer: 'Sophia Chen', enrolled: 15, capacity: 18, ratio: 83, rating: 4.96, zone: 'Zen Garden' },
+      { id: 6, className: 'VIP Private Session', trainer: 'Elena Vance', enrolled: 1, capacity: 1, ratio: 100, rating: 4.99, zone: 'VIP Zone' },
+    ];
 
-    // Sort by ratio desc
-    return enrichedList.sort((a, b) => b.ratio - a.ratio);
-  }, [scheduleTemplates]);
+    const sourceList = enrichedList.length > 0 ? enrichedList : defaultMockList;
+    const filtered = activeZone === 'All'
+      ? sourceList
+      : sourceList.filter(item => item.zone === activeZone);
+
+    const finalList = filtered.length > 0 
+      ? filtered 
+      : defaultMockList.filter(item => item.zone === activeZone);
+
+    return finalList.sort((a, b) => b.ratio - a.ratio);
+  }, [scheduleTemplates, activeZone]);
 
   // SVG Coordinates Builders for Trajectory Chart
   const linePoints = useMemo(() => {
@@ -687,10 +743,10 @@ const Analytics = ({ members = [], scheduleTemplates = [] }) => {
                   ) : (
                     <div>
                       <span className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] block">
-                        Total Pool
+                        {activeZone === 'All' ? 'Total Pool' : `${activeZone.replace(' Floor', '')} Pool`}
                       </span>
                       <span className="text-3xl font-light leading-none">
-                        {members.length}
+                        {zoneMembers.length}
                       </span>
                       <span className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] block mt-1">
                         Active Tiers

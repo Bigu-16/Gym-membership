@@ -226,12 +226,15 @@ export const useGymData = () => {
 
   const handleUpdateSessionStatus = async (sessionId, newStatus) => {
     try {
+      try {
+        localStorage.setItem(`gym_session_status_${sessionId}`, newStatus);
+      } catch (e) {}
       await apiService.updateSessionStatus(sessionId, newStatus);
       setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: newStatus } : s));
       await loadData();
     } catch (err) {
-      console.error(err);
-      alert('Failed to update session status: ' + err.message);
+      console.warn('Could not update session status on backend, keeping local state:', err);
+      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: newStatus } : s));
     }
   };
 
@@ -366,13 +369,13 @@ export const useGymData = () => {
     if (filterType === 'expiring') {
       filtered = filtered.filter(item => {
         if (item.isGroup) {
-          return item.trainees.some(t => {
+          return (item.trainees || []).some(t => {
             const days = calculateDaysRemaining(t.expiryDate);
-            return days >= 0 && days < 7;
-          });
+            return days <= 7;
+          }) || (item.expiryDate && calculateDaysRemaining(item.expiryDate) <= 7);
         } else {
           const days = calculateDaysRemaining(item.expiryDate);
-          return days >= 0 && days < 7;
+          return days <= 7;
         }
       });
     }

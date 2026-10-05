@@ -88,10 +88,9 @@ const Schedule = ({
     });
   };
 
-  const handleDeleteChecklistItem = (sessionId, itemId, itemIndex) => {
-    const isConfirmed = window.confirm("Are you sure you want to delete this task from the checklist?");
-    if (!isConfirmed) return;
+  const [taskToDelete, setTaskToDelete] = useState(null);
 
+  const executeDeleteChecklistItem = (sessionId, itemId, itemIndex) => {
     setLocalChecklists(prev => {
       const currentList = prev[sessionId] || (sessions.find(s => s.id === sessionId)?.checklist || []);
       const updatedList = currentList.filter((item, idx) => {
@@ -108,6 +107,10 @@ const Schedule = ({
         [sessionId]: updatedList
       };
     });
+  };
+
+  const handleDeleteChecklistItem = (sessionId, itemId, itemIndex) => {
+    setTaskToDelete({ sessionId, itemId, itemIndex });
   };
 
   const [timeLeft, setTimeLeft] = useState('');
@@ -146,13 +149,16 @@ const Schedule = ({
       'Sun': 'Sunday'
     };
     if (template.days) {
-      const shortDays = template.days.split(', ').map(d => d.trim());
-      setSelectedDays(shortDays.map(sd => dayMap[sd]).filter(Boolean));
+      const daysArr = Array.isArray(template.days)
+        ? template.days
+        : template.days.split(', ').map(d => d.trim());
+      setSelectedDays(daysArr.map(sd => dayMap[sd] || sd).filter(Boolean));
     } else {
       setSelectedDays([]);
     }
     
     const parseTime12hTo24h = (t12) => {
+      if (!t12) return '16:00';
       const parts12 = t12.trim().split(/\s+/);
       const timeStrPart = parts12[0];
       const modifier = parts12[1] ? parts12[1].toUpperCase() : null;
@@ -168,15 +174,17 @@ const Schedule = ({
         setStartTime(parseTime12hTo24h(startStr));
         setEndTime(parseTime12hTo24h(endStr));
       } else if (template.time) {
-        setStartTime(parseTime12hTo24h(template.time));
-        const [sh, sm] = parseTime12hTo24h(template.time).split(':').map(Number);
-        const eh = (sh + 1) % 24;
+        const parsedStart = parseTime12hTo24h(template.time);
+        setStartTime(parsedStart);
+        const [sh, sm] = parsedStart.split(':').map(Number);
+        const eh = ((sh || 16) + 1) % 24;
         setEndTime(`${String(eh).padStart(2, '0')}:${String(sm || 0).padStart(2, '0')}`);
       } else {
         setStartTime('16:00');
         setEndTime('17:00');
       }
     } catch (e) {
+      console.warn('Error parsing template time:', e);
       setStartTime('16:00');
       setEndTime('17:00');
     }
@@ -425,6 +433,37 @@ const Schedule = ({
         timeLeft={timeLeft}
         onUpdateSessionStatus={onUpdateSessionStatus}
       />
+
+      {/* Task Deletion Confirmation Modal */}
+      {taskToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="glass-card p-6 border border-[var(--glass-border)] max-w-sm w-full shadow-2xl rounded-2xl bg-[var(--bg-secondary)] space-y-4">
+            <h4 className="text-sm uppercase tracking-luxury font-bold text-[var(--text-primary)]">Delete Protocol Task</h4>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Are you sure you want to delete this task from the checklist?
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setTaskToDelete(null)}
+                className="px-4 py-2 rounded-xl text-xs uppercase tracking-luxury border border-[var(--glass-border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  executeDeleteChecklistItem(taskToDelete.sessionId, taskToDelete.itemId, taskToDelete.itemIndex);
+                  setTaskToDelete(null);
+                }}
+                className="px-4 py-2 rounded-xl text-xs uppercase tracking-luxury font-bold bg-rose-500 text-white hover:bg-rose-600 transition-colors shadow-lg"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -199,6 +199,14 @@ export const mapSessionToFrontend = (s, templates = []) => {
     checked: Boolean(item.checked)
   }));
 
+  let status = s.status === 'in_progress' ? 'in-progress' : s.status;
+  try {
+    const localSavedStatus = localStorage.getItem(`gym_session_status_${s.id}`);
+    if (localSavedStatus) {
+      status = localSavedStatus;
+    }
+  } catch (e) {}
+
   return {
     id: s.id,
     title: title,
@@ -206,7 +214,7 @@ export const mapSessionToFrontend = (s, templates = []) => {
     location: title.toLowerCase().includes('yoga') ? 'Zen Garden' : 'Studio B - Group Floor',
     start: startDate,
     end: endDate,
-    status: s.status === 'in_progress' ? 'in-progress' : s.status,
+    status: status,
     type: template?.type || 'personal',
     checklist: checklist,
     templateId: s.template_id
