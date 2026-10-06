@@ -2,47 +2,143 @@ import React from 'react';
 
 const LiveSessionsCard = ({
   allSessions = [],
+  selectedDate = new Date(),
+  onSelectDate,
   onTabChange,
   handleToggleSessionStatus,
   handleToggleChecklist,
   handleDeleteChecklistItem,
   handleAddChecklistItem
 }) => {
+  const today = new Date();
+  const isSelectedToday = (
+    selectedDate.getDate() === today.getDate() &&
+    selectedDate.getMonth() === today.getMonth() &&
+    selectedDate.getFullYear() === today.getFullYear()
+  );
+
+  // Generate next 7 days for quick day selection
+  const dayTabs = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    let label = d.toLocaleDateString('en-US', { weekday: 'short' });
+    if (i === 0) label = 'Today';
+    else if (i === 1) label = 'Tomorrow';
+
+    const isCurrent = (
+      d.getDate() === selectedDate.getDate() &&
+      d.getMonth() === selectedDate.getMonth() &&
+      d.getFullYear() === selectedDate.getFullYear()
+    );
+
+    return {
+      date: d,
+      label,
+      dateNum: d.getDate(),
+      monthShort: d.toLocaleDateString('en-US', { month: 'short' }),
+      isCurrent
+    };
+  });
+
+  const formattedSelectedDate = selectedDate.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric'
+  });
+
   return (
     <div className="lg:col-span-2 space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-color)]"></span> Live Session Control Center
-        </h2>
-        <button 
-          type="button"
-          onClick={() => onTabChange('schedule')}
-          className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-1"
-        >
-          Manage Schedule 
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+      {/* Top Header & Manage Schedule Link */}
+      <div className="flex justify-between items-center flex-wrap gap-3">
+        <div>
+          <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${isSelectedToday ? 'bg-emerald-500 animate-pulse' : 'bg-[var(--accent-color)]'}`}></span>
+            {isSelectedToday ? 'Live Session Control Center' : 'Scheduled Sessions'}
+          </h2>
+          <p className="text-[11px] font-medium text-[var(--text-primary)] opacity-80 mt-0.5">
+            {isSelectedToday ? `Today • ${formattedSelectedDate}` : formattedSelectedDate}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] uppercase tracking-luxury px-2.5 py-1 rounded-full bg-[var(--glass-border)] text-[var(--text-secondary)] font-semibold">
+            {allSessions.length} {allSessions.length === 1 ? 'Class' : 'Classes'}
+          </span>
+          <button 
+            type="button"
+            onClick={() => onTabChange('schedule')}
+            className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-1"
+          >
+            Manage Schedule 
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Day Selector Navigation Pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+        {dayTabs.map((tab, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => onSelectDate && onSelectDate(tab.date)}
+            className={`px-3.5 py-2 rounded-xl text-xs flex flex-col items-center min-w-[70px] transition-all duration-200 border ${
+              tab.isCurrent
+                ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] border-transparent font-bold shadow-md scale-105'
+                : 'bg-[var(--glass-bg)] border-[var(--glass-border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)]/40'
+            }`}
+          >
+            <span className="text-[9px] uppercase tracking-luxury font-bold opacity-80">{tab.label}</span>
+            <span className="text-xs font-semibold">{tab.monthShort} {tab.dateNum}</span>
+          </button>
+        ))}
       </div>
 
       <div className="space-y-6">
-        {allSessions.map((session) => {
-          const isProgress = session.status === 'in-progress';
-          const sessionChecklist = session.checklist || [];
-          const totalTasks = sessionChecklist.length;
-          const completedTasks = sessionChecklist.filter(item => item.checked).length;
-          const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+        {allSessions.length === 0 ? (
+          <div className="glass-card p-10 border border-[var(--glass-border)] rounded-2xl flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-[var(--glass-border)] flex items-center justify-center text-[var(--text-secondary)]">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
+                No Sessions Scheduled for {formattedSelectedDate}
+              </h4>
+              <p className="text-xs text-[var(--text-secondary)] mt-1">
+                There are no live or pre-set classes booked on this date.
+              </p>
+            </div>
+            {!isSelectedToday && (
+              <button
+                type="button"
+                onClick={() => onSelectDate && onSelectDate(new Date())}
+                className="px-4 py-2 rounded-xl text-xs uppercase tracking-luxury font-bold bg-[var(--text-primary)] text-[var(--bg-primary)] hover:scale-105 transition-all shadow-md"
+              >
+                Back to Today's Sessions
+              </button>
+            )}
+          </div>
+        ) : (
+          allSessions.map((session) => {
+            const isProgress = session.status === 'in-progress';
+            const sessionChecklist = session.checklist || [];
+            const totalTasks = sessionChecklist.length;
+            const completedTasks = sessionChecklist.filter(item => item.checked).length;
+            const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
-          return (
-            <div 
-              key={session.id} 
-              className={`glass-card p-6 border transition-all duration-300 ${
-                isProgress 
-                  ? 'border-[var(--text-primary)] shadow-[0_0_25px_rgba(255,255,255,0.02)]' 
-                  : 'border-[var(--glass-border)]'
-              }`}
-            >
+            return (
+              <div 
+                key={session.id} 
+                className={`glass-card p-6 border transition-all duration-300 ${
+                  isProgress 
+                    ? 'border-[var(--text-primary)] shadow-[0_0_25px_rgba(255,255,255,0.02)]' 
+                    : 'border-[var(--glass-border)]'
+                }`}
+              >
               <div className="flex justify-between items-start flex-wrap gap-4 mb-4">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
@@ -55,8 +151,13 @@ const LiveSessionsCard = ({
                       {isProgress ? 'In Progress' : 'Upcoming'}
                     </span>
                   </div>
-                  <p className="text-xs text-[var(--text-secondary)] uppercase tracking-luxury font-medium">
-                    {session.trainer} • <span className="opacity-70">{session.location}</span>
+                  <p className="text-xs text-[var(--text-secondary)] uppercase tracking-luxury font-medium flex items-center gap-2 flex-wrap">
+                    <span>{session.trainer} • <span className="opacity-70">{session.location}</span></span>
+                    {session.capacity && (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--glass-border)] text-[var(--text-primary)] font-bold">
+                        {session.enrolled || 0}/{session.capacity} Enrolled
+                      </span>
+                    )}
                   </p>
                 </div>
                 
@@ -178,7 +279,8 @@ const LiveSessionsCard = ({
 
             </div>
           );
-        })}
+        })
+      )}
       </div>
     </div>
   );

@@ -173,15 +173,17 @@ export const useGymData = () => {
       }
 
       for (const sess of newSessions) {
-        try {
-          await apiService.createSession({
-            start: sess.start,
-            trainer: sess.trainer || 'Coach',
-            status: sess.status || 'upcoming',
-            checklist: sess.checklist || []
-          });
-        } catch (e) {
-          console.warn('Session creation note:', e);
+        if (sess.type === 'personal') {
+          try {
+            await apiService.createSession({
+              start: sess.start,
+              trainer: sess.trainer || 'Coach',
+              status: sess.status || 'upcoming',
+              checklist: sess.checklist || []
+            });
+          } catch (e) {
+            console.warn('Session creation note:', e);
+          }
         }
       }
 

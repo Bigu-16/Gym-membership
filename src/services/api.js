@@ -1,4 +1,18 @@
-export const API_BASE_URL = localStorage.getItem('gym_api_base_url') || import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const getInitialBaseUrl = () => {
+  let stored = localStorage.getItem('gym_api_base_url');
+  if (stored && (stored.startsWith('https://localhost') || stored.startsWith('https://127.0.0.1'))) {
+    stored = stored.replace('https://', 'http://');
+    localStorage.setItem('gym_api_base_url', stored);
+  }
+  const envUrl = import.meta.env.VITE_API_URL;
+  const raw = stored || envUrl || 'http://localhost:8000/api/v1';
+  if (raw.startsWith('https://localhost') || raw.startsWith('https://127.0.0.1')) {
+    return raw.replace('https://', 'http://');
+  }
+  return raw;
+};
+
+export const API_BASE_URL = getInitialBaseUrl();
 
 // Helpers to get/set tokens
 const getAuthHeaders = () => {

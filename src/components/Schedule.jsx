@@ -307,10 +307,12 @@ const Schedule = ({
 
       if (!matchesDay) return null;
 
-      const exists = directSessions.some(s => 
-        s.template_id === template.id || 
-        (s.title && s.title.toLowerCase() === (template.className || template.title || '').toLowerCase())
-      );
+      const exists = directSessions.some(s => {
+        if (s.template_id && s.template_id === template.id) return true;
+        const sTitle = (s.title || '').toLowerCase().replace(/session$/i, '').trim();
+        const tTitle = (template.className || template.title || '').toLowerCase().replace(/session$/i, '').trim();
+        return sTitle === tTitle || (sTitle && tTitle && (sTitle.includes(tTitle) || tTitle.includes(sTitle)));
+      });
       if (exists) return null;
 
       const { start, end } = parseTimeToDay(day, template.time);
@@ -348,7 +350,20 @@ const Schedule = ({
     }).filter(Boolean);
 
     const combined = [...directSessions, ...projectedSessions];
-    return combined.sort((a, b) => new Date(a.start) - new Date(b.start));
+    const deduplicated = [];
+    const seenSlots = new Set();
+    for (const session of combined) {
+      if (!session) continue;
+      const sStart = session.start instanceof Date ? session.start : new Date(session.start);
+      const startTimeKey = `${sStart.getHours()}:${sStart.getMinutes()}`;
+      const titleKey = (session.title || '').trim().toLowerCase().replace(/session$/i, '').trim();
+      const slotKey = `${session.template_id || titleKey}-${startTimeKey}`;
+      if (!seenSlots.has(slotKey)) {
+        seenSlots.add(slotKey);
+        deduplicated.push(session);
+      }
+    }
+    return deduplicated.sort((a, b) => new Date(a.start) - new Date(b.start));
   };
 
   return (

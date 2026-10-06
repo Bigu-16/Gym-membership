@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { apiService } from '../services/api';
 import DashboardMetrics from './dashboard/DashboardMetrics';
 import LiveSessionsCard from './dashboard/LiveSessionsCard';
@@ -51,93 +51,23 @@ const DashboardOverview = ({
     };
   }, [inClubList, members.length, sessions.length]);
 
-  const allSessions = useMemo(() => {
-    const templateSessions = (scheduleTemplates || []).map(template => {
-      if (!template) return null;
-      const templateTitle = (template.className || '').toLowerCase();
-      
-      if (sessions.some(s => (s.title || '').toLowerCase() === templateTitle)) {
-        return null;
-      }
-      
-      const parseTimePart = (str) => {
-        if (!str) return new Date();
-        const trimmed = str.trim();
-        let hours = 10;
-        let minutes = 0;
-        if (trimmed.toLowerCase().includes('am') || trimmed.toLowerCase().includes('pm')) {
-          const parts = trimmed.split(/\s+/);
-          const [h, m] = (parts[0] || '10:00').split(':').map(Number);
-          const ampm = (parts[1] || 'AM').toUpperCase();
-          hours = h % 12;
-          if (ampm === 'PM') hours += 12;
-          minutes = m || 0;
-        } else if (trimmed.includes(':')) {
-          const [h, m] = trimmed.split(':').map(Number);
-          hours = isNaN(h) ? 10 : h;
-          minutes = isNaN(m) ? 0 : m;
-        }
-        
-        const date = new Date();
-        date.setHours(hours, minutes, 0, 0);
-        return date;
-      };
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
-      let start = new Date();
-      let end = new Date(Date.now() + 60 * 60 * 1000);
-      try {
-        if (template.time && template.time.includes(' - ')) {
-          const [startStr, endStr] = template.time.split(' - ');
-          start = parseTimePart(startStr);
-          end = parseTimePart(endStr);
-        } else if (template.time) {
-          start = parseTimePart(template.time);
-          end = new Date(start.getTime() + 90 * 60 * 1000);
-        }
-      } catch (e) {
-        // Fallback
-      }
+  const getSessionsForDate = useCallback((targetDate) => {
+    if (!targetDate) targetDate = new Date();
+    const dayShort = targetDate.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+    const dayFull = targetDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
-      let trainer = "Marcus Thorne";
-      if (templateTitle.includes("karate")) trainer = "Coach Somchai";
-      if (templateTitle.includes("taekwondo")) trainer = "Master Kim";
-      if (templateTitle.includes("kickboxing")) trainer = "Elena Vance";
-      if (templateTitle.includes("fitness") || templateTitle.includes("zumba")) trainer = "Marcus Thorne";
-
-      let defaultChecklist = [
-        { id: 1, text: 'Safety warm-up completed', checked: false },
-        { id: 2, text: 'Core group training sequence', checked: false },
-        { id: 3, text: 'Assisted stretching session', checked: false }
-      ];
-      try {
-        const saved = localStorage.getItem(`gym_session_checklist_template-${template.id}`);
-        if (saved) {
-          defaultChecklist = JSON.parse(saved);
-        }
-      } catch (e) {}
-
-      let defaultStatus = start < new Date() && end > new Date() ? 'in-progress' : 'upcoming';
-      try {
-        const savedStatus = localStorage.getItem(`gym_session_status_template-${template.id}`);
-        if (savedStatus) {
-          defaultStatus = savedStatus;
-        }
-      } catch (e) {}
-
-      return {
-        id: `template-${template.id}`,
-        title: template.className || 'Group Class',
-        trainer: trainer,
-        location: templateTitle.includes("yoga") ? 'Zen Garden' : 'Studio B - Group Floor',
-        start: start,
-        end: end,
-        status: defaultStatus,
-        type: 'group',
-        checklist: defaultChecklist
-      };
-    }).filter(Boolean);
-
-    const enrichedSessions = (sessions || []).map(s => {
+    // 1. Direct sessions from database matching targetDate
+    const directSessions = (sessions || []).filter(s => {
+      if (!s.start) return false;
+      const sDate = s.start instanceof Date ? s.start : new Date(s.start);
+      return (
+        sDate.getFullYear() === targetDate.getFullYear() &&
+        sDate.getMonth() === targetDate.getMonth() &&
+        sDate.getDate() === targetDate.getDate()
+      );
+    }).map(s => {
       let checklist = s.checklist;
       try {
         const saved = localStorage.getItem(`gym_session_checklist_${s.id}`);
@@ -159,8 +89,151 @@ const DashboardOverview = ({
       };
     });
 
-    return [...enrichedSessions, ...templateSessions];
+    // 2. Projected sessions from scheduleTemplates matching targetDate's day of week
+    const projectedSessions = (scheduleTemplates || []).map(template => {
+      if (!template) return null;
+      const tDays = Array.isArray(template.days)
+        ? template.days
+        : (typeof template.days === 'string' ? template.days.split(',').map(s => s.trim()) : []);
+
+      const runsOnThisDay = tDays.some(d => {
+        const dl = d.toLowerCase();
+        return dl.startsWith(dayShort) || dayShort.startsWith(dl) || dl === dayFull;
+      });
+
+      if (!runsOnThisDay) return null;
+
+      const templateTitle = (template.className || template.title || '').trim().toLowerCase();
+
+      // Check if a direct session already covers this template
+      const alreadyHasDirect = directSessions.some(s => {
+        if (s.template_id && s.template_id === template.id) return true;
+        const sTitle = (s.title || '').trim().toLowerCase().replace(/session$/i, '').trim();
+        const cleanTTitle = templateTitle.replace(/session$/i, '').trim();
+        return sTitle === cleanTTitle || (sTitle && cleanTTitle && (sTitle.includes(cleanTTitle) || cleanTTitle.includes(sTitle)));
+      });
+
+      if (alreadyHasDirect) return null;
+
+      const parseTimePart = (str) => {
+        const d = new Date(targetDate);
+        if (!str) {
+          d.setHours(10, 0, 0, 0);
+          return d;
+        }
+        const trimmed = str.trim();
+        let hours = 10;
+        let minutes = 0;
+        if (trimmed.toLowerCase().includes('am') || trimmed.toLowerCase().includes('pm')) {
+          const parts = trimmed.split(/\s+/);
+          const [h, m] = (parts[0] || '10:00').split(':').map(Number);
+          const ampm = (parts[1] || 'AM').toUpperCase();
+          hours = h % 12;
+          if (ampm === 'PM') hours += 12;
+          minutes = m || 0;
+        } else if (trimmed.includes(':')) {
+          const [h, m] = trimmed.split(':').map(Number);
+          hours = isNaN(h) ? 10 : h;
+          minutes = isNaN(m) ? 0 : m;
+        }
+        d.setHours(hours, minutes, 0, 0);
+        return d;
+      };
+
+      let start = new Date(targetDate);
+      start.setHours(16, 0, 0, 0);
+      let end = new Date(targetDate);
+      end.setHours(17, 0, 0, 0);
+
+      try {
+        if (template.time && template.time.includes(' - ')) {
+          const [startStr, endStr] = template.time.split(' - ');
+          start = parseTimePart(startStr);
+          end = parseTimePart(endStr);
+        } else if (template.time) {
+          start = parseTimePart(template.time);
+          end = new Date(start.getTime() + 60 * 60 * 1000);
+        }
+      } catch (e) {}
+
+      let trainer = "Marcus Thorne";
+      if (templateTitle.includes("karate")) trainer = "Coach Somchai";
+      if (templateTitle.includes("taekwondo")) trainer = "Master Kim";
+      if (templateTitle.includes("kickboxing")) trainer = "Elena Vance";
+      if (templateTitle.includes("fitness") || templateTitle.includes("zumba")) trainer = "Marcus Thorne";
+
+      let defaultChecklist = [
+        { id: 1, text: 'Safety warm-up completed', checked: false },
+        { id: 2, text: 'Core group training sequence', checked: false },
+        { id: 3, text: 'Assisted stretching session', checked: false }
+      ];
+      try {
+        const saved = localStorage.getItem(`gym_session_checklist_template-${template.id}`);
+        if (saved) defaultChecklist = JSON.parse(saved);
+      } catch (e) {}
+
+      const now = new Date();
+      const isTodayTarget = (
+        now.getFullYear() === targetDate.getFullYear() &&
+        now.getMonth() === targetDate.getMonth() &&
+        now.getDate() === targetDate.getDate()
+      );
+
+      let defaultStatus = 'upcoming';
+      if (isTodayTarget) {
+        if (now >= start && now <= end) defaultStatus = 'in-progress';
+        else if (now > end) defaultStatus = 'completed';
+      }
+
+      try {
+        const savedStatus = localStorage.getItem(`gym_session_status_template-${template.id}`);
+        if (savedStatus) defaultStatus = savedStatus;
+      } catch (e) {}
+
+      return {
+        id: `template-${template.id}`,
+        title: template.className || template.title || 'Group Class',
+        trainer: template.trainer || trainer,
+        location: templateTitle.includes("yoga") ? 'Zen Garden' : 'Studio B - Group Floor',
+        start,
+        end,
+        status: defaultStatus,
+        type: 'group',
+        capacity: template.capacity || 20,
+        enrolled: template.enrolled || 0,
+        checklist: defaultChecklist
+      };
+    }).filter(Boolean);
+
+    // 3. Combine and deduplicate so there is only 1 box per class time slot
+    const combined = [...directSessions, ...projectedSessions];
+    const deduplicated = [];
+    const seenSlots = new Set();
+
+    for (const session of combined) {
+      if (!session) continue;
+      const sStart = session.start instanceof Date ? session.start : new Date(session.start);
+      const timeKey = `${sStart.getHours()}:${sStart.getMinutes()}`;
+      const titleKey = (session.title || '').trim().toLowerCase().replace(/session$/i, '').trim();
+      const slotKey = `${session.template_id || titleKey}-${timeKey}`;
+      if (!seenSlots.has(slotKey)) {
+        seenSlots.add(slotKey);
+        deduplicated.push(session);
+      }
+    }
+
+    return deduplicated.sort((a, b) => new Date(a.start) - new Date(b.start));
   }, [sessions, scheduleTemplates]);
+
+  const todaySessions = useMemo(() => {
+    return getSessionsForDate(new Date());
+  }, [getSessionsForDate]);
+
+  const displayedSessions = useMemo(() => {
+    return getSessionsForDate(selectedDate);
+  }, [getSessionsForDate, selectedDate]);
+
+  const allSessions = todaySessions;
 
   const getSessionCategory = (session) => {
     if (!session) return 'General';
@@ -250,12 +323,14 @@ const DashboardOverview = ({
       console.warn('Error saving checklist to localStorage:', e);
     }
 
+    const findSession = (id) => displayedSessions.find(s => s.id === id) || allSessions.find(s => s.id === id);
+
     setSessions(prev => {
       const exists = prev.some(s => s.id === sessionId);
       if (exists) {
         return prev.map(s => s.id === sessionId ? { ...s, checklist: updatedList } : s);
       } else {
-        const target = allSessions.find(s => s.id === sessionId);
+        const target = findSession(sessionId);
         if (target) {
           return [{ ...target, checklist: updatedList }, ...prev];
         }
@@ -271,7 +346,7 @@ const DashboardOverview = ({
   };
 
   const handleToggleChecklist = async (sessionId, itemId, itemIndex) => {
-    const targetSession = allSessions.find(s => s.id === sessionId);
+    const targetSession = displayedSessions.find(s => s.id === sessionId) || allSessions.find(s => s.id === sessionId);
     if (!targetSession) return;
 
     const currentChecklist = targetSession.checklist || [];
@@ -287,7 +362,7 @@ const DashboardOverview = ({
 
   const handleAddChecklistItem = async (sessionId, text) => {
     if (!text || !text.trim()) return;
-    const targetSession = allSessions.find(s => s.id === sessionId);
+    const targetSession = displayedSessions.find(s => s.id === sessionId) || allSessions.find(s => s.id === sessionId);
     if (!targetSession) return;
 
     const currentChecklist = targetSession.checklist || [];
@@ -302,7 +377,7 @@ const DashboardOverview = ({
   };
 
   const executeDeleteChecklistItem = async (sessionId, itemId, itemIndex) => {
-    const targetSession = allSessions.find(s => s.id === sessionId);
+    const targetSession = displayedSessions.find(s => s.id === sessionId) || allSessions.find(s => s.id === sessionId);
     if (!targetSession) return;
 
     const currentChecklist = targetSession.checklist || [];
@@ -418,7 +493,9 @@ const DashboardOverview = ({
       {/* Main Two-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <LiveSessionsCard 
-          allSessions={allSessions}
+          allSessions={displayedSessions}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
           onTabChange={onTabChange}
           handleToggleSessionStatus={handleToggleSessionStatus}
           handleToggleChecklist={handleToggleChecklist}
