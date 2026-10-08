@@ -593,7 +593,7 @@ describe('apiService', () => {
       );
     });
 
-    it('updatePlan sends PUT request with updated plan data', async () => {
+    it('updatePlan sends PATCH request with updated plan data', async () => {
       const updateData = { name: 'Elite Performance Pro', price: 179 };
       globalThis.fetch.mockResolvedValueOnce({
         ok: true,
@@ -605,7 +605,7 @@ describe('apiService', () => {
       expect(globalThis.fetch).toHaveBeenCalledWith(
         `${API_BASE_URL}/plans/1`,
         expect.objectContaining({
-          method: 'PUT',
+          method: 'PATCH',
           body: JSON.stringify(updateData)
         })
       );

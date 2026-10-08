@@ -56,7 +56,8 @@ async def get_plan(
     return MembershipPlanResponse.model_validate(plan)
 
 
-@router.put("/{plan_id}", response_model=MembershipPlanResponse)
+@router.put("/{plan_id}", response_model=MembershipPlanResponse, include_in_schema=False)
+@router.patch("/{plan_id}", response_model=MembershipPlanResponse)
 async def update_plan(
     plan_id: int,
     payload: MembershipPlanUpdate,

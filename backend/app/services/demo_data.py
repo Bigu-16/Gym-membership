@@ -99,6 +99,24 @@ async def seed_plans(session: AsyncSession) -> dict[str, MembershipPlan]:
             "included_items": ["Free uniform"],
             "sort_order": 12,
         },
+        "Kickboxing One Month - 2 Classes": {
+            "program": "Kickboxing",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 2,
+            "price": Decimal("300.00"),
+            "duration_days": 30,
+            "sort_order": 20,
+        },
+        "Kickboxing One Month - 3 Classes": {
+            "program": "Kickboxing",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 3,
+            "price": Decimal("350.00"),
+            "duration_days": 30,
+            "sort_order": 21,
+        },
         "Kickboxing Three Month - 3 Classes": {
             "program": "Kickboxing",
             "duration_label": "3 Month",
@@ -118,6 +136,43 @@ async def seed_plans(session: AsyncSession) -> dict[str, MembershipPlan]:
             "duration_days": 30,
             "sort_order": 31,
         },
+        "Karate One Month - 2 Classes": {
+            "program": "Karate",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 2,
+            "price": Decimal("300.00"),
+            "duration_days": 30,
+            "sort_order": 30,
+        },
+        "Karate Three Month - 3 Classes": {
+            "program": "Karate",
+            "duration_label": "3 Month",
+            "duration_months": 3,
+            "classes_per_week": 3,
+            "price": Decimal("900.00"),
+            "duration_days": 90,
+            "included_items": ["Free uniform"],
+            "sort_order": 32,
+        },
+        "Kung Fu One Month - 2 Classes": {
+            "program": "Kung Fu",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 2,
+            "price": Decimal("300.00"),
+            "duration_days": 30,
+            "sort_order": 40,
+        },
+        "Kung Fu One Month - 3 Classes": {
+            "program": "Kung Fu",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 3,
+            "price": Decimal("350.00"),
+            "duration_days": 30,
+            "sort_order": 41,
+        },
         "Kung Fu Three Month - 3 Classes": {
             "program": "Kung Fu",
             "duration_label": "3 Month",
@@ -136,62 +191,23 @@ async def seed_plans(session: AsyncSession) -> dict[str, MembershipPlan]:
             "duration_days": 30,
             "sort_order": 50,
         },
-        "Little Kids Karate One Month - 3 Classes": {
-            "program": "Karate",
+        "Fitness One Month - 3 Classes": {
+            "program": "Fitness",
             "duration_label": "One Month",
             "duration_months": 1,
             "classes_per_week": 3,
             "price": Decimal("350.00"),
             "duration_days": 30,
-            "sort_order": 5,
+            "sort_order": 51,
         },
-        "Little Kids Karate Three Month - 3 Classes": {
-            "program": "Karate",
+        "Fitness Three Month - 3 Classes": {
+            "program": "Fitness",
             "duration_label": "3 Month",
             "duration_months": 3,
             "classes_per_week": 3,
             "price": Decimal("900.00"),
             "duration_days": 90,
-            "included_items": ["Free uniform"],
-            "sort_order": 6,
-        },
-        "Kids Karate Three Month - 3 Classes": {
-            "program": "Karate",
-            "duration_label": "3 Month",
-            "duration_months": 3,
-            "classes_per_week": 3,
-            "price": Decimal("900.00"),
-            "duration_days": 90,
-            "included_items": ["Free uniform"],
-            "sort_order": 7,
-        },
-        "Kids Taekwondo Three Month - 3 Classes": {
-            "program": "Taekwondo",
-            "duration_label": "3 Month",
-            "duration_months": 3,
-            "classes_per_week": 3,
-            "price": Decimal("900.00"),
-            "duration_days": 90,
-            "included_items": ["Free uniform"],
-            "sort_order": 8,
-        },
-        "Adult Karate One Month - 3 Classes": {
-            "program": "Adult Karate",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 3,
-            "price": Decimal("350.00"),
-            "duration_days": 30,
-            "sort_order": 35,
-        },
-        "Adult Kickboxing One Month - 3 Classes": {
-            "program": "Adult Kickboxing",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 3,
-            "price": Decimal("350.00"),
-            "duration_days": 30,
-            "sort_order": 36,
+            "sort_order": 52,
         },
         "Family Group": {
             "program": "Family",
@@ -227,18 +243,6 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "parent_address": "42 Harbor Street",
             "parent_relationship": "mother",
             "notes": "Primary contact for Carter family membership",
-        },
-    )
-    almuharrami_family = await get_or_create(
-        session,
-        Family,
-        {"parent_phone": "+971506199709"},
-        {
-            "parent_name": "Safeya Almuharrami",
-            "parent_email": "safeya.almuharrami@example.com",
-            "parent_address": "Abu Dhabi, UAE",
-            "parent_relationship": "mother",
-            "notes": "Primary contact for Mouza Almuharrami",
         },
     )
     member_rows = [
@@ -311,17 +315,6 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "plan": "Family Group",
             "expiry_date": today + timedelta(days=45),
         },
-        {
-            "name": "Mouza Almuharrami",
-            "phone": "+971506199709",
-            "parent_phone": "+971506199709",
-            "family_id": almuharrami_family.id,
-            "age": 3,
-            "gender": Gender.female,
-            "medical_issues": None,
-            "plan": "Little Kids Karate Three Month - 3 Classes",
-            "expiry_date": today + timedelta(days=90),
-        },
     ]
 
     output = {}
@@ -352,6 +345,7 @@ async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTempla
     today = date.today()
     template_rows = [
         {
+            "key": "little_karate_1600",
             "title": "Little Kids Karate",
             "type": ScheduleType.group,
             "days": ["Tuesday", "Thursday", "Saturday"],
@@ -359,6 +353,7 @@ async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTempla
             "capacity": 12,
         },
         {
+            "key": "kids_taekwondo_1600",
             "title": "Kids Taekwondo",
             "type": ScheduleType.group,
             "days": ["Monday", "Wednesday", "Friday"],
@@ -366,6 +361,47 @@ async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTempla
             "capacity": 15,
         },
         {
+            "key": "kids_taekwondo_1700",
+            "title": "Kids Taekwondo",
+            "type": ScheduleType.group,
+            "days": ["Monday", "Wednesday"],
+            "time": "17:00",
+            "capacity": 15,
+        },
+        {
+            "key": "kids_karate_friday_1700",
+            "title": "Kids Karate",
+            "type": ScheduleType.group,
+            "days": ["Friday"],
+            "time": "17:00",
+            "capacity": 15,
+        },
+        {
+            "key": "kids_taekwondo_1800",
+            "title": "Kids Taekwondo",
+            "type": ScheduleType.group,
+            "days": ["Monday", "Wednesday", "Friday"],
+            "time": "18:00",
+            "capacity": 15,
+        },
+        {
+            "key": "kids_taekwondo_1900",
+            "title": "Kids Taekwondo",
+            "type": ScheduleType.group,
+            "days": ["Monday", "Wednesday", "Friday"],
+            "time": "19:00",
+            "capacity": 15,
+        },
+        {
+            "key": "kids_taekwondo_2000",
+            "title": "Kids Taekwondo",
+            "type": ScheduleType.group,
+            "days": ["Monday", "Wednesday", "Friday"],
+            "time": "20:00",
+            "capacity": 15,
+        },
+        {
+            "key": "kids_karate_1700",
             "title": "Kids Karate",
             "type": ScheduleType.group,
             "days": ["Tuesday", "Thursday", "Saturday"],
@@ -373,6 +409,15 @@ async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTempla
             "capacity": 15,
         },
         {
+            "key": "kids_karate_1800",
+            "title": "Kids Karate",
+            "type": ScheduleType.group,
+            "days": ["Tuesday", "Thursday", "Saturday"],
+            "time": "18:00",
+            "capacity": 15,
+        },
+        {
+            "key": "adult_kickboxing_1900",
             "title": "Adult Kickboxing",
             "type": ScheduleType.group,
             "days": ["Tuesday", "Thursday", "Saturday"],
@@ -380,6 +425,7 @@ async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTempla
             "capacity": 15,
         },
         {
+            "key": "adult_karate_2000",
             "title": "Adult Karate",
             "type": ScheduleType.group,
             "days": ["Tuesday", "Thursday", "Saturday"],
@@ -387,6 +433,7 @@ async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTempla
             "capacity": 15,
         },
         {
+            "key": "Elite Performance",
             "title": "Elite Performance",
             "type": ScheduleType.group,
             "days": ["Monday", "Wednesday", "Friday"],
@@ -394,6 +441,7 @@ async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTempla
             "capacity": 12,
         },
         {
+            "key": "Yoga Flow",
             "title": "Yoga Flow",
             "type": ScheduleType.group,
             "days": ["Tuesday", "Thursday"],
@@ -401,6 +449,7 @@ async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTempla
             "capacity": 16,
         },
         {
+            "key": "Personal Training",
             "title": "Personal Training",
             "type": ScheduleType.personal,
             "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
@@ -411,17 +460,27 @@ async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTempla
 
     templates = {}
     for row in template_rows:
-        templates[row["title"]] = await get_or_create(
-            session,
-            ScheduleTemplate,
-            {"title": row["title"]},
-            {
-                "type": row["type"],
-                "days": row["days"],
-                "time": row["time"],
-                "capacity": row["capacity"],
-            },
+        candidates = await session.scalars(
+            select(ScheduleTemplate).where(
+                ScheduleTemplate.title == row["title"],
+                ScheduleTemplate.time == row["time"],
+            )
         )
+        template = next((item for item in candidates.all() if item.days == row["days"]), None)
+        if template is None:
+            template = ScheduleTemplate(
+                title=row["title"],
+                type=row["type"],
+                days=row["days"],
+                time=row["time"],
+                capacity=row["capacity"],
+            )
+            session.add(template)
+            await session.flush()
+        else:
+            template.type = row["type"]
+            template.capacity = row["capacity"]
+        templates[row["key"]] = template
 
     session_rows = [
         {
@@ -501,7 +560,6 @@ async def seed_enrollments(
         {"member": "Sophia Chen", "session": sessions["yoga_today"]},
         {"member": "Noah Carter", "template": templates["Yoga Flow"]},
         {"member": "Ava Carter", "template": templates["Yoga Flow"]},
-        {"member": "Mouza Almuharrami", "template": templates["Little Kids Karate"]},
     ]
 
     for row in rows:

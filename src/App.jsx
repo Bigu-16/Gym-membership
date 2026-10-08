@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import MemberGrid from './components/MemberGrid';
 import MemberDetails from './components/MemberDetails';
 import Sidebar from './components/Sidebar';
@@ -8,6 +8,7 @@ import DashboardOverview from './components/DashboardOverview';
 import Analytics from './components/Analytics';
 import Login from './components/Login';
 import Notifications from './components/Notifications';
+import TemplateManagement from './components/TemplateManagement';
 import AppHeader from './components/layout/AppHeader';
 import { useGymData } from './hooks/useGymData';
 import { apiService } from './services/api';
@@ -26,6 +27,7 @@ const App = () => {
     inClubList,
     setInClubList,
     scheduleTemplates,
+    membershipPlans,
     loading,
     error,
     notificationJobs,
@@ -42,6 +44,9 @@ const App = () => {
     handleAddTemplate,
     handleDeleteTemplate,
     handleUpdateTemplate,
+    handleAddPlan,
+    handleUpdatePlan,
+    handleDeletePlan,
     handleUpdateSessionStatus,
     handleUpdateMember,
     handleRenewMember,
@@ -167,16 +172,28 @@ const App = () => {
                   </>
                 )
               ) : activeTab === 'enrollment' ? (
-                <EnrollmentForm onEnroll={handleEnroll} scheduleTemplates={scheduleTemplates} />
+                <EnrollmentForm
+                  onEnroll={handleEnroll}
+                  scheduleTemplates={scheduleTemplates}
+                  membershipPlans={membershipPlans}
+                />
               ) : activeTab === 'schedule' ? (
                 <Schedule 
                   sessions={sessions} 
                   scheduleTemplates={scheduleTemplates}
                   members={members}
-                  onAddTemplate={handleAddTemplate}
-                  onDeleteTemplate={handleDeleteTemplate}
-                  onUpdateTemplate={handleUpdateTemplate}
                   onUpdateSessionStatus={handleUpdateSessionStatus}
+                />
+              ) : activeTab === 'templates' ? (
+                <TemplateManagement
+                  membershipPlans={membershipPlans}
+                  scheduleTemplates={scheduleTemplates}
+                  onAddPlan={handleAddPlan}
+                  onUpdatePlan={handleUpdatePlan}
+                  onDeletePlan={handleDeletePlan}
+                  onAddScheduleTemplate={handleAddTemplate}
+                  onUpdateScheduleTemplate={handleUpdateTemplate}
+                  onDeleteScheduleTemplate={handleDeleteTemplate}
                 />
               ) : activeTab === 'dashboard' ? (
                 <DashboardOverview 

@@ -1,11 +1,13 @@
-import React from 'react';
 
 const PaymentDetailsSection = ({
   payment,
   setPayment,
-  handleDurationValueChange,
-  handleDurationUnitChange
+  trainingType,
+  selectedPackage,
+  participantCount
 }) => {
+  const isGroupPackage = trainingType === 'group';
+
   return (
     <>
       <section className="glass-card p-8 space-y-6">
@@ -18,164 +20,84 @@ const PaymentDetailsSection = ({
           <h2 className="text-xs uppercase tracking-luxury font-bold">Payment Details</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Duration</label>
-            <div className="flex gap-2">
-              {/* Stepper Input Button */}
-              <div className="flex items-center bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl overflow-hidden shadow-sm hover:border-[var(--text-primary)]/30 transition-all">
-                <button
-                  type="button"
-                  onClick={() => handleDurationValueChange(payment.durationValue - 1)}
-                  className="px-3 py-3 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--text-primary)]/5 transition-colors border-r border-[var(--glass-border)]"
-                  aria-label="Decrease duration"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12H4" />
-                  </svg>
-                </button>
-                <input
-                  type="number"
-                  min="0"
-                  value={payment.durationValue}
-                  onChange={(e) => handleDurationValueChange(e.target.value)}
-                  className="w-12 bg-transparent text-center text-sm focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-bold text-[var(--text-primary)]"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleDurationValueChange(payment.durationValue + 1)}
-                  className="px-3 py-3 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--text-primary)]/5 transition-colors border-l border-[var(--glass-border)]"
-                  aria-label="Increase duration"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Unit Selector */}
-              <div className="relative flex-grow min-w-[100px]">
-                <select
-                  value={payment.durationUnit}
-                  onChange={(e) => handleDurationUnitChange(e.target.value)}
-                  className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10 text-[var(--text-primary)]"
-                >
-                  <option value="Day">Days</option>
-                  <option value="Month">Months</option>
-                  <option value="Year">Years</option>
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-            {payment.durationValue === 3 && payment.durationUnit.toLowerCase().startsWith('month') && (
-              <span className="inline-flex items-center gap-1 text-[9px] text-amber-500 font-bold uppercase tracking-wider mt-1 animate-pulse">
-                🎁 Includes Package Perk: Free Uniform / Gloves
+        {isGroupPackage && (
+          <div className="rounded-2xl border border-orange-500/25 bg-orange-500/5 p-5 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <span className="block text-[9px] uppercase tracking-luxury text-[var(--text-secondary)]">Selected package</span>
+              <span className="block text-sm font-black mt-1">
+                {selectedPackage.program} · {selectedPackage.durationMonths} {selectedPackage.durationMonths === 1 ? 'month' : 'months'} · {selectedPackage.classesPerWeek} classes/week
               </span>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Currency</label>
-            <div className="relative">
-              <select 
-                value={payment.currency}
-                onChange={(e) => setPayment({...payment, currency: e.target.value})}
-                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10 text-[var(--text-primary)]"
-              >
-                <option>AED</option>
-                <option>USD</option>
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
+              {selectedPackage.includedItem && (
+                <span className="inline-flex mt-2 rounded-full bg-amber-500/15 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-amber-500">
+                  {selectedPackage.includedItem}
+                </span>
+              )}
+            </div>
+            <div className="text-right">
+              <span className="block text-[9px] uppercase tracking-luxury text-[var(--text-secondary)]">
+                {participantCount} {participantCount === 1 ? 'trainee' : 'trainees'}
+              </span>
+              <span className="block text-2xl font-black mt-1">AED {payment.amount}</span>
             </div>
           </div>
+        )}
 
+        {!isGroupPackage && (
+          <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--bg-primary)] p-4 text-[11px] text-[var(--text-secondary)]">
+            Personal training pricing is custom. Enter agreed amount; no package price is assumed.
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Total Amount</label>
-            <div className="flex flex-col gap-3">
-              <div className="relative group">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--text-secondary)]">
-                  {payment.currency === 'AED' ? 'AED' : '$'}
-                </span>
-                <input 
-                  required
-                  type="text" 
-                  list="amount-presets"
-                  value={payment.amount}
-                  onChange={(e) => setPayment({...payment, amount: e.target.value})}
-                  className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl pl-12 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none"
-                  placeholder="0.00"
-                />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)] opacity-40 group-hover:opacity-100 transition-opacity">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-                <datalist id="amount-presets">
-                  <option value="300" label="1 Month (2 classes/week)" />
-                  <option value="350" label="1 Month (3 classes/week)" />
-                  <option value="800" label="3 Months (2 classes/week)" />
-                  <option value="900" label="3 Months (3 classes/week - Free Uniform/Gloves)" />
-                  <option value="1400" label="6 Months Package" />
-                  <option value="1450" label="6 Months (Zumba)" />
-                  <option value="2550" label="1 Year Full Membership" />
-                </datalist>
-              </div>
+            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">
+              {isGroupPackage ? 'Total Amount' : 'Agreed Amount'}
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--text-secondary)]">AED</span>
+              <input
+                required
+                readOnly={isGroupPackage}
+                type="text"
+                value={payment.amount}
+                onChange={(event) => setPayment((current) => ({ ...current, amount: event.target.value }))}
+                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl pl-14 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20"
+                placeholder="0.00"
+              />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Method</label>
-            <div className="relative">
-              <select 
-                value={payment.method}
-                onChange={(e) => setPayment({...payment, method: e.target.value})}
-                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10"
-              >
-                <option>Cash</option>
-                <option>Credit Card</option>
-                <option>Bank Transfer</option>
-                <option>Mobile Pay</option>
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
+            <select
+              value={payment.method}
+              onChange={(event) => setPayment((current) => ({ ...current, method: event.target.value }))}
+              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20"
+            >
+              <option>Cash</option>
+              <option>Credit Card</option>
+              <option>Bank Transfer</option>
+              <option>Mobile Pay</option>
+            </select>
           </div>
 
           <div className="space-y-2">
             <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Initial Status</label>
-            <div className="relative">
-              <select 
-                value={payment.status}
-                onChange={(e) => setPayment({...payment, status: e.target.value})}
-                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-10"
-              >
-                <option>Paid</option>
-                <option>Partial</option>
-                <option>Pending</option>
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
+            <select
+              value={payment.status}
+              onChange={(event) => setPayment((current) => ({ ...current, status: event.target.value }))}
+              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20"
+            >
+              <option>Paid</option>
+              <option>Partial</option>
+              <option>Pending</option>
+            </select>
           </div>
         </div>
       </section>
 
       <div className="flex justify-end pt-4">
-        <button 
+        <button
           type="submit"
           className="group relative px-12 py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] overflow-hidden transition-all hover:scale-[1.02] active:scale-95 shadow-xl"
         >

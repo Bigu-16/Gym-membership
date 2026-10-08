@@ -1,5 +1,3 @@
-import React from 'react';
-
 const AppHeader = ({
   activeTab,
   theme,
@@ -22,6 +20,8 @@ const AppHeader = ({
               <>New <span className="font-bold">Registration</span></>
             ) : activeTab === 'schedule' ? (
               <>Training <span className="font-bold">Schedule</span></>
+            ) : activeTab === 'templates' ? (
+              <>Template <span className="font-bold">Studio</span></>
             ) : activeTab === 'analytics' ? (
               <>Business <span className="font-bold">Analytics</span></>
             ) : (

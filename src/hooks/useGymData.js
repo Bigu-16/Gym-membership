@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
-import { GROUP_SCHEDULE_SLOTS } from '../config/scheduleConfig';
 
 export const useGymData = () => {
   // Clear any legacy persistent token in localStorage so new sessions start at Login
@@ -16,6 +15,7 @@ export const useGymData = () => {
   const [sessions, setSessions] = useState([]);
   const [inClubList, setInClubList] = useState([]);
   const [scheduleTemplates, setScheduleTemplates] = useState([]);
+  const [membershipPlans, setMembershipPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notificationJobs, setNotificationJobs] = useState([]);
@@ -31,6 +31,7 @@ export const useGymData = () => {
     setSessions([]);
     setInClubList([]);
     setScheduleTemplates([]);
+    setMembershipPlans([]);
     setNotificationJobs([]);
     setSelectedMember(null);
   }, []);
@@ -48,60 +49,18 @@ export const useGymData = () => {
       }));
       setCurrentUser(userProfile);
 
-      const [rawTemplatesData, rawMembersData, familiesData, enrollmentsData] = await Promise.all([
+      const [rawTemplatesData, rawMembersData, familiesData, enrollmentsData, plansData] = await Promise.all([
         apiService.getTemplates().catch(() => []),
         apiService.getMembers().catch(() => []),
         apiService.getFamilies().catch(() => []),
-        apiService.getEnrollments().catch(() => [])
+        apiService.getEnrollments().catch(() => []),
+        apiService.getPlans().catch(() => [])
       ]);
+      setMembershipPlans(Array.isArray(plansData) ? plansData : []);
 
-      // Ensure class templates contain all N & T Center recurring classes
-      let templatesData = Array.isArray(rawTemplatesData) ? [...rawTemplatesData] : [];
-      if (templatesData.length === 0 || !templatesData.some(t => (t.className || t.title) === 'Little Kids Karate')) {
-        const existingKeys = new Set(templatesData.map(t => `${t.className || t.title}_${t.time}`));
-        const missing = GROUP_SCHEDULE_SLOTS.filter(s => !existingKeys.has(`${s.className}_${s.time}`));
-        templatesData = [...templatesData, ...missing];
-      }
+      const templatesData = Array.isArray(rawTemplatesData) ? rawTemplatesData : [];
 
-      // Ensure Mouza Almuharrami (from the registration sheet) is populated in members
-      let membersData = Array.isArray(rawMembersData) ? [...rawMembersData] : [];
-      const hasMouza = membersData.some(m =>
-        (m.name && m.name.toLowerCase().includes('mouza')) ||
-        (m.phone && (m.phone.includes('0506199709') || m.phone.includes('506199709')))
-      );
-      if (!hasMouza) {
-        membersData.unshift({
-          id: 'mouza-101',
-          name: 'Mouza Almuharrami',
-          phone: '0506199709',
-          parentPhone: '0506199709',
-          parentName: 'Safeya Almuharrami',
-          parentEmail: 'safeya.almuharrami@example.com',
-          age: 3,
-          gender: 'Female',
-          medicalIssues: 'None',
-          plan: 'Little Kids Karate',
-          expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          isFrozen: false,
-          image: 'https://images.unsplash.com/photo-1595152772835-219674b2a8a6?w=150&auto=format&fit=crop&q=80',
-          trainingType: 'group',
-          schedule: {
-            slot: 'Little Kids Karate: Tue, Thu, Sat @ 4:00 PM - 5:00 PM',
-            daysPerWeek: 3,
-            duration: 1,
-            location: 'Main Dojo'
-          },
-          payment: {
-            amount: '300',
-            method: 'Cash',
-            status: 'Paid',
-            currency: 'AED',
-            duration: '1 Month',
-            durationValue: 1,
-            durationUnit: 'Month'
-          }
-        });
-      }
+      const membersData = Array.isArray(rawMembersData) ? [...rawMembersData] : [];
 
       const familyParentMap = new Map();
       familiesData.forEach(f => {
@@ -210,6 +169,8 @@ export const useGymData = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
+      // Authentication state triggers the initial backend synchronization.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadData();
     }
   }, [isAuthenticated, loadData]);
@@ -266,41 +227,66 @@ export const useGymData = () => {
 
   const handleAddTemplate = async (newTemplate) => {
     try {
-      await apiService.createTemplate(newTemplate);
-      await loadData();
+      const created = await apiService.createTemplate(newTemplate);
+      setScheduleTemplates((current) => [...current, created]);
+      return created;
     } catch (err) {
       console.error(err);
-      alert('Failed to create class template: ' + err.message);
+      throw err;
     }
   };
 
   const handleDeleteTemplate = async (id) => {
     try {
       await apiService.deleteTemplate(id);
-      setScheduleTemplates(prev => prev.filter(t => t.id !== id));
-      await loadData();
+      setScheduleTemplates((current) => current.filter((template) => template.id !== id));
     } catch (err) {
       console.error('Failed to delete template from backend:', err);
-      setScheduleTemplates(prev => prev.filter(t => t.id !== id));
+      throw err;
     }
   };
 
   const handleUpdateTemplate = async (updatedTemplate) => {
     try {
-      await apiService.updateTemplate(updatedTemplate.id, updatedTemplate);
-      setScheduleTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t));
-      await loadData();
+      const updated = await apiService.updateTemplate(updatedTemplate.id, updatedTemplate);
+      setScheduleTemplates((current) => current.map((template) => template.id === updated.id
+        ? { ...updated, enrolled: template.enrolled || 0 }
+        : template));
+      return updated;
     } catch (err) {
       console.error('Failed to update template on backend:', err);
-      setScheduleTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t));
+      throw err;
     }
+  };
+
+  const handleAddPlan = async (plan) => {
+    const created = await apiService.createPlan(plan);
+    setMembershipPlans((current) => [...current, created]);
+    return created;
+  };
+
+  const handleUpdatePlan = async (plan) => {
+    const payload = { ...plan };
+    delete payload.id;
+    delete payload.created_at;
+    delete payload.updated_at;
+    const updated = await apiService.updatePlan(plan.id, payload);
+    setMembershipPlans((current) => current.map((item) => item.id === updated.id ? updated : item));
+    return updated;
+  };
+
+  const handleDeletePlan = async (id) => {
+    await apiService.deletePlan(id);
+    setMembershipPlans((current) => current.filter((plan) => plan.id !== id));
   };
 
   const handleUpdateSessionStatus = async (sessionId, newStatus) => {
     try {
       try {
         localStorage.setItem(`gym_session_status_${sessionId}`, newStatus);
-      } catch (e) {}
+      } catch {
+        // Browser storage can be unavailable in private contexts.
+      }
       await apiService.updateSessionStatus(sessionId, newStatus);
       setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: newStatus } : s));
       await loadData();
@@ -476,6 +462,7 @@ export const useGymData = () => {
     inClubList,
     setInClubList,
     scheduleTemplates,
+    membershipPlans,
     loading,
     error,
     notificationJobs,
@@ -492,6 +479,9 @@ export const useGymData = () => {
     handleAddTemplate,
     handleDeleteTemplate,
     handleUpdateTemplate,
+    handleAddPlan,
+    handleUpdatePlan,
+    handleDeletePlan,
     handleUpdateSessionStatus,
     handleUpdateMember,
     handleRenewMember,

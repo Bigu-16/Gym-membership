@@ -1,6 +1,4 @@
-import React from 'react';
-
-const MemberHeader = ({ onBack, onViewRegistrationForm }) => {
+const MemberHeader = ({ onBack }) => {
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
       <div className="flex items-center gap-4">
@@ -17,16 +15,6 @@ const MemberHeader = ({ onBack, onViewRegistrationForm }) => {
           Member <span className="font-bold">Details</span>
         </h2>
       </div>
-
-      {onViewRegistrationForm && (
-        <button
-          type="button"
-          onClick={onViewRegistrationForm}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 border border-orange-500/30 text-[10px] uppercase tracking-luxury font-bold transition-all shadow-sm active:scale-95"
-        >
-          📄 Official Registration Form
-        </button>
-      )}
     </div>
   );
 };

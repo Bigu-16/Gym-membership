@@ -1,12 +1,10 @@
-import React from 'react';
 import { format } from 'date-fns';
 import { 
   ChevronLeft, 
   ChevronRight, 
   Calendar as CalendarIcon, 
   CalendarDays, 
-  CalendarRange, 
-  LayoutGrid 
+  CalendarRange
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -54,20 +52,9 @@ const ScheduleHeader = ({
           >
             <CalendarDays size={14} /> Month
           </button>
-          <button 
-            type="button"
-            onClick={() => setView('templates')}
-            className={cn(
-              "px-4 py-2 rounded-xl text-[10px] uppercase tracking-luxury transition-all flex items-center gap-2",
-              view === 'templates' ? "bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-lg" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            )}
-          >
-            <LayoutGrid size={14} /> Templates
-          </button>
         </div>
 
-        {view !== 'templates' && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
             <button 
               type="button"
               onClick={() => navigateDate('prev')}
@@ -89,12 +76,11 @@ const ScheduleHeader = ({
             >
               <ChevronRight size={18} />
             </button>
-          </div>
-        )}
+        </div>
       </div>
 
       <h2 className="text-2xl font-light tracking-luxury uppercase">
-        {view === 'templates' ? 'Schedule Templates' : format(currentDate, view === 'month' ? 'MMMM yyyy' : 'MMMM d, yyyy')}
+        {format(currentDate, view === 'month' ? 'MMMM yyyy' : 'MMMM d, yyyy')}
       </h2>
     </div>
   );

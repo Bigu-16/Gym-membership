@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   format, 
   addDays, 
@@ -15,28 +15,23 @@ import ScheduleHeader from './schedule/ScheduleHeader';
 import DayView from './schedule/DayView';
 import WeekView from './schedule/WeekView';
 import MonthView from './schedule/MonthView';
-import TemplatesView from './schedule/TemplatesView';
 import SessionModal from './schedule/SessionModal';
-import TemplateModal from './schedule/TemplateModal';
-import DeleteTemplateModal from './schedule/DeleteTemplateModal';
 
 const Schedule = ({ 
   sessions = [], 
   scheduleTemplates = [], 
   members = [], 
-  onAddTemplate, 
-  onDeleteTemplate,
-  onUpdateTemplate,
   onUpdateSessionStatus
 }) => {
-  const [view, setView] = useState('week'); // 'day', 'week', 'month', 'templates'
-  const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('All');
+  const [view, setView] = useState('week');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedSession, setSelectedSession] = useState(null);
   const [localChecklists, setLocalChecklists] = useState({});
 
   useEffect(() => {
     if (sessions && sessions.length > 0) {
+      // Session payload is the external source for persisted checklist state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalChecklists(prev => {
         const updated = { ...prev };
         sessions.forEach(s => {
@@ -115,96 +110,6 @@ const Schedule = ({
 
   const [timeLeft, setTimeLeft] = useState('');
 
-  // Create/Edit Template modal state
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedClassOption, setSelectedClassOption] = useState('Kids Taekwondo');
-  const [selectedDays, setSelectedDays] = useState([]);
-  const [startTime, setStartTime] = useState('16:00');
-  const [endTime, setEndTime] = useState('17:00');
-  const [capacity, setCapacity] = useState(15);
-  const [deleteTemplateId, setDeleteTemplateId] = useState(null);
-  const [editingTemplate, setEditingTemplate] = useState(null);
-
-  const handleCloseModal = () => {
-    setIsCreateModalOpen(false);
-    setEditingTemplate(null);
-    setSelectedClassOption('Kids Taekwondo');
-    setSelectedDays([]);
-    setStartTime('16:00');
-    setEndTime('17:00');
-    setCapacity(15);
-  };
-
-  const handleEditClick = (template) => {
-    setEditingTemplate(template);
-    setSelectedClassOption(template.className || 'Kids Taekwondo');
-    
-    const dayMap = {
-      'Mon': 'Monday',
-      'Tue': 'Tuesday',
-      'Wed': 'Wednesday',
-      'Thu': 'Thursday',
-      'Fri': 'Friday',
-      'Sat': 'Saturday',
-      'Sun': 'Sunday'
-    };
-    if (template.days) {
-      const daysArr = Array.isArray(template.days)
-        ? template.days
-        : template.days.split(', ').map(d => d.trim());
-      setSelectedDays(daysArr.map(sd => dayMap[sd] || sd).filter(Boolean));
-    } else {
-      setSelectedDays([]);
-    }
-    
-    const parseTime12hTo24h = (t12) => {
-      if (!t12) return '16:00';
-      const parts12 = t12.trim().split(/\s+/);
-      const timeStrPart = parts12[0];
-      const modifier = parts12[1] ? parts12[1].toUpperCase() : null;
-      let [hours, minutes] = timeStrPart.split(':');
-      if (modifier === 'PM' && hours !== '12') hours = String(parseInt(hours, 10) + 12);
-      if (modifier === 'AM' && hours === '12') hours = '00';
-      return `${hours.padStart(2, '0')}:${(minutes || '00').padStart(2, '0')}`;
-    };
-    
-    try {
-      if (template.time && template.time.includes(' - ')) {
-        const [startStr, endStr] = template.time.split(' - ');
-        setStartTime(parseTime12hTo24h(startStr));
-        setEndTime(parseTime12hTo24h(endStr));
-      } else if (template.time) {
-        const parsedStart = parseTime12hTo24h(template.time);
-        setStartTime(parsedStart);
-        const [sh, sm] = parsedStart.split(':').map(Number);
-        const eh = ((sh || 16) + 1) % 24;
-        setEndTime(`${String(eh).padStart(2, '0')}:${String(sm || 0).padStart(2, '0')}`);
-      } else {
-        setStartTime('16:00');
-        setEndTime('17:00');
-      }
-    } catch (e) {
-      console.warn('Error parsing template time:', e);
-      setStartTime('16:00');
-      setEndTime('17:00');
-    }
-    
-    setCapacity(template.capacity || 15);
-    setIsCreateModalOpen(true);
-  };
-
-  const existingClassNames = Array.from(new Set(scheduleTemplates.map(t => t.className).filter(Boolean)));
-  const defaultClassNames = [
-    'Kids Taekwondo',
-    'Little Kids Karate',
-    'Kids Karate',
-    'Adult Karate',
-    'Adult Kickboxing',
-    'Kung Fu',
-    'Zumba Fitness'
-  ];
-  const uniqueClassNames = Array.from(new Set([...defaultClassNames, ...existingClassNames]));
-
   useEffect(() => {
     const timer = setInterval(() => {
       const inProgress = sessions.find(s => s.status === 'in-progress');
@@ -242,8 +147,8 @@ const Schedule = ({
     const parseTimeComponent = (str, baseDate) => {
       if (!str) return null;
       const trimmed = str.trim();
-      let hours = 10;
-      let minutes = 0;
+      let hours;
+      let minutes;
 
       if (trimmed.toLowerCase().includes('am') || trimmed.toLowerCase().includes('pm')) {
         const parts = trimmed.split(/\s+/);
@@ -400,43 +305,6 @@ const Schedule = ({
           timeLeft={timeLeft}
         />
       )}
-      {view === 'templates' && (
-        <TemplatesView 
-          scheduleTemplates={scheduleTemplates}
-          members={members}
-          selectedTemplateCategory={selectedTemplateCategory}
-          setSelectedTemplateCategory={setSelectedTemplateCategory}
-          setIsCreateModalOpen={setIsCreateModalOpen}
-          handleEditClick={handleEditClick}
-          setDeleteTemplateId={setDeleteTemplateId}
-        />
-      )}
-
-      <DeleteTemplateModal 
-        deleteTemplateId={deleteTemplateId}
-        setDeleteTemplateId={setDeleteTemplateId}
-        onDeleteTemplate={onDeleteTemplate}
-      />
-
-      <TemplateModal 
-        isOpen={isCreateModalOpen}
-        handleCloseModal={handleCloseModal}
-        editingTemplate={editingTemplate}
-        selectedClassOption={selectedClassOption}
-        setSelectedClassOption={setSelectedClassOption}
-        uniqueClassNames={uniqueClassNames}
-        selectedDays={selectedDays}
-        setSelectedDays={setSelectedDays}
-        startTime={startTime}
-        setStartTime={setStartTime}
-        endTime={endTime}
-        setEndTime={setEndTime}
-        capacity={capacity}
-        setCapacity={setCapacity}
-        onAddTemplate={onAddTemplate}
-        onUpdateTemplate={onUpdateTemplate}
-      />
-
       <SessionModal 
         selectedSession={selectedSession}
         setSelectedSession={setSelectedSession}

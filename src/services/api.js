@@ -1,15 +1,13 @@
+const DEFAULT_API_BASE_URL = 'https://gym-membership-f3ua.onrender.com/api/v1';
+
 const getInitialBaseUrl = () => {
   let stored = localStorage.getItem('gym_api_base_url');
-  if (stored && (stored.startsWith('https://localhost') || stored.startsWith('https://127.0.0.1'))) {
-    stored = stored.replace('https://', 'http://');
+  if (stored && (stored.includes('localhost') || stored.includes('127.0.0.1'))) {
+    stored = DEFAULT_API_BASE_URL;
     localStorage.setItem('gym_api_base_url', stored);
   }
   const envUrl = import.meta.env.VITE_API_URL;
-  const raw = stored || envUrl || 'http://localhost:8000/api/v1';
-  if (raw.startsWith('https://localhost') || raw.startsWith('https://127.0.0.1')) {
-    return raw.replace('https://', 'http://');
-  }
-  return raw;
+  return stored || envUrl || DEFAULT_API_BASE_URL;
 };
 
 export const API_BASE_URL = getInitialBaseUrl();
@@ -138,7 +136,7 @@ const mapMemberToBackend = (m) => {
     parent_phone: m.parentPhone || null,
     gender: m.gender ? m.gender.toLowerCase() : null,
     medical_issues: m.medicalIssues || null,
-    plan_id: m.planId || 3, // Default to Elite Performance
+    plan_id: m.planId || null,
     expiry_date: expiryDate,
     messaging_opt_in: m.messagingOptIn !== undefined ? m.messagingOptIn : true,
     is_frozen: m.isFrozen || false
@@ -221,7 +219,9 @@ export const mapSessionToFrontend = (s, templates = []) => {
     if (localSavedStatus) {
       status = localSavedStatus;
     }
-  } catch (e) {}
+  } catch {
+    // Browser storage can be unavailable in private contexts.
+  }
 
   return {
     id: s.id,
@@ -591,6 +591,7 @@ export const apiService = {
     return data.map(t => ({
       id: t.id,
       className: t.title,
+      type: t.type,
       days: mapDaysToFrontend(t.days),
       time: t.time,
       capacity: t.capacity,
@@ -601,7 +602,7 @@ export const apiService = {
   async createTemplate(templateData) {
     const payload = {
       title: templateData.className,
-      type: 'group', // Default to group
+      type: templateData.type || 'group',
       days: mapDaysToBackend(templateData.days),
       time: templateData.time,
       capacity: Number(templateData.capacity),
@@ -616,6 +617,7 @@ export const apiService = {
     return {
       id: t.id,
       className: t.title,
+      type: t.type,
       days: mapDaysToFrontend(t.days),
       time: t.time,
       capacity: t.capacity,
@@ -626,6 +628,7 @@ export const apiService = {
   async updateTemplate(templateId, templateData) {
     const payload = {};
     if (templateData.className !== undefined) payload.title = templateData.className;
+    if (templateData.type !== undefined) payload.type = templateData.type;
     if (templateData.days !== undefined) payload.days = mapDaysToBackend(templateData.days);
     if (templateData.time !== undefined) payload.time = templateData.time;
     if (templateData.capacity !== undefined) payload.capacity = Number(templateData.capacity);
@@ -640,6 +643,7 @@ export const apiService = {
     return {
       id: t.id,
       className: t.title,
+      type: t.type,
       days: mapDaysToFrontend(t.days),
       time: t.time,
       capacity: t.capacity,
@@ -838,11 +842,19 @@ export const apiService = {
   },
 
   async updatePlan(planId, planData) {
-    const response = await fetch(`${API_BASE_URL}/plans/${planId}`, {
-      method: 'PUT',
+    let response = await fetch(`${API_BASE_URL}/plans/${planId}`, {
+      method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(planData),
     });
+    // Compatibility while older deployed backends still expose only PUT.
+    if (response.status === 405) {
+      response = await fetch(`${API_BASE_URL}/plans/${planId}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(planData),
+      });
+    }
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       throw new Error(data.detail || 'Failed to update plan');

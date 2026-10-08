@@ -36,6 +36,32 @@ async def test_schedule_template_can_be_updated(client):
 
 
 @pytest.mark.asyncio
+async def test_membership_plan_supports_partial_patch(client):
+    created = await client.post(
+        "/api/v1/plans/",
+        json={
+            "name": "Editable Karate Package",
+            "program": "Karate",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 3,
+            "price": 350,
+            "currency": "AED",
+            "duration_days": 30,
+        },
+    )
+
+    response = await client.patch(
+        f"/api/v1/plans/{created.json()['id']}",
+        json={"price": 375, "included_items": ["Free uniform"]},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["price"] == "375.00"
+    assert response.json()["included_items"] == ["Free uniform"]
+
+
+@pytest.mark.asyncio
 async def test_deleting_template_preserves_history_and_detaches_references(client, session_factory):
     async with session_factory() as db:
         template = ScheduleTemplate(title="Boxing", type=ScheduleType.group, days=["Friday"], time="18:00", capacity=8)

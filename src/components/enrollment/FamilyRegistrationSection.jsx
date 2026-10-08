@@ -1,7 +1,6 @@
-import React from 'react';
 import { PhoneInput } from 'react-international-phone';
 import 'react-international-phone/style.css';
-import { PERSONAL_DEFAULTS, ACTIVITIES, PERSONAL_TRAINING_PROGRAMS } from '../../config/scheduleConfig';
+import { PERSONAL_DEFAULTS, PERSONAL_TRAINING_PROGRAMS } from '../../config/scheduleConfig';
 
 const FamilyRegistrationSection = ({
   trainingType,
@@ -12,7 +11,8 @@ const FamilyRegistrationSection = ({
   addTrainee,
   removeTrainee,
   handleParentChange,
-  handleTraineeChange
+  handleTraineeChange,
+  selectedPackage
 }) => {
   return (
     <section className="space-y-8">
@@ -164,45 +164,12 @@ const FamilyRegistrationSection = ({
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {trainingType === 'group' ? (
-                          <>
-                            <div className="space-y-1.5">
-                              <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Activity / Sport</label>
-                              <div className="relative">
-                                <select 
-                                  value={trainee.service || 'Taekwondo'}
-                                  onChange={(e) => handleTraineeChange(fIndex, tIndex, 'service', e.target.value)}
-                                  className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-8"
-                                >
-                                  {ACTIVITIES.map(act => (
-                                    <option key={act} value={act}>{act}</option>
-                                  ))}
-                                </select>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Classes per Week</label>
-                              <div className="relative">
-                                <select 
-                                  value={trainee.frequency || '3 classes/week'}
-                                  onChange={(e) => handleTraineeChange(fIndex, tIndex, 'frequency', e.target.value)}
-                                  className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all appearance-none cursor-pointer pr-8"
-                                >
-                                  <option value="2 classes/week">2 Classes / Week</option>
-                                  <option value="3 classes/week">3 Classes / Week</option>
-                                </select>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </div>
-                              </div>
-                            </div>
-                          </>
+                          <div className="md:col-span-2 rounded-xl border border-orange-500/25 bg-orange-500/5 px-4 py-3">
+                            <span className="block text-[8px] uppercase tracking-luxury text-[var(--text-secondary)]">Selected Package</span>
+                            <span className="block text-sm font-bold mt-1">
+                              {selectedPackage.program} · {selectedPackage.durationMonths} {selectedPackage.durationMonths === 1 ? 'month' : 'months'} · {selectedPackage.classesPerWeek} classes/week
+                            </span>
+                          </div>
                         ) : (
                           <div className="space-y-1.5 md:col-span-2">
                             <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Personal Training Program</label>

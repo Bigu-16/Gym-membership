@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import DashboardOverview from '../DashboardOverview';
 import Analytics from '../Analytics';
 import Schedule from '../Schedule';
+import TemplateManagement from '../TemplateManagement';
 import { apiService } from '../../services/api';
 
 vi.mock('../../services/api', () => ({
@@ -275,27 +276,19 @@ describe('Gym App Defect Fixes Verification', () => {
       }
     ];
 
-    render(
-      <Schedule
-        sessions={[]}
-        scheduleTemplates={yogaTemplate}
-        members={[]}
-        onAddTemplate={vi.fn()}
-        onDeleteTemplate={vi.fn()}
-        onUpdateTemplate={vi.fn()}
-      />
-    );
+    render(<TemplateManagement
+      membershipPlans={[]}
+      scheduleTemplates={yogaTemplate}
+      onAddPlan={vi.fn()}
+      onUpdatePlan={vi.fn()}
+      onDeletePlan={vi.fn()}
+      onAddScheduleTemplate={vi.fn()}
+      onUpdateScheduleTemplate={vi.fn()}
+      onDeleteScheduleTemplate={vi.fn()}
+    />);
 
-    // Switch to Templates tab
-    const templatesTab = screen.getByText('Templates');
-    fireEvent.click(templatesTab);
-
-    // Yoga Flow card should display 4:30 PM (or 16:30)
-    expect(screen.getByText('4:30 PM')).toBeInTheDocument();
-
-    // Click Edit button
-    const editBtn = screen.getByTitle('Edit Template');
-    fireEvent.click(editBtn);
+    fireEvent.click(screen.getByRole('button', { name: /Weekly Schedule/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Yoga Flow/i })[0]);
 
     // Modal should open without throwing an error
     expect(screen.getByText('Edit Template')).toBeInTheDocument();

@@ -1,4 +1,3 @@
-import React from 'react';
 import { ACTIVITIES, PERSONAL_TRAINING_PROGRAMS } from '../../config/scheduleConfig';
 
 const ProgramTypeSelector = ({
@@ -7,7 +6,8 @@ const ProgramTypeSelector = ({
   personalType,
   setPersonalType,
   families,
-  setFamilies
+  setFamilies,
+  selectedPackage
 }) => {
   return (
     <section className="space-y-6">
@@ -28,11 +28,11 @@ const ProgramTypeSelector = ({
             setFamilies([families[0]].map(fam => ({
               ...fam,
               trainees: fam.trainees.map(t => {
-                const current = t.service || '';
-                const matchedAct = ACTIVITIES.find(a => current.toLowerCase().includes(a.toLowerCase()));
                 return {
                   ...t,
-                  service: matchedAct || 'Taekwondo'
+                  service: selectedPackage?.program || ACTIVITIES[0],
+                  frequency: `${selectedPackage?.classesPerWeek || 3} classes/week`,
+                  packageTemplateId: selectedPackage?.id
                 };
               })
             })));

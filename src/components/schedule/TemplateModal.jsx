@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -23,9 +23,12 @@ const TemplateModal = ({
   onAddTemplate,
   onUpdateTemplate
 }) => {
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (selectedDays.length === 0) {
       alert('Please select at least one training day.');
@@ -58,21 +61,29 @@ const TemplateModal = ({
 
     const templateData = {
       className: selectedClassOption.trim() || 'General Class',
+      type: editingTemplate?.type || 'group',
       days: formattedDaysStr,
       time: `${formatTime12h(startTime)} - ${formatTime12h(endTime)}`,
       capacity: parseInt(capacity, 10)
     };
 
-    if (editingTemplate) {
-      onUpdateTemplate({
-        ...editingTemplate,
-        ...templateData
-      });
-    } else {
-      onAddTemplate(templateData);
+    setSaving(true);
+    setError('');
+    try {
+      if (editingTemplate) {
+        await onUpdateTemplate({
+          ...editingTemplate,
+          ...templateData
+        });
+      } else {
+        await onAddTemplate(templateData);
+      }
+      handleCloseModal();
+    } catch (saveError) {
+      setError(saveError.message || 'Unable to save schedule template');
+    } finally {
+      setSaving(false);
     }
-
-    handleCloseModal();
   };
 
   return (
@@ -204,11 +215,13 @@ const TemplateModal = ({
           </div>
 
           <div className="pt-8 flex gap-4">
+            {error && <p role="alert" className="w-full text-xs text-rose-500">{error}</p>}
             <button 
               type="submit"
-              className="flex-grow py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:opacity-90 transition-all"
+              disabled={saving}
+              className="flex-grow py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:opacity-90 transition-all disabled:opacity-50"
             >
-              {editingTemplate ? 'Save Changes' : 'Create Template'}
+              {saving ? 'Saving…' : editingTemplate ? 'Save Changes' : 'Create Template'}
             </button>
             <button 
               type="button"
