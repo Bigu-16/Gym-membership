@@ -84,8 +84,8 @@ const Sidebar = ({ activeTab = 'members', onTabChange }) => {
               <img src="/logo.png" alt="Azyab Logo" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-widest leading-none">Azyab</h2>
-              <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-luxury">Wellness Systems</span>
+              <h2 className="text-sm font-bold uppercase tracking-widest leading-none text-orange-500">N & T</h2>
+              <span className="text-[9px] text-[var(--text-secondary)] uppercase tracking-luxury">Taekwondo & Karate Center</span>
             </div>
           </div>
         </div>

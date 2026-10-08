@@ -59,7 +59,7 @@ const AppHeader = ({
           </div>
         </div>
         <p className="text-[var(--text-secondary)] text-xs sm:text-sm tracking-wide uppercase">
-          Managing <span className="text-[var(--text-primary)] opacity-60">Azyab Wellness Center</span>
+          Managing <span className="text-orange-500 font-semibold">N & T Taekwondo & Karate Center</span>
           {currentUser && (
             <span className="block text-[10px] mt-1 normal-case text-emerald-500 font-medium">
               Logged in as <span className="font-bold">{currentUser.full_name}</span> ({currentUser.role})

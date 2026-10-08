@@ -1,5 +1,6 @@
 import React from 'react';
 import { PERSONAL_DEFAULTS } from '../../config/scheduleConfig';
+import { Check } from 'lucide-react';
 
 const ScheduleSelectorSection = ({
   trainingType,
@@ -18,14 +19,28 @@ const ScheduleSelectorSection = ({
   };
 
   return (
-    <section className="glass-card p-8 space-y-8">
-      <div className="flex items-center gap-4">
-        <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+    <section className="glass-card p-6 sm:p-8 space-y-8">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xs uppercase tracking-luxury font-bold">Training Schedule</h2>
+            <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider">
+              {trainingType === 'group' ? 'Select Pre-set or Custom Class Slot' : 'Personal Training Customization'}
+            </p>
+          </div>
         </div>
-        <h2 className="text-xs uppercase tracking-luxury font-bold">Training Schedule</h2>
+
+        {schedule.slot && (
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-bold">
+            <Check size={12} />
+            <span className="truncate max-w-xs">{schedule.slot}</span>
+          </div>
+        )}
       </div>
 
       {trainingType === 'group' ? (
@@ -75,11 +90,13 @@ const ScheduleSelectorSection = ({
                           {slots.map(slot => {
                             const isFull = slot.enrolled >= slot.capacity;
                             const slotText = `${cName}: ${slot.days} @ ${slot.time}`;
+                            const isSelected = schedule.slot === slotText;
+
                             return (
                               <div 
                                 key={slot.id}
                                 onClick={() => !isFull && setSchedule({...schedule, slot: slotText})}
-                                className={`slot-pill flex flex-col items-center justify-center py-4 px-2 relative ${schedule.slot === slotText ? 'active ring-2 ring-[var(--text-primary)]' : ''} ${isFull ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:border-[var(--text-primary)]'}`}
+                                className={`slot-pill flex flex-col items-center justify-center py-4 px-2 relative ${isSelected ? 'active ring-2 ring-[var(--text-primary)]' : ''} ${isFull ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:border-[var(--text-primary)]'}`}
                               >
                                 <span className="text-[10px] font-bold mb-1">{slot.days}</span>
                                 <span className="text-[11px] font-light opacity-80">{slot.time}</span>

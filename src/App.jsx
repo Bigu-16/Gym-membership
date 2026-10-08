@@ -218,7 +218,7 @@ const App = () => {
         </main>
         
         <footer className="mt-16 pt-8 border-t border-[var(--glass-border)] flex flex-wrap justify-between gap-6 text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">
-          <span>© 2026 Azyab Wellness Systems</span>
+          <span>© 2026 N & T Taekwondo & Karate Center</span>
           <div className="flex gap-6">
             <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Privacy</a>
             <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Security</a>

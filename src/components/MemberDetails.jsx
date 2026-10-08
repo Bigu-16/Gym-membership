@@ -6,6 +6,7 @@ import MemberEditForm from './member-details/MemberEditForm';
 import FamilyGroupSection from './member-details/FamilyGroupSection';
 import IndividualMemberInfo from './member-details/IndividualMemberInfo';
 import MemberRenewModal from './member-details/MemberRenewModal';
+import RegistrationFormTemplateModal from './enrollment/RegistrationFormTemplateModal';
 
 const MemberDetails = ({ member, onBack, onUpdateMember, onDeleteMember, onRenewMember, scheduleTemplates = [] }) => {
   const [localMember, setLocalMember] = useState(member);
@@ -14,6 +15,7 @@ const MemberDetails = ({ member, onBack, onUpdateMember, onDeleteMember, onRenew
   const [freezeDuration, setFreezeDuration] = useState(1);
   const [showDeleteConfirmId, setShowDeleteConfirmId] = useState(null);
   const [editingMemberId, setEditingMemberId] = useState(null);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   
   // Membership Renewal state
   const [showRenewModal, setShowRenewModal] = useState(false);
@@ -249,7 +251,10 @@ const MemberDetails = ({ member, onBack, onUpdateMember, onDeleteMember, onRenew
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <MemberHeader onBack={onBack} />
+      <MemberHeader 
+        onBack={onBack} 
+        onViewRegistrationForm={() => setShowTemplateModal(true)}
+      />
 
       {loading && !editingMemberId ? (
         <div className="flex justify-center items-center py-24">
@@ -315,6 +320,13 @@ const MemberDetails = ({ member, onBack, onUpdateMember, onDeleteMember, onRenew
         renewSuccess={renewSuccess}
         calculateNewExpiryDate={calculateNewExpiryDate}
         handleConfirmRenewal={handleConfirmRenewal}
+      />
+
+      {/* Official Registration Form Template Modal */}
+      <RegistrationFormTemplateModal
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        data={localMember}
       />
     </div>
   );

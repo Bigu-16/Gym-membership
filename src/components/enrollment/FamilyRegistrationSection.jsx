@@ -229,6 +229,16 @@ const FamilyRegistrationSection = ({
                           </div>
                         )}
                         <div className="space-y-1.5">
+                          <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Emirates ID (Optional)</label>
+                          <input 
+                            type="text" 
+                            value={trainee.emiratesId || ''}
+                            onChange={(e) => handleTraineeChange(fIndex, tIndex, 'emiratesId', e.target.value)}
+                            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all font-mono"
+                            placeholder="784-XXXX-XXXXXXX-X"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
                           <label className="text-[8px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Medical Issues (Optional)</label>
                           <input 
                             type="text" 

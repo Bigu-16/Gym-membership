@@ -5,10 +5,11 @@ describe('apiService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   describe('Auth API', () => {
-    it('login sets auth token in localStorage on success', async () => {
+    it('login sets auth token in sessionStorage on success', async () => {
       const mockTokenResponse = { access_token: 'test-token-123' };
       globalThis.fetch.mockResolvedValueOnce({
         ok: true,
@@ -18,7 +19,7 @@ describe('apiService', () => {
       const token = await apiService.login('admin@example.com', 'password123');
 
       expect(token).toBe('test-token-123');
-      expect(localStorage.getItem('gym_api_token')).toBe('test-token-123');
+      expect(sessionStorage.getItem('gym_api_token')).toBe('test-token-123');
       expect(globalThis.fetch).toHaveBeenCalledWith(
         `${API_BASE_URL}/auth/login`,
         expect.objectContaining({
@@ -36,17 +37,17 @@ describe('apiService', () => {
 
       await expect(apiService.login('wrong@example.com', 'wrong'))
         .rejects.toThrow('Invalid credentials');
-      expect(localStorage.getItem('gym_api_token')).toBeNull();
+      expect(sessionStorage.getItem('gym_api_token')).toBeNull();
     });
 
-    it('logout removes token from localStorage', () => {
-      localStorage.setItem('gym_api_token', 'active-token');
+    it('logout removes token from sessionStorage', () => {
+      sessionStorage.setItem('gym_api_token', 'active-token');
       apiService.logout();
-      expect(localStorage.getItem('gym_api_token')).toBeNull();
+      expect(sessionStorage.getItem('gym_api_token')).toBeNull();
     });
 
     it('getMe requests authenticated user profile', async () => {
-      localStorage.setItem('gym_api_token', 'me-token');
+      sessionStorage.setItem('gym_api_token', 'me-token');
       const mockProfile = { id: 1, email: 'me@example.com', full_name: 'Me' };
       globalThis.fetch.mockResolvedValueOnce({
         ok: true,

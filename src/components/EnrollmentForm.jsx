@@ -5,16 +5,18 @@ import FamilyRegistrationSection from './enrollment/FamilyRegistrationSection';
 import ScheduleSelectorSection from './enrollment/ScheduleSelectorSection';
 import PaymentDetailsSection from './enrollment/PaymentDetailsSection';
 import EnrollmentSuccess from './enrollment/EnrollmentSuccess';
+import RegistrationFormTemplateModal from './enrollment/RegistrationFormTemplateModal';
 
 const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
   const [trainingType, setTrainingType] = useState('group'); // 'group' or 'personal'
   const [personalType, setPersonalType] = useState('individual'); // 'individual' or 'group'
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   
   const [families, setFamilies] = useState([
     {
       id: Date.now(),
       parentInfo: { name: '', phone: '', email: '' },
-      trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Taekwondo', frequency: '3 classes/week' }]
+      trainees: [{ name: '', age: '', gender: 'Male', emiratesId: '', medicalIssues: '', service: 'Taekwondo', frequency: '3 classes/week' }]
     }
   ]);
 
@@ -29,15 +31,40 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
   const [customScheduleSlots, setCustomScheduleSlots] = useState([{ day: 'Monday', time: '08:00' }]);
 
   const [payment, setPayment] = useState({ 
-    amount: '', 
-    method: 'Cash', 
-    status: 'Paid', 
-    currency: 'AED', 
+    amount: '',
+    method: 'Cash',
+    status: 'Paid',
+    currency: 'AED',
     duration: '1 Month',
     durationValue: 1,
     durationUnit: 'Month'
   });
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const clearForm = () => {
+    setFamilies([
+      {
+        id: Date.now(),
+        parentInfo: { name: '', phone: '', email: '' },
+        trainees: [{ name: '', age: '', gender: 'Male', emiratesId: '', medicalIssues: '', service: 'Taekwondo', frequency: '3 classes/week' }]
+      }
+    ]);
+    setSchedule({
+      slot: '',
+      daysPerWeek: PERSONAL_DEFAULTS.daysPerWeek,
+      duration: PERSONAL_DEFAULTS.duration,
+      location: ''
+    });
+    setPayment({
+      amount: '',
+      method: 'Cash',
+      status: 'Paid',
+      currency: 'AED',
+      duration: '1 Month',
+      durationValue: 1,
+      durationUnit: 'Month'
+    });
+  };
 
   const addFamily = () => {
     setFamilies([...families, {
@@ -187,6 +214,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
           phone: traineePhone,
           age: t.age,
           gender: t.gender,
+          emiratesId: t.emiratesId || '',
           medicalIssues: t.medicalIssues,
           plan: t.service,
           expiryDate: expiryDateStr,
@@ -228,20 +256,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
     setTimeout(() => {
       setIsSuccess(false);
       setTrainingType('group');
-      setFamilies([{
-        id: Date.now(),
-        parentInfo: { name: '', phone: '', email: '' },
-        trainees: [{ name: '', age: '', gender: 'Male', medicalIssues: '', service: 'Taekwondo', frequency: '3 classes/week' }]
-      }]);
-      setPayment({
-        amount: '',
-        method: 'Cash',
-        status: 'Paid',
-        currency: 'AED',
-        duration: '1 Month',
-        durationValue: 1,
-        durationUnit: 'Month'
-      });
+      clearForm();
       setPersonalType('individual');
     }, 3000);
   };
@@ -250,47 +265,103 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [] }) => {
     return <EnrollmentSuccess families={families} />;
   }
 
+  const currentTrainee = families[0]?.trainees[0] || {};
+  const currentParent = families[0]?.parentInfo || {};
+  const templateModalData = {
+    name: currentTrainee.name || '',
+    age: currentTrainee.age || '',
+    gender: currentTrainee.gender || '',
+    emiratesId: currentTrainee.emiratesId || '',
+    phone: currentParent.phone || '',
+    parentName: currentParent.name || '',
+    service: currentTrainee.service || '',
+    slot: schedule.slot || '',
+    date: new Date().toISOString().split('T')[0]
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-12 max-w-full animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <ProgramTypeSelector 
-        trainingType={trainingType}
-        setTrainingType={setTrainingType}
-        personalType={personalType}
-        setPersonalType={setPersonalType}
-        families={families}
-        setFamilies={setFamilies}
-      />
+    <div className="space-y-6">
+      {/* Official Template & Form Action Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-5 glass-card rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20 flex items-center justify-center font-bold text-lg">
+            🥋
+          </div>
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-luxury text-[var(--text-primary)]">
+              N & T Taekwondo & Karate Center
+            </h3>
+            <p className="text-[9px] uppercase tracking-wider text-[var(--text-secondary)]">
+              Official Registration Form & Package Enrollment
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={clearForm}
+            className="px-3.5 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--card-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-[10px] uppercase tracking-luxury font-bold transition-all border border-[var(--glass-border)] active:scale-95 flex items-center gap-1.5"
+          >
+            🔄 Reset Form
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowTemplateModal(true)}
+            className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[10px] uppercase tracking-luxury font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+          >
+            📄 View Official Template
+          </button>
+        </div>
+      </div>
 
-      <FamilyRegistrationSection 
-        trainingType={trainingType}
-        personalType={personalType}
-        families={families}
-        addFamily={addFamily}
-        removeFamily={removeFamily}
-        addTrainee={addTrainee}
-        removeTrainee={removeTrainee}
-        handleParentChange={handleParentChange}
-        handleTraineeChange={handleTraineeChange}
-      />
+      <form onSubmit={handleSubmit} className="space-y-12 max-w-full animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <ProgramTypeSelector 
+          trainingType={trainingType}
+          setTrainingType={setTrainingType}
+          personalType={personalType}
+          setPersonalType={setPersonalType}
+          families={families}
+          setFamilies={setFamilies}
+        />
 
-      <ScheduleSelectorSection 
-        trainingType={trainingType}
-        scheduleMode={scheduleMode}
-        setScheduleMode={setScheduleMode}
-        scheduleTemplates={scheduleTemplates}
-        schedule={schedule}
-        setSchedule={setSchedule}
-        customScheduleSlots={customScheduleSlots}
-        setCustomScheduleSlots={setCustomScheduleSlots}
-      />
+        <FamilyRegistrationSection 
+          trainingType={trainingType}
+          personalType={personalType}
+          families={families}
+          addFamily={addFamily}
+          removeFamily={removeFamily}
+          addTrainee={addTrainee}
+          removeTrainee={removeTrainee}
+          handleParentChange={handleParentChange}
+          handleTraineeChange={handleTraineeChange}
+        />
 
-      <PaymentDetailsSection 
-        payment={payment}
-        setPayment={setPayment}
-        handleDurationValueChange={handleDurationValueChange}
-        handleDurationUnitChange={handleDurationUnitChange}
+        <ScheduleSelectorSection 
+          trainingType={trainingType}
+          scheduleMode={scheduleMode}
+          setScheduleMode={setScheduleMode}
+          scheduleTemplates={scheduleTemplates}
+          schedule={schedule}
+          setSchedule={setSchedule}
+          customScheduleSlots={customScheduleSlots}
+          setCustomScheduleSlots={setCustomScheduleSlots}
+        />
+
+        <PaymentDetailsSection 
+          payment={payment}
+          setPayment={setPayment}
+          handleDurationValueChange={handleDurationValueChange}
+          handleDurationUnitChange={handleDurationUnitChange}
+        />
+      </form>
+
+      {/* Official Registration Form Template Modal */}
+      <RegistrationFormTemplateModal
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        data={templateModalData}
       />
-    </form>
+    </div>
   );
 };
 

@@ -136,6 +136,63 @@ async def seed_plans(session: AsyncSession) -> dict[str, MembershipPlan]:
             "duration_days": 30,
             "sort_order": 50,
         },
+        "Little Kids Karate One Month - 3 Classes": {
+            "program": "Karate",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 3,
+            "price": Decimal("350.00"),
+            "duration_days": 30,
+            "sort_order": 5,
+        },
+        "Little Kids Karate Three Month - 3 Classes": {
+            "program": "Karate",
+            "duration_label": "3 Month",
+            "duration_months": 3,
+            "classes_per_week": 3,
+            "price": Decimal("900.00"),
+            "duration_days": 90,
+            "included_items": ["Free uniform"],
+            "sort_order": 6,
+        },
+        "Kids Karate Three Month - 3 Classes": {
+            "program": "Karate",
+            "duration_label": "3 Month",
+            "duration_months": 3,
+            "classes_per_week": 3,
+            "price": Decimal("900.00"),
+            "duration_days": 90,
+            "included_items": ["Free uniform"],
+            "sort_order": 7,
+        },
+        "Kids Taekwondo Three Month - 3 Classes": {
+            "program": "Taekwondo",
+            "duration_label": "3 Month",
+            "duration_months": 3,
+            "classes_per_week": 3,
+            "price": Decimal("900.00"),
+            "duration_days": 90,
+            "included_items": ["Free uniform"],
+            "sort_order": 8,
+        },
+        "Adult Karate One Month - 3 Classes": {
+            "program": "Adult Karate",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 3,
+            "price": Decimal("350.00"),
+            "duration_days": 30,
+            "sort_order": 35,
+        },
+        "Adult Kickboxing One Month - 3 Classes": {
+            "program": "Adult Kickboxing",
+            "duration_label": "One Month",
+            "duration_months": 1,
+            "classes_per_week": 3,
+            "price": Decimal("350.00"),
+            "duration_days": 30,
+            "sort_order": 36,
+        },
         "Family Group": {
             "program": "Family",
             "duration_label": "Two Month",
@@ -170,6 +227,18 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "parent_address": "42 Harbor Street",
             "parent_relationship": "mother",
             "notes": "Primary contact for Carter family membership",
+        },
+    )
+    almuharrami_family = await get_or_create(
+        session,
+        Family,
+        {"parent_phone": "+971506199709"},
+        {
+            "parent_name": "Safeya Almuharrami",
+            "parent_email": "safeya.almuharrami@example.com",
+            "parent_address": "Abu Dhabi, UAE",
+            "parent_relationship": "mother",
+            "notes": "Primary contact for Mouza Almuharrami",
         },
     )
     member_rows = [
@@ -242,6 +311,17 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
             "plan": "Family Group",
             "expiry_date": today + timedelta(days=45),
         },
+        {
+            "name": "Mouza Almuharrami",
+            "phone": "+971506199709",
+            "parent_phone": "+971506199709",
+            "family_id": almuharrami_family.id,
+            "age": 3,
+            "gender": Gender.female,
+            "medical_issues": None,
+            "plan": "Little Kids Karate Three Month - 3 Classes",
+            "expiry_date": today + timedelta(days=90),
+        },
     ]
 
     output = {}
@@ -271,6 +351,41 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
 async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTemplate], dict[str, Session]]:
     today = date.today()
     template_rows = [
+        {
+            "title": "Little Kids Karate",
+            "type": ScheduleType.group,
+            "days": ["Tuesday", "Thursday", "Saturday"],
+            "time": "16:00",
+            "capacity": 12,
+        },
+        {
+            "title": "Kids Taekwondo",
+            "type": ScheduleType.group,
+            "days": ["Monday", "Wednesday", "Friday"],
+            "time": "16:00",
+            "capacity": 15,
+        },
+        {
+            "title": "Kids Karate",
+            "type": ScheduleType.group,
+            "days": ["Tuesday", "Thursday", "Saturday"],
+            "time": "17:00",
+            "capacity": 15,
+        },
+        {
+            "title": "Adult Kickboxing",
+            "type": ScheduleType.group,
+            "days": ["Tuesday", "Thursday", "Saturday"],
+            "time": "19:00",
+            "capacity": 15,
+        },
+        {
+            "title": "Adult Karate",
+            "type": ScheduleType.group,
+            "days": ["Tuesday", "Thursday", "Saturday"],
+            "time": "20:00",
+            "capacity": 15,
+        },
         {
             "title": "Elite Performance",
             "type": ScheduleType.group,
@@ -386,6 +501,7 @@ async def seed_enrollments(
         {"member": "Sophia Chen", "session": sessions["yoga_today"]},
         {"member": "Noah Carter", "template": templates["Yoga Flow"]},
         {"member": "Ava Carter", "template": templates["Yoga Flow"]},
+        {"member": "Mouza Almuharrami", "template": templates["Little Kids Karate"]},
     ]
 
     for row in rows:

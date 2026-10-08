@@ -16,7 +16,9 @@ export const API_BASE_URL = getInitialBaseUrl();
 
 // Helpers to get/set tokens
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('gym_api_token');
+  const token = typeof window !== 'undefined' && window.sessionStorage
+    ? sessionStorage.getItem('gym_api_token')
+    : null;
   const headers = {
     'Content-Type': 'application/json',
   };
@@ -255,12 +257,20 @@ export const apiService = {
       throw new Error(data.detail || 'Login failed');
     }
 
-    localStorage.setItem('gym_api_token', data.access_token);
+    sessionStorage.setItem('gym_api_token', data.access_token);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('gym_api_token');
+    }
     return data.access_token;
   },
 
   logout() {
-    localStorage.removeItem('gym_api_token');
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      sessionStorage.removeItem('gym_api_token');
+    }
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('gym_api_token');
+    }
   },
 
   async getMe() {

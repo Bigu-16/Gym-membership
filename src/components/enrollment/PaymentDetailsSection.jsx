@@ -71,6 +71,11 @@ const PaymentDetailsSection = ({
                 </div>
               </div>
             </div>
+            {payment.durationValue === 3 && payment.durationUnit.toLowerCase().startsWith('month') && (
+              <span className="inline-flex items-center gap-1 text-[9px] text-amber-500 font-bold uppercase tracking-wider mt-1 animate-pulse">
+                🎁 Includes Package Perk: Free Uniform / Gloves
+              </span>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -114,12 +119,13 @@ const PaymentDetailsSection = ({
                   </svg>
                 </div>
                 <datalist id="amount-presets">
-                  <option value="500" />
-                  <option value="1000" />
-                  <option value="1500" />
-                  <option value="2000" />
-                  <option value="2500" />
-                  <option value="3000" />
+                  <option value="300" label="1 Month (2 classes/week)" />
+                  <option value="350" label="1 Month (3 classes/week)" />
+                  <option value="800" label="3 Months (2 classes/week)" />
+                  <option value="900" label="3 Months (3 classes/week - Free Uniform/Gloves)" />
+                  <option value="1400" label="6 Months Package" />
+                  <option value="1450" label="6 Months (Zumba)" />
+                  <option value="2550" label="1 Year Full Membership" />
                 </datalist>
               </div>
             </div>

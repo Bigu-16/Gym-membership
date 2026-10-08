@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Clock, Plus, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import RegistrationFormTemplateModal from '../enrollment/RegistrationFormTemplateModal';
 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
@@ -29,6 +30,7 @@ const TemplatesView = ({
   handleEditClick,
   setDeleteTemplateId
 }) => {
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const categories = ['All', ...Array.from(new Set(scheduleTemplates.map(t => t.className || 'General Classes')))];
 
   const grouped = scheduleTemplates.reduce((acc, t) => {
@@ -51,13 +53,22 @@ const TemplatesView = ({
           <h3 className="text-lg font-light tracking-luxury uppercase mb-1">Active Class Templates</h3>
           <p className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)]">Create and manage recurring schedule options for group enrollment</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
-        >
-          <Plus size={14} /> Create Template
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowTemplateModal(true)}
+            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 border border-orange-500/30 text-[10px] uppercase tracking-luxury font-bold transition-all shadow-sm active:scale-95"
+          >
+            📄 Timetable & Registration Template
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
+          >
+            <Plus size={14} /> Create Template
+          </button>
+        </div>
       </div>
 
       {/* Category Tabs Filter */}
@@ -200,6 +211,12 @@ const TemplatesView = ({
         </div>
         <span className="text-xs uppercase tracking-luxury font-bold">Add Another Template Class Slot</span>
       </div>
+
+      {/* Official Timetable & Registration Form Template Modal */}
+      <RegistrationFormTemplateModal
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+      />
     </div>
   );
 };
