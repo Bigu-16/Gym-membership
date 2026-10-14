@@ -15,6 +15,7 @@ class ScheduleTemplate(TimestampMixin, Base):
     days: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     time: Mapped[str] = mapped_column(String(20), nullable=False)
     capacity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    trainer_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     sessions = relationship("Session", back_populates="template")
     enrollments = relationship("Enrollment", back_populates="template")

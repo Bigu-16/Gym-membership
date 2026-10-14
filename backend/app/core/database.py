@@ -12,7 +12,7 @@ class Base(DeclarativeBase):
 
 engine = create_async_engine(
     settings.database_url,
-    echo=settings.debug,
+    echo=settings.sql_echo,
     future=True,
 )
 SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)

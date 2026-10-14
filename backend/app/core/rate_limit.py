@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class LoginRateLimiter:
-    def __init__(self) -> None:
+    def __init__(self, key_prefix: str = "login") -> None:
+        self._key_prefix = key_prefix
         self._redis: Redis | None = None
         self._attempts: dict[str, deque[float]] = defaultdict(deque)
         self._lock = asyncio.Lock()
@@ -47,7 +48,7 @@ class LoginRateLimiter:
     async def _record_redis(self, client_ip: str) -> int | None:
         if self._redis is None:
             self._redis = Redis.from_url(settings.redis_url, decode_responses=True)
-        key = f"rate-limit:login:{client_ip}"
+        key = f"rate-limit:{self._key_prefix}:{client_ip}"
         async with self._redis.pipeline(transaction=True) as pipeline:
             pipeline.incr(key)
             pipeline.expire(key, settings.login_rate_limit_window_seconds, nx=True)
@@ -75,3 +76,5 @@ class LoginRateLimiter:
 
 
 login_rate_limiter = LoginRateLimiter()
+# Separate bucket so probing which staff emails exist is throttled without locking out logins.
+email_lookup_rate_limiter = LoginRateLimiter(key_prefix="check-email")

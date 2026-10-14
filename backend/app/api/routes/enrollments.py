@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin_user, get_current_user
+from app.core.timeutils import gym_today
 from app.db import get_db_session
 from app.models import AppUser
 from app.models import Enrollment, Member, ScheduleTemplate, Session
@@ -38,6 +39,11 @@ async def create_enrollment(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Frozen members cannot be enrolled",
+        )
+    if member.expiry_date is not None and member.expiry_date < gym_today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Membership has expired; renew before enrolling in a class",
         )
 
     class_label = "your class"

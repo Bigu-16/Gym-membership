@@ -1,54 +1,65 @@
-import React from 'react';
+import { daysUntil, membershipStatus, periodProgress } from '../utils/membership';
+
+const STYLES = {
+  frozen: {
+    border: 'border-cyan-300/50 dark:border-cyan-500/50',
+    glow: 'shadow-[0_0_30px_rgba(6,182,212,0.3)] dark:shadow-[0_0_30px_rgba(6,182,212,0.4)]',
+    indicator: 'bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)] animate-pulse',
+    text: 'text-cyan-700 dark:text-cyan-300',
+    bar: 'bg-gradient-to-r from-cyan-400 to-blue-400',
+    bg: 'bg-gradient-to-br from-cyan-100/40 to-blue-200/20 dark:from-cyan-900/40 dark:to-blue-900/20 backdrop-blur-md backdrop-saturate-150'
+  },
+  expired: {
+    border: 'border-rose-500/30 dark:border-rose-500/50',
+    glow: 'shadow-[0_0_30px_rgba(239,68,68,0.1)] dark:shadow-[0_0_30px_rgba(239,68,68,0.2)]',
+    indicator: 'bg-rose-500 animate-pulse',
+    text: 'text-rose-500 dark:text-rose-400',
+    bar: 'bg-rose-500',
+    bg: ''
+  },
+  expiring: {
+    border: 'border-amber-400/30 dark:border-amber-400/40',
+    glow: 'shadow-[0_0_30px_rgba(251,191,36,0.1)] dark:shadow-[0_0_30px_rgba(251,191,36,0.2)]',
+    indicator: 'bg-amber-400',
+    text: 'text-amber-600 dark:text-amber-400',
+    bar: 'bg-amber-400',
+    bg: ''
+  },
+  active: {
+    border: 'border-[var(--glass-border)]',
+    glow: 'shadow-[var(--glass-shadow)]',
+    indicator: 'bg-emerald-500 dark:bg-emerald-400',
+    text: 'text-[var(--text-secondary)]',
+    bar: 'bg-emerald-400',
+    bg: ''
+  }
+};
+STYLES['no-expiry'] = { ...STYLES.active, indicator: 'bg-[var(--text-secondary)]' };
+
+// A family card follows the trainee whose membership runs out first.
+const planForProgress = (member) => {
+  if (member.planDetails) return member.planDetails;
+  if (member.isGroup) {
+    return (member.trainees || []).find((t) => t.expiryDate === member.expiryDate)?.planDetails || null;
+  }
+  return null;
+};
+
+const statusLabel = (status, days) => {
+  if (status === 'frozen') return 'On Hold (Frozen)';
+  if (status === 'no-expiry') return 'No expiry set';
+  if (status === 'expired') return 'Expired';
+  if (days === 0) return 'Expires today';
+  return `${days} Days Left`;
+};
 
 const MembershipCard = ({ member, onManage }) => {
-  const { name, plan, expiryDate, image } = member;
-  
-  const calculateDaysRemaining = (date) => {
-    const today = new Date();
-    const expiry = new Date(date);
-    const diffTime = expiry - today;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
+  const { name, plan, image } = member;
+  const status = membershipStatus(member);
+  const daysRemaining = daysUntil(member.expiryDate);
+  const progress = status === 'frozen' ? 100 : periodProgress(member, planForProgress(member));
 
-  const daysRemaining = calculateDaysRemaining(expiryDate);
-
-  const getStatusStyles = () => {
-    if (member.isFrozen) {
-      return {
-        border: 'border-cyan-300/50 dark:border-cyan-500/50',
-        glow: 'shadow-[0_0_30px_rgba(6,182,212,0.3)] dark:shadow-[0_0_30px_rgba(6,182,212,0.4)]',
-        indicator: 'bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)] animate-pulse',
-        text: 'text-cyan-700 dark:text-cyan-300',
-        bg: 'bg-gradient-to-br from-cyan-100/40 to-blue-200/20 dark:from-cyan-900/40 dark:to-blue-900/20 backdrop-blur-md backdrop-saturate-150'
-      };
-    } else if (daysRemaining < 3) {
-      return {
-        border: 'border-rose-500/30 dark:border-rose-500/50',
-        glow: 'shadow-[0_0_30px_rgba(239,68,68,0.1)] dark:shadow-[0_0_30px_rgba(239,68,68,0.2)]',
-        indicator: 'bg-rose-500 animate-pulse',
-        text: 'text-rose-500 dark:text-rose-400',
-        bg: ''
-      };
-    } else if (daysRemaining < 7) {
-      return {
-        border: 'border-amber-400/30 dark:border-amber-400/40',
-        glow: 'shadow-[0_0_30px_rgba(251,191,36,0.1)] dark:shadow-[0_0_30px_rgba(251,191,36,0.2)]',
-        indicator: 'bg-amber-400',
-        text: 'text-amber-600 dark:text-amber-400',
-        bg: ''
-      };
-    } else {
-      return {
-        border: 'border-[var(--glass-border)]',
-        glow: 'shadow-[var(--glass-shadow)]',
-        indicator: 'bg-emerald-500 dark:bg-emerald-400',
-        text: 'text-[var(--text-secondary)]',
-        bg: ''
-      };
-    }
-  };
-
-  const styles = getStatusStyles();
+  const styles = STYLES[status];
 
   return (
     <div className={`glass-card p-6 flex flex-col gap-4 ${styles.border} ${styles.glow} ${styles.bg} hover:bg-[var(--card-hover)] group relative overflow-hidden`}>
@@ -93,13 +104,9 @@ const MembershipCard = ({ member, onManage }) => {
                   ))}
                 </div>
               )}
-              {!member.isGroup && member.schedule?.location && (
-                <p className="text-[9px] text-[var(--text-secondary)] opacity-60 flex items-center gap-1 mt-1">
-                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  {member.schedule.location}
+              {!member.isGroup && member.enrolledClasses?.length > 0 && (
+                <p className="text-[9px] text-[var(--text-secondary)] opacity-70 mt-1">
+                  {member.enrolledClasses.map((c) => c.className).filter((v, i, all) => all.indexOf(v) === i).join(', ')}
                 </p>
               )}
             </div>
@@ -112,26 +119,27 @@ const MembershipCard = ({ member, onManage }) => {
         <div className="flex justify-between text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] mb-2">
           <span>Membership Status</span>
           <span className={styles.text}>
-            {member.isFrozen ? 'On Hold (Frozen)' : (daysRemaining < 0 ? 'Expired' : `${daysRemaining} Days Left`)}
+            {statusLabel(status, daysRemaining)}
           </span>
         </div>
         <div className="w-full h-1 bg-[var(--glass-border)] rounded-full overflow-hidden">
-          <div 
-            className={`h-full transition-all duration-1000 ${
-              member.isFrozen ? 'bg-gradient-to-r from-cyan-400 to-blue-400' : (daysRemaining < 3 ? 'bg-rose-500' : daysRemaining < 7 ? 'bg-amber-400' : 'bg-emerald-400')
-            }`}
-            style={{ width: member.isFrozen ? '100%' : `${Math.max(0, Math.min(100, (daysRemaining / 30) * 100))}%` }}
+          <div
+            data-testid="membership-progress"
+            className={`h-full transition-all duration-1000 ${styles.bar}`}
+            style={{ width: `${progress}%` }}
           ></div>
         </div>
       </div>
 
       <div className="flex justify-between items-center mt-2 relative z-10">
-        <button 
+        <button
+          type="button"
           onClick={() => onManage && onManage(member)}
           className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
           View Profile
         </button>
-        <button 
+        <button
+          type="button"
           onClick={() => onManage && onManage(member)}
           className={`px-4 py-2 rounded-full border text-[10px] uppercase tracking-luxury transition-all ${
             member.isFrozen 

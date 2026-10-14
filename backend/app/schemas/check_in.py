@@ -5,6 +5,8 @@ from pydantic import BaseModel
 
 class CheckInCreate(BaseModel):
     member_id: int
+    # Front desk can knowingly let in an expired/frozen member (e.g. paying at the desk).
+    override: bool = False
 
 
 class CheckOutRequest(BaseModel):

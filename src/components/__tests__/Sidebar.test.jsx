@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Sidebar from '../Sidebar';
@@ -29,12 +28,12 @@ describe('Sidebar Component', () => {
     const notificationsBtns = screen.getAllByRole('button', { name: /Notifications/i });
     expect(notificationsBtns.length).toBeGreaterThanOrEqual(2);
 
-    const templatesBtns = screen.getAllByRole('button', { name: /Templates/i });
-    expect(templatesBtns.length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByRole('button', { name: /Timetable/i }).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByRole('button', { name: /Packages/i }).length).toBeGreaterThanOrEqual(2);
 
-    // Also check current shift text displays
-    expect(screen.getByText(/Current Shift/i)).toBeInTheDocument();
-    expect(screen.getByText(/Morning Session/i)).toBeInTheDocument();
+    // No invented "shift" — without a timetable there are simply no classes today.
+    expect(screen.queryByText(/Morning Session/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/No classes today/i)).toBeInTheDocument();
   });
 
   it('calls onTabChange when desktop sidebar items are clicked', () => {
@@ -58,7 +57,7 @@ describe('Sidebar Component', () => {
   });
 
   it('applies correct active styling classes to active tab', () => {
-    const { container } = render(<Sidebar activeTab="schedule" onTabChange={mockOnTabChange} />);
+    render(<Sidebar activeTab="schedule" onTabChange={mockOnTabChange} />);
     
     // Desktop: Schedule button should have active background class
     const desktopScheduleBtn = screen.getAllByRole('button', { name: /Schedule/i })[0];
@@ -67,5 +66,17 @@ describe('Sidebar Component', () => {
     // Desktop: Dashboard button (inactive) should not have the active background class
     const desktopDashboardBtn = screen.getAllByRole('button', { name: /Overview/i })[0];
     expect(desktopDashboardBtn).not.toHaveClass('bg-[var(--text-primary)]');
+  });
+});
+
+describe('Sidebar today panel', () => {
+  it("summarises today's real class hours from the timetable", () => {
+    const today = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date().getDay()];
+    const templates = [
+      { id: 1, className: 'Kids Taekwondo', days: today, time: '16:00 - 17:00' },
+      { id: 2, className: 'Adult Karate', days: today, time: '20:00 - 21:00' }
+    ];
+    render(<Sidebar activeTab="dashboard" onTabChange={vi.fn()} scheduleTemplates={templates} />);
+    expect(screen.getByText('2 classes · 4:00 PM – 9:00 PM')).toBeInTheDocument();
   });
 });

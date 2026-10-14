@@ -5,10 +5,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "Gym Management Backend"
-    app_env: str = "development"
+    app_name: str = "N & T Taekwondo & Karate Center API"
+    # Safe defaults: production unless the environment explicitly opts into development.
+    app_env: str = "production"
     api_v1_prefix: str = "/api/v1"
-    debug: bool = True
+    debug: bool = False
+    sql_echo: bool = False
+    # All "today", expiry and reporting calculations use the gym's local clock.
+    gym_timezone: str = "Asia/Dubai"
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60 * 24
     redis_host: str = "redis"
@@ -28,10 +32,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://gym-membership-beta.vercel.app"
 
     # --- Messaging / notifications ---
-    # When true (the default), unconfigured channels log the payload and report a
-    # synthetic success ("dev-stub") so flows are fully testable without credentials.
-    # Set to false in production so only configured channels are dispatched.
-    messaging_dev_mode: bool = True
+    # When true, unconfigured channels log the payload and report a synthetic
+    # success ("dev-stub") so flows are testable without credentials. Left unset it
+    # follows APP_ENV, so production never reports stubbed messages as delivered.
+    messaging_dev_mode_override: bool | None = Field(default=None, validation_alias="MESSAGING_DEV_MODE")
     notification_max_attempts: int = 3
 
     # WhatsApp (Meta Cloud API)
@@ -48,7 +52,7 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from_email: str = ""
-    smtp_from_name: str = "Gym Membership"
+    smtp_from_name: str = "N & T Taekwondo & Karate Center"
     smtp_use_tls: bool = True
 
     model_config = SettingsConfigDict(
@@ -92,6 +96,12 @@ class Settings(BaseSettings):
     @property
     def allows_development_endpoints(self) -> bool:
         return self.app_env.lower() in {"development", "dev", "test", "testing", "local"}
+
+    @property
+    def messaging_dev_mode(self) -> bool:
+        if self.messaging_dev_mode_override is not None:
+            return self.messaging_dev_mode_override
+        return self.allows_development_endpoints
 
 
 def normalize_database_url(url: str) -> str:

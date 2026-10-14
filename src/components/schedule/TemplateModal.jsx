@@ -20,6 +20,8 @@ const TemplateModal = ({
   setEndTime,
   capacity,
   setCapacity,
+  trainer = '',
+  setTrainer,
   onAddTemplate,
   onUpdateTemplate
 }) => {
@@ -31,7 +33,11 @@ const TemplateModal = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (selectedDays.length === 0) {
-      alert('Please select at least one training day.');
+      setError('Select at least one training day.');
+      return;
+    }
+    if (endTime <= startTime) {
+      setError('End time must be after the start time.');
       return;
     }
     
@@ -51,20 +57,14 @@ const TemplateModal = ({
       .map(d => shortDays[d])
       .join(', ');
 
-    const formatTime12h = (t24) => {
-      const [hStr, mStr] = t24.split(':');
-      const h = parseInt(hStr, 10);
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const h12 = h % 12 || 12;
-      return `${h12}:${mStr} ${ampm}`;
-    };
-
     const templateData = {
       className: selectedClassOption.trim() || 'General Class',
       type: editingTemplate?.type || 'group',
       days: formattedDaysStr,
-      time: `${formatTime12h(startTime)} - ${formatTime12h(endTime)}`,
-      capacity: parseInt(capacity, 10)
+      // Same 24h "HH:MM - HH:MM" form as the official timetable.
+      time: `${startTime} - ${endTime}`,
+      capacity: parseInt(capacity, 10),
+      trainer: trainer.trim() || null
     };
 
     setSaving(true);
@@ -186,6 +186,18 @@ const TemplateModal = ({
               </div>
             </div>
 
+            <div className="space-y-2">
+              <label htmlFor="template-trainer" className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Coach (optional)</label>
+              <input
+                id="template-trainer"
+                type="text"
+                value={trainer}
+                onChange={(e) => setTrainer && setTrainer(e.target.value)}
+                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20"
+                placeholder="e.g. Coach Nasser"
+              />
+            </div>
+
             {/* Capacity Input */}
             <div className="space-y-2">
               <div className="flex justify-between items-center ml-1">
@@ -214,8 +226,8 @@ const TemplateModal = ({
             </div>
           </div>
 
-          <div className="pt-8 flex gap-4">
-            {error && <p role="alert" className="w-full text-xs text-rose-500">{error}</p>}
+          {error && <p role="alert" className="text-xs text-rose-500">{error}</p>}
+          <div className="pt-4 flex gap-4">
             <button 
               type="submit"
               disabled={saving}

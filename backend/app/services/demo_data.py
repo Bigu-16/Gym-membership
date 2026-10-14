@@ -1,10 +1,17 @@
-from datetime import date, datetime, time, timedelta, timezone
+"""Development seed for N & T Taekwondo & Karate Center.
+
+Uses the official timetable and package catalog (app.services.catalog) so local data
+looks like the real center. Only reachable when APP_ENV allows development endpoints.
+"""
+
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
+from app.core.timeutils import add_months, gym_today, gym_tz
 from app.models import (
     AppUser,
     CheckIn,
@@ -13,22 +20,37 @@ from app.models import (
     Member,
     MembershipPlan,
     NotificationJob,
+    Payment,
     ScheduleTemplate,
     Session,
 )
 from app.models.enums import (
     Gender,
+    NotificationChannel,
     NotificationStatus,
     NotificationType,
-    ScheduleType,
+    PaymentKind,
+    PaymentMethod,
     SessionStatus,
     UserRole,
 )
+from app.services.catalog import OFFICIAL_TIMETABLE, class_key, start_of, sync_official_packages, sync_official_timetable
 
 ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = "ChangeMe123!"
 STAFF_EMAIL = "staff@example.com"
 STAFF_PASSWORD = "ChangeMe123!"
+
+# Placeholder data from an earlier gym template that never belonged to this center.
+LEGACY_DEMO_TEMPLATES = {"Elite Performance", "Yoga Flow", "Personal Training"}
+LEGACY_DEMO_PLANS = {"Family Group"}
+
+DEFAULT_CHECKLIST = [
+    "Roll call & attendance",
+    "Warm-up & stretching",
+    "Technique & drills",
+    "Cool down & notes",
+]
 
 
 async def get_or_create(session: AsyncSession, model, lookup: dict, defaults: dict | None = None):
@@ -38,7 +60,7 @@ async def get_or_create(session: AsyncSession, model, lookup: dict, defaults: di
             setattr(item, key, value)
         return item
 
-    item = model(**lookup, **(defaults or {}))
+    item = model(**{**(defaults or {}), **lookup})
     session.add(item)
     await session.flush()
     return item
@@ -50,7 +72,7 @@ async def seed_users(session: AsyncSession) -> None:
         AppUser,
         {"email": ADMIN_EMAIL},
         {
-            "full_name": "Admin User",
+            "full_name": "Center Administrator",
             "password_hash": hash_password(ADMIN_PASSWORD),
             "role": UserRole.admin,
             "is_active": True,
@@ -61,7 +83,7 @@ async def seed_users(session: AsyncSession) -> None:
         AppUser,
         {"email": STAFF_EMAIL},
         {
-            "full_name": "Front Desk Staff",
+            "full_name": "Front Desk",
             "password_hash": hash_password(STAFF_PASSWORD),
             "role": UserRole.staff,
             "is_active": True,
@@ -69,586 +91,239 @@ async def seed_users(session: AsyncSession) -> None:
     )
 
 
+async def retire_legacy_demo_data(session: AsyncSession) -> None:
+    """Remove placeholder classes/sessions and deactivate placeholder plans from older seeds."""
+    legacy_templates = (
+        await session.scalars(select(ScheduleTemplate).where(ScheduleTemplate.title.in_(LEGACY_DEMO_TEMPLATES)))
+    ).all()
+    for template in legacy_templates:
+        for model in (Enrollment, Session):
+            rows = (await session.scalars(select(model).where(model.template_id == template.id))).all()
+            for row in rows:
+                await session.delete(row)
+        await session.delete(template)
+    legacy_plans = (await session.scalars(select(MembershipPlan).where(MembershipPlan.name.in_(LEGACY_DEMO_PLANS)))).all()
+    for plan in legacy_plans:
+        plan.is_active = False
+    await session.flush()
+
+
 async def seed_plans(session: AsyncSession) -> dict[str, MembershipPlan]:
-    plans = {
-        "Taekwondo One Month - 2 Classes": {
-            "program": "Taekwondo",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 2,
-            "price": Decimal("300.00"),
-            "duration_days": 30,
-            "sort_order": 10,
-        },
-        "Taekwondo One Month - 3 Classes": {
-            "program": "Taekwondo",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 3,
-            "price": Decimal("350.00"),
-            "duration_days": 30,
-            "sort_order": 11,
-        },
-        "Taekwondo Three Month - 3 Classes": {
-            "program": "Taekwondo",
-            "duration_label": "3 Month",
-            "duration_months": 3,
-            "classes_per_week": 3,
-            "price": Decimal("900.00"),
-            "duration_days": 90,
-            "included_items": ["Free uniform"],
-            "sort_order": 12,
-        },
-        "Kickboxing One Month - 2 Classes": {
-            "program": "Kickboxing",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 2,
-            "price": Decimal("300.00"),
-            "duration_days": 30,
-            "sort_order": 20,
-        },
-        "Kickboxing One Month - 3 Classes": {
-            "program": "Kickboxing",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 3,
-            "price": Decimal("350.00"),
-            "duration_days": 30,
-            "sort_order": 21,
-        },
-        "Kickboxing Three Month - 3 Classes": {
-            "program": "Kickboxing",
-            "duration_label": "3 Month",
-            "duration_months": 3,
-            "classes_per_week": 3,
-            "price": Decimal("900.00"),
-            "duration_days": 90,
-            "included_items": ["Free gloves"],
-            "sort_order": 22,
-        },
-        "Karate One Month - 3 Classes": {
-            "program": "Karate",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 3,
-            "price": Decimal("350.00"),
-            "duration_days": 30,
-            "sort_order": 31,
-        },
-        "Karate One Month - 2 Classes": {
-            "program": "Karate",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 2,
-            "price": Decimal("300.00"),
-            "duration_days": 30,
-            "sort_order": 30,
-        },
-        "Karate Three Month - 3 Classes": {
-            "program": "Karate",
-            "duration_label": "3 Month",
-            "duration_months": 3,
-            "classes_per_week": 3,
-            "price": Decimal("900.00"),
-            "duration_days": 90,
-            "included_items": ["Free uniform"],
-            "sort_order": 32,
-        },
-        "Kung Fu One Month - 2 Classes": {
-            "program": "Kung Fu",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 2,
-            "price": Decimal("300.00"),
-            "duration_days": 30,
-            "sort_order": 40,
-        },
-        "Kung Fu One Month - 3 Classes": {
-            "program": "Kung Fu",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 3,
-            "price": Decimal("350.00"),
-            "duration_days": 30,
-            "sort_order": 41,
-        },
-        "Kung Fu Three Month - 3 Classes": {
-            "program": "Kung Fu",
-            "duration_label": "3 Month",
-            "duration_months": 3,
-            "classes_per_week": 3,
-            "price": Decimal("900.00"),
-            "duration_days": 90,
-            "sort_order": 42,
-        },
-        "Fitness One Month - 2 Classes": {
-            "program": "Fitness",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 2,
-            "price": Decimal("300.00"),
-            "duration_days": 30,
-            "sort_order": 50,
-        },
-        "Fitness One Month - 3 Classes": {
-            "program": "Fitness",
-            "duration_label": "One Month",
-            "duration_months": 1,
-            "classes_per_week": 3,
-            "price": Decimal("350.00"),
-            "duration_days": 30,
-            "sort_order": 51,
-        },
-        "Fitness Three Month - 3 Classes": {
-            "program": "Fitness",
-            "duration_label": "3 Month",
-            "duration_months": 3,
-            "classes_per_week": 3,
-            "price": Decimal("900.00"),
-            "duration_days": 90,
-            "sort_order": 52,
-        },
-        "Family Group": {
-            "program": "Family",
-            "duration_label": "Two Month",
-            "duration_months": 2,
-            "classes_per_week": 3,
-            "price": Decimal("199.00"),
-            "duration_days": 60,
-            "description": "Demo family membership package",
-            "sort_order": 60,
-        },
-    }
-    output = {}
-    for name, values in plans.items():
-        output[name] = await get_or_create(
-            session,
-            MembershipPlan,
-            {"name": name},
-            {"currency": "AED", "included_items": [], **values, "is_active": True},
-        )
-    return output
-
-
-async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) -> dict[str, Member]:
-    today = date.today()
-    carter_family = await get_or_create(
-        session,
-        Family,
-        {"parent_phone": "+15559990001"},
-        {
-            "parent_name": "Olivia Carter",
-            "parent_email": "olivia.carter@example.com",
-            "parent_address": "42 Harbor Street",
-            "parent_relationship": "mother",
-            "notes": "Primary contact for Carter family membership",
-        },
-    )
-    member_rows = [
-        {
-            "name": "Alexander Rossi",
-            "phone": "+15550001001",
-            "age": 34,
-            "gender": Gender.male,
-            "plan": "Taekwondo Three Month - 3 Classes",
-            "expiry_date": today + timedelta(days=21),
-        },
-        {
-            "name": "Elena Vance",
-            "phone": "+15550001002",
-            "age": 29,
-            "gender": Gender.female,
-            "plan": "Fitness One Month - 2 Classes",
-            "expiry_date": today + timedelta(days=7),
-        },
-        {
-            "name": "Marcus Thorne",
-            "phone": "+15550001003",
-            "age": 41,
-            "gender": Gender.male,
-            "plan": "Kickboxing Three Month - 3 Classes",
-            "expiry_date": today + timedelta(days=2),
-        },
-        {
-            "name": "Sophia Chen",
-            "phone": "+15550001004",
-            "age": 26,
-            "gender": Gender.female,
-            "plan": "Karate One Month - 3 Classes",
-            "expiry_date": today - timedelta(days=4),
-        },
-        {
-            "name": "Julian Drax",
-            "phone": "+15550001005",
-            "age": 38,
-            "gender": Gender.other,
-            "plan": "Kung Fu Three Month - 3 Classes",
-            "expiry_date": today + timedelta(days=32),
-            "is_frozen": True,
-        },
-        {
-            "name": "Maya Johnson",
-            "phone": "+15550001006",
-            "age": 31,
-            "gender": Gender.female,
-            "plan": "Taekwondo One Month - 3 Classes",
-            "expiry_date": today + timedelta(days=50),
-        },
-        {
-            "name": "Noah Carter",
-            "phone": "+15550002001",
-            "parent_phone": "+15559990001",
-            "family_id": carter_family.id,
-            "age": 14,
-            "gender": Gender.male,
-            "plan": "Family Group",
-            "expiry_date": today + timedelta(days=45),
-        },
-        {
-            "name": "Ava Carter",
-            "phone": "+15550002002",
-            "parent_phone": "+15559990001",
-            "family_id": carter_family.id,
-            "age": 12,
-            "gender": Gender.female,
-            "plan": "Family Group",
-            "expiry_date": today + timedelta(days=45),
-        },
-    ]
-
-    output = {}
-    for row in member_rows:
-        plan = plans[row.pop("plan")]
-        member = await get_or_create(
-            session,
-            Member,
-            {"phone": row["phone"]},
-            {
-                "name": row["name"],
-                "parent_phone": row.get("parent_phone"),
-                "family_id": row.get("family_id"),
-                "gender": row["gender"],
-                "medical_issues": row.get("medical_issues"),
-                "age": row["age"],
-                "plan_id": plan.id,
-                "expiry_date": row["expiry_date"],
-                "is_frozen": row.get("is_frozen", False),
-                "messaging_opt_in": True,
-            },
-        )
-        output[member.name] = member
-    return output
+    await sync_official_packages(session)
+    plans = (await session.scalars(select(MembershipPlan))).all()
+    return {plan.name: plan for plan in plans}
 
 
 async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTemplate], dict[str, Session]]:
-    today = date.today()
-    template_rows = [
-        {
-            "key": "little_karate_1600",
-            "title": "Little Kids Karate",
-            "type": ScheduleType.group,
-            "days": ["Tuesday", "Thursday", "Saturday"],
-            "time": "16:00",
-            "capacity": 12,
-        },
-        {
-            "key": "kids_taekwondo_1600",
-            "title": "Kids Taekwondo",
-            "type": ScheduleType.group,
-            "days": ["Monday", "Wednesday", "Friday"],
-            "time": "16:00",
-            "capacity": 15,
-        },
-        {
-            "key": "kids_taekwondo_1700",
-            "title": "Kids Taekwondo",
-            "type": ScheduleType.group,
-            "days": ["Monday", "Wednesday"],
-            "time": "17:00",
-            "capacity": 15,
-        },
-        {
-            "key": "kids_karate_friday_1700",
-            "title": "Kids Karate",
-            "type": ScheduleType.group,
-            "days": ["Friday"],
-            "time": "17:00",
-            "capacity": 15,
-        },
-        {
-            "key": "kids_taekwondo_1800",
-            "title": "Kids Taekwondo",
-            "type": ScheduleType.group,
-            "days": ["Monday", "Wednesday", "Friday"],
-            "time": "18:00",
-            "capacity": 15,
-        },
-        {
-            "key": "kids_taekwondo_1900",
-            "title": "Kids Taekwondo",
-            "type": ScheduleType.group,
-            "days": ["Monday", "Wednesday", "Friday"],
-            "time": "19:00",
-            "capacity": 15,
-        },
-        {
-            "key": "kids_taekwondo_2000",
-            "title": "Kids Taekwondo",
-            "type": ScheduleType.group,
-            "days": ["Monday", "Wednesday", "Friday"],
-            "time": "20:00",
-            "capacity": 15,
-        },
-        {
-            "key": "kids_karate_1700",
-            "title": "Kids Karate",
-            "type": ScheduleType.group,
-            "days": ["Tuesday", "Thursday", "Saturday"],
-            "time": "17:00",
-            "capacity": 15,
-        },
-        {
-            "key": "kids_karate_1800",
-            "title": "Kids Karate",
-            "type": ScheduleType.group,
-            "days": ["Tuesday", "Thursday", "Saturday"],
-            "time": "18:00",
-            "capacity": 15,
-        },
-        {
-            "key": "adult_kickboxing_1900",
-            "title": "Adult Kickboxing",
-            "type": ScheduleType.group,
-            "days": ["Tuesday", "Thursday", "Saturday"],
-            "time": "19:00",
-            "capacity": 15,
-        },
-        {
-            "key": "adult_karate_2000",
-            "title": "Adult Karate",
-            "type": ScheduleType.group,
-            "days": ["Tuesday", "Thursday", "Saturday"],
-            "time": "20:00",
-            "capacity": 15,
-        },
-        {
-            "key": "Elite Performance",
-            "title": "Elite Performance",
-            "type": ScheduleType.group,
-            "days": ["Monday", "Wednesday", "Friday"],
-            "time": "14:00",
-            "capacity": 12,
-        },
-        {
-            "key": "Yoga Flow",
-            "title": "Yoga Flow",
-            "type": ScheduleType.group,
-            "days": ["Tuesday", "Thursday"],
-            "time": "16:30",
-            "capacity": 16,
-        },
-        {
-            "key": "Personal Training",
-            "title": "Personal Training",
-            "type": ScheduleType.personal,
-            "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-            "time": "10:00",
-            "capacity": 1,
-        },
-    ]
+    """Official timetable plus a week of recorded sessions for those classes."""
+    await sync_official_timetable(session)
+    all_templates = (await session.scalars(select(ScheduleTemplate))).all()
+    by_key = {class_key(t.title, t.days, t.time): t for t in all_templates}
 
-    templates = {}
-    for row in template_rows:
-        candidates = await session.scalars(
-            select(ScheduleTemplate).where(
-                ScheduleTemplate.title == row["title"],
-                ScheduleTemplate.time == row["time"],
-            )
-        )
-        template = next((item for item in candidates.all() if item.days == row["days"]), None)
-        if template is None:
-            template = ScheduleTemplate(
-                title=row["title"],
-                type=row["type"],
-                days=row["days"],
-                time=row["time"],
-                capacity=row["capacity"],
-            )
-            session.add(template)
-            await session.flush()
-        else:
-            template.type = row["type"]
-            template.capacity = row["capacity"]
-        templates[row["key"]] = template
+    templates: dict[str, ScheduleTemplate] = {}
+    for spec in OFFICIAL_TIMETABLE:
+        template = by_key[class_key(spec.title, spec.days, spec.time)]
+        key = f"{spec.title.lower().replace(' ', '_')}_{'_'.join(d[:3].lower() for d in spec.days)}_{start_of(spec.time).replace(':', '')}"
+        templates[key] = template
 
-    session_rows = [
-        {
-            "key": "elite_today",
-            "template": "Elite Performance",
-            "date": today,
-            "trainer_name": "Marcus Thorne",
-            "status": SessionStatus.in_progress,
-        },
-        {
-            "key": "yoga_today",
-            "template": "Yoga Flow",
-            "date": today,
-            "trainer_name": "Sophia Chen",
-            "status": SessionStatus.upcoming,
-        },
-        {
-            "key": "pt_tomorrow",
-            "template": "Personal Training",
-            "date": today + timedelta(days=1),
-            "trainer_name": "Elena Vance",
-            "status": SessionStatus.upcoming,
-        },
-        {
-            "key": "elite_yesterday",
-            "template": "Elite Performance",
-            "date": today - timedelta(days=1),
-            "trainer_name": "Marcus Thorne",
-            "status": SessionStatus.completed,
-        },
-    ]
+    trainers = {
+        "Kids Taekwondo": "Coach Nasser",
+        "Little Kids Karate": "Coach Tasneem",
+        "Kids Karate": "Coach Tasneem",
+        "Adult Kickboxing": "Coach Omar",
+        "Adult Karate": "Coach Omar",
+    }
+    for template in templates.values():
+        template.trainer_name = template.trainer_name or trainers.get(template.title)
 
-    sessions = {}
-    for row in session_rows:
-        template = templates[row["template"]]
-        existing = await session.scalar(
-            select(Session).where(
-                Session.template_id == template.id,
-                Session.date == row["date"],
-                Session.trainer_name == row["trainer_name"],
+    today = gym_today()
+    now_local = datetime.now(gym_tz())
+    sessions: dict[str, Session] = {}
+    for offset in range(7, -1, -1):
+        day = today - timedelta(days=offset)
+        weekday = day.strftime("%A")
+        for key, template in templates.items():
+            if weekday not in template.days:
+                continue
+            start = start_of(template.time)
+            end_hour = int(start[:2]) + 1
+            end = f"{end_hour:02d}:{start[3:]}"
+            class_end = datetime.combine(day, time(end_hour, int(start[3:])), tzinfo=gym_tz())
+            if class_end > now_local:
+                continue  # only classes that have already happened get a recorded session
+            existing = await session.scalar(
+                select(Session).where(Session.template_id == template.id, Session.date == day)
             )
-        )
-        if existing is None:
-            existing = Session(
-                template_id=template.id,
-                date=row["date"],
-                trainer_name=row["trainer_name"],
-                status=row["status"],
-                checklist_data={
-                    "items": [
-                        {"text": "Warm-up completed", "checked": True},
-                        {"text": "Main session complete", "checked": row["status"] == SessionStatus.completed},
-                        {"text": "Cool-down recorded", "checked": False},
-                    ]
-                },
-            )
-            session.add(existing)
-            await session.flush()
-        else:
-            existing.status = row["status"]
-        sessions[row["key"]] = existing
+            if existing is None:
+                existing = Session(
+                    template_id=template.id,
+                    date=day,
+                    start_time=start,
+                    end_time=end,
+                    trainer_name=template.trainer_name or "Coach",
+                    status=SessionStatus.completed,
+                    checklist_data={
+                        "items": [{"id": i + 1, "text": text, "checked": True} for i, text in enumerate(DEFAULT_CHECKLIST)]
+                    },
+                )
+                session.add(existing)
+                await session.flush()
+            sessions[f"{key}_{day.isoformat()}"] = existing
 
     return templates, sessions
+
+
+async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) -> dict[str, Member]:
+    today = gym_today()
+    family = await get_or_create(
+        session,
+        Family,
+        {"parent_phone": "+971501110001"},
+        {
+            "parent_name": "Safiya Al Muharrami",
+            "parent_email": None,
+            "parent_relationship": "mother",
+            "notes": "Prefers WhatsApp",
+        },
+    )
+    rows = [
+        # name, phone, age, gender, plan, days until expiry (relative to start), family?, extra
+        ("Mouza Al Muharrami", None, 3, Gender.female, "Karate One Month - 3 Classes", 30, True, {}),
+        ("Hamdan Al Muharrami", None, 8, Gender.male, "Taekwondo Three Month - 3 Classes", 75, True, {}),
+        ("Rashid Al Ketbi", "+971502220002", 11, Gender.male, "Taekwondo One Month - 3 Classes", 2, False, {}),
+        ("Layla Haddad", "+971503330003", 9, Gender.female, "Karate One Month - 2 Classes", 18, False, {"medical_issues": "Mild asthma"}),
+        ("Omar Siddiqui", "+971504440004", 29, Gender.male, "Kickboxing Three Month - 3 Classes", 50, False, {}),
+        ("Priya Nair", "+971505550005", 34, Gender.female, "Fitness One Month - 3 Classes", -5, False, {}),
+        ("Yousef Al Hammadi", "+971506660006", 41, Gender.male, "Karate Six Month - 3 Classes", 140, False, {"is_frozen": True}),
+        ("Noura Al Mansoori", "+971507770007", 13, Gender.female, "Taekwondo One Year - 3 Classes", 300, False, {}),
+    ]
+
+    output = {}
+    for name, phone, age, gender, plan_name, days_left, in_family, extra in rows:
+        plan = plans[plan_name]
+        expiry = today + timedelta(days=days_left)
+        lookup = {"name": name, "family_id": family.id} if in_family else {"phone": phone}
+        member = await get_or_create(
+            session,
+            Member,
+            lookup,
+            {
+                "name": name,
+                "phone": phone,
+                "whatsapp_number": phone,
+                "parent_phone": family.parent_phone if in_family else None,
+                "family_id": family.id if in_family else None,
+                "gender": gender,
+                "age": age,
+                "plan_id": plan.id,
+                "expiry_date": expiry,
+                "is_frozen": extra.get("is_frozen", False),
+                "medical_issues": extra.get("medical_issues"),
+                "messaging_opt_in": True,
+            },
+        )
+        output[name] = member
+
+        # The payment that started the current membership period.
+        start = add_months(expiry, -plan.duration_months)
+        existing_payment = await session.scalar(select(Payment.id).where(Payment.member_id == member.id).limit(1))
+        if existing_payment is None:
+            session.add(
+                Payment(
+                    member_id=member.id,
+                    plan_id=plan.id,
+                    amount=Decimal(plan.price),
+                    currency="AED",
+                    method=PaymentMethod.card if age >= 18 else PaymentMethod.cash,
+                    kind=PaymentKind.renewal if name == "Omar Siddiqui" else PaymentKind.new,
+                    paid_on=start,
+                    period_start=start,
+                    period_end=expiry,
+                )
+            )
+    await session.flush()
+    return output
 
 
 async def seed_enrollments(
     session: AsyncSession,
     members: dict[str, Member],
     templates: dict[str, ScheduleTemplate],
-    sessions: dict[str, Session],
 ) -> None:
     rows = [
-        {"member": "Alexander Rossi", "template": templates["Elite Performance"]},
-        {"member": "Marcus Thorne", "template": templates["Elite Performance"]},
-        {"member": "Maya Johnson", "template": templates["Elite Performance"]},
-        {"member": "Elena Vance", "template": templates["Yoga Flow"]},
-        {"member": "Sophia Chen", "session": sessions["yoga_today"]},
-        {"member": "Noah Carter", "template": templates["Yoga Flow"]},
-        {"member": "Ava Carter", "template": templates["Yoga Flow"]},
+        ("Mouza Al Muharrami", "little_kids_karate_tue_thu_sat_1600"),
+        ("Hamdan Al Muharrami", "kids_taekwondo_mon_wed_1700"),
+        ("Rashid Al Ketbi", "kids_taekwondo_mon_wed_fri_1800"),
+        ("Layla Haddad", "kids_karate_tue_thu_sat_1700"),
+        ("Omar Siddiqui", "adult_kickboxing_tue_thu_sat_1900"),
+        ("Yousef Al Hammadi", "adult_karate_tue_thu_sat_2000"),
+        ("Noura Al Mansoori", "kids_taekwondo_mon_wed_fri_1900"),
     ]
-
-    for row in rows:
-        member = members[row["member"]]
-        template = row.get("template")
-        target_session = row.get("session")
+    for member_name, template_key in rows:
+        member = members[member_name]
+        template = templates[template_key]
         existing = await session.scalar(
-            select(Enrollment).where(
-                Enrollment.member_id == member.id,
-                Enrollment.template_id == (template.id if template else None),
-                Enrollment.session_id == (target_session.id if target_session else None),
-            )
+            select(Enrollment).where(Enrollment.member_id == member.id, Enrollment.template_id == template.id)
         )
         if existing is None:
-            session.add(
-                Enrollment(
-                    member_id=member.id,
-                    template_id=template.id if template else None,
-                    session_id=target_session.id if target_session else None,
-                )
-            )
+            session.add(Enrollment(member_id=member.id, template_id=template.id))
 
 
-async def seed_check_ins(session: AsyncSession, members: dict[str, Member]) -> None:
-    today = date.today()
-    now = datetime.now(timezone.utc)
-    rows = [
-        {"member": "Alexander Rossi", "in": now.replace(second=0, microsecond=0) - timedelta(minutes=85), "out": None},
-        {
-            "member": "Elena Vance",
-            "in": datetime.combine(today, time(9, 0), tzinfo=timezone.utc),
-            "out": datetime.combine(today, time(10, 10), tzinfo=timezone.utc),
-        },
-        {"member": "Maya Johnson", "in": now - timedelta(minutes=35), "out": None},
-        {
-            "member": "Marcus Thorne",
-            "in": datetime.combine(today - timedelta(days=1), time(18, 0), tzinfo=timezone.utc),
-            "out": datetime.combine(today - timedelta(days=1), time(19, 20), tzinfo=timezone.utc),
-        },
-        {
-            "member": "Noah Carter",
-            "in": datetime.combine(today - timedelta(days=2), time(16, 0), tzinfo=timezone.utc),
-            "out": datetime.combine(today - timedelta(days=2), time(17, 5), tzinfo=timezone.utc),
-        },
-    ]
+async def seed_check_ins(
+    session: AsyncSession, members: dict[str, Member], templates: dict[str, ScheduleTemplate]
+) -> None:
+    """Realistic past visits: each enrolled member attended most of their classes."""
+    today = gym_today()
+    tz = gym_tz()
+    enrollments = (await session.scalars(select(Enrollment).where(Enrollment.template_id.is_not(None)))).all()
+    template_by_id = {t.id: t for t in templates.values()}
+    member_ids = {m.id for m in members.values()}
+    now = datetime.now(UTC)
 
-    for row in rows:
-        member = members[row["member"]]
-        if row["out"] is None:
+    for enrollment in enrollments:
+        template = template_by_id.get(enrollment.template_id)
+        if template is None or enrollment.member_id not in member_ids:
+            continue
+        start = start_of(template.time)
+        for offset in range(1, 29):
+            day = today - timedelta(days=offset)
+            if day.strftime("%A") not in template.days or (offset + enrollment.member_id) % 5 == 0:
+                continue  # skip roughly one class in five
+            check_in_at = datetime.combine(day, time(int(start[:2]), int(start[3:])), tzinfo=tz) - timedelta(minutes=10)
+            check_out_at = check_in_at + timedelta(minutes=75)
             existing = await session.scalar(
-                select(CheckIn).where(
-                    CheckIn.member_id == member.id,
-                    CheckIn.check_out_time.is_(None),
+                select(CheckIn.id).where(
+                    CheckIn.member_id == enrollment.member_id,
+                    CheckIn.check_in_time == check_in_at.astimezone(UTC),
                 )
             )
-        else:
-            existing = await session.scalar(
-                select(CheckIn).where(
-                    CheckIn.member_id == member.id,
-                    CheckIn.check_in_time == row["in"],
+            if existing is None and check_out_at.astimezone(UTC) < now:
+                session.add(
+                    CheckIn(
+                        member_id=enrollment.member_id,
+                        check_in_time=check_in_at.astimezone(UTC),
+                        check_out_time=check_out_at.astimezone(UTC),
+                    )
                 )
-            )
-        if existing is None:
-            session.add(
-                CheckIn(
-                    member_id=member.id,
-                    check_in_time=row["in"],
-                    check_out_time=row["out"],
-                )
-            )
 
 
 async def seed_notifications(session: AsyncSession, members: dict[str, Member]) -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     rows = [
         {
-            "member": "Marcus Thorne",
+            "member": "Rashid Al Ketbi",
             "notification_type": NotificationType.membership_expiry,
             "status": NotificationStatus.pending,
             "scheduled_for": now + timedelta(hours=1),
-            "payload": {"message": "Membership expires soon", "days_remaining": 2},
+            "payload": {"subject": "Membership Expiry Reminder", "text": "Membership expires in 2 days"},
         },
         {
-            "member": "Sophia Chen",
+            "member": "Priya Nair",
             "notification_type": NotificationType.membership_expiry,
             "status": NotificationStatus.failed,
             "scheduled_for": now - timedelta(days=1),
-            "payload": {"message": "Membership has expired", "days_overdue": 4},
-            "error_message": "Demo failed provider response",
+            "payload": {"subject": "Membership Expiry Reminder", "text": "Membership has expired"},
+            "error_message": "whatsapp channel is not configured",
         },
     ]
 
@@ -662,7 +337,15 @@ async def seed_notifications(session: AsyncSession, members: dict[str, Member]) 
             )
         )
         if existing is None:
-            session.add(NotificationJob(member_id=member.id, provider="internal", **row))
+            session.add(
+                NotificationJob(
+                    member_id=member.id,
+                    provider="whatsapp",
+                    channel=NotificationChannel.whatsapp,
+                    recipient=member.whatsapp_number or member.phone or member.parent_phone,
+                    **row,
+                )
+            )
         else:
             for key, value in row.items():
                 setattr(existing, key, value)
@@ -670,11 +353,13 @@ async def seed_notifications(session: AsyncSession, members: dict[str, Member]) 
 
 async def seed_demo_data(session: AsyncSession) -> dict[str, int]:
     await seed_users(session)
+    await retire_legacy_demo_data(session)
     plans = await seed_plans(session)
+    templates, _ = await seed_schedule(session)
     members = await seed_members(session, plans)
-    templates, sessions = await seed_schedule(session)
-    await seed_enrollments(session, members, templates, sessions)
-    await seed_check_ins(session, members)
+    await seed_enrollments(session, members, templates)
+    await session.flush()
+    await seed_check_ins(session, members, templates)
     await seed_notifications(session, members)
     await session.commit()
 
@@ -686,6 +371,7 @@ async def seed_demo_data(session: AsyncSession) -> dict[str, int]:
         "sessions": await count_rows(session, Session),
         "enrollments": await count_rows(session, Enrollment),
         "check_ins": await count_rows(session, CheckIn),
+        "payments": await count_rows(session, Payment),
         "notification_jobs": await count_rows(session, NotificationJob),
     }
 

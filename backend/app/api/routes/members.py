@@ -1,4 +1,3 @@
-from datetime import date
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -6,11 +5,13 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_current_admin_user, get_current_user
+from app.api.deps import get_current_admin_or_staff_user, get_current_admin_user, get_current_user
+from app.core.timeutils import gym_today
 from app.db import get_db_session
 from app.models import AppUser
 from app.models import Family
 from app.models import Member
+from app.models.enums import PaymentKind
 from app.schemas.member import (
     FamilyCreate,
     FamilyFreezeRequest,
@@ -19,7 +20,9 @@ from app.schemas.member import (
     MemberCreate,
     MemberResponse,
     MemberUpdate,
+    RenewRequest,
 )
+from app.services.memberships import ensure_phone_available, expiry_for_plan, get_plan_or_404, record_payment
 from app.tasks.notifications import queue_enrollment_confirmation
 
 router = APIRouter(prefix="/members", tags=["members"])
@@ -64,7 +67,7 @@ async def list_members(
     if phone:
         stmt = stmt.where(Member.phone == phone)
     if expired is not None:
-        today = date.today()
+        today = gym_today()
         stmt = stmt.where(Member.expiry_date < today if expired else Member.expiry_date >= today)
     if is_frozen is not None:
         stmt = stmt.where(Member.is_frozen == is_frozen)
@@ -79,12 +82,28 @@ async def create_member(
     db: AsyncSession = Depends(get_db_session),
     _: AppUser = Depends(get_current_admin_user),
 ) -> MemberResponse:
-    existing = await db.scalar(select(Member.id).where(Member.phone == payload.phone))
-    if existing is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone is already in use")
+    if not payload.parent_phone and payload.family_id is None:
+        await ensure_phone_available(db, payload.phone)
+    plan = await get_plan_or_404(db, payload.plan_id)
 
-    member = Member(**payload.model_dump())
+    data = payload.model_dump(exclude={"payment"})
+    start = gym_today()
+    if data["expiry_date"] is None and plan is not None:
+        data["expiry_date"] = expiry_for_plan(plan, start)
+
+    member = Member(**data)
     db.add(member)
+    await db.flush()
+    if payload.payment is not None:
+        record_payment(
+            db,
+            member=member,
+            plan=plan,
+            payment=payload.payment,
+            kind=PaymentKind.new,
+            period_start=start,
+            period_end=member.expiry_date,
+        )
     await db.commit()
     await db.refresh(member)
     if member.messaging_opt_in:
@@ -101,37 +120,45 @@ async def create_family(
     db: AsyncSession = Depends(get_db_session),
     _: AppUser = Depends(get_current_admin_user),
 ) -> FamilyGroupResponse:
-    if not payload.members:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="members list cannot be empty")
+    # A returning parent registers more children into their existing family.
+    family = await db.scalar(select(Family).where(Family.parent_phone == payload.parent.phone))
+    if family is None:
+        family = Family(
+            parent_name=payload.parent.name,
+            parent_phone=payload.parent.phone,
+            parent_email=payload.parent.email,
+            parent_address=payload.parent.address,
+            parent_relationship=payload.parent.relationship,
+            notes=payload.parent.notes,
+        )
+        db.add(family)
+        await db.flush()
+    else:
+        family.parent_name = payload.parent.name
+        family.parent_email = payload.parent.email or family.parent_email
+        family.parent_address = payload.parent.address or family.parent_address
 
-    phones = [member.phone for member in payload.members]
-    if len(phones) != len(set(phones)):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Family member phones must be unique")
-
-    existing_family = await db.scalar(select(Family.id).where(Family.parent_phone == payload.parent.phone))
-    if existing_family is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Parent phone is already in use")
-
-    existing_phone = await db.scalar(select(Member.phone).where(Member.phone.in_(phones)).limit(1))
-    if existing_phone is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone is already in use")
-
-    family = Family(
-        parent_name=payload.parent.name,
-        parent_phone=payload.parent.phone,
-        parent_email=payload.parent.email,
-        parent_address=payload.parent.address,
-        parent_relationship=payload.parent.relationship,
-        notes=payload.parent.notes,
-    )
-    db.add(family)
-    await db.flush()
-
-    members = [
-        Member(**member.model_dump(exclude={"family_id", "parent_phone"}), family_id=family.id, parent_phone=family.parent_phone)
-        for member in payload.members
-    ]
-    db.add_all(members)
+    start = gym_today()
+    members: list[Member] = []
+    for entry in payload.members:
+        plan = await get_plan_or_404(db, entry.plan_id)
+        data = entry.model_dump(exclude={"family_id", "parent_phone", "payment"})
+        if data["expiry_date"] is None and plan is not None:
+            data["expiry_date"] = expiry_for_plan(plan, start)
+        member = Member(**data, family_id=family.id, parent_phone=family.parent_phone)
+        db.add(member)
+        await db.flush()
+        if entry.payment is not None:
+            record_payment(
+                db,
+                member=member,
+                plan=plan,
+                payment=entry.payment,
+                kind=PaymentKind.new,
+                period_start=start,
+                period_end=member.expiry_date,
+            )
+        members.append(member)
     await db.commit()
     await db.refresh(family)
     for member in members:
@@ -181,9 +208,53 @@ async def update_member(
     if member is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    if "phone" in updates and not member.family_id and not member.parent_phone:
+        await ensure_phone_available(db, updates["phone"], exclude_member_id=member.id)
+    if "plan_id" in updates:
+        await get_plan_or_404(db, updates["plan_id"])
+
+    for field, value in updates.items():
         setattr(member, field, value)
 
+    await db.commit()
+    await db.refresh(member)
+    return MemberResponse.model_validate(member)
+
+
+@router.post("/{member_id}/renew", response_model=MemberResponse)
+async def renew_member(
+    member_id: int,
+    payload: RenewRequest,
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_admin_or_staff_user),
+) -> MemberResponse:
+    member = await db.get(Member, member_id)
+    if member is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+
+    plan = await get_plan_or_404(db, payload.plan_id if payload.plan_id is not None else member.plan_id)
+    if plan is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose a package to renew")
+
+    today = gym_today()
+    start = today
+    if payload.start_from == "expiry" and member.expiry_date and member.expiry_date > today:
+        start = member.expiry_date
+    member.plan_id = plan.id
+    member.expiry_date = expiry_for_plan(plan, start)
+    member.is_frozen = False
+
+    if payload.payment is not None:
+        record_payment(
+            db,
+            member=member,
+            plan=plan,
+            payment=payload.payment,
+            kind=PaymentKind.renewal,
+            period_start=start,
+            period_end=member.expiry_date,
+        )
     await db.commit()
     await db.refresh(member)
     return MemberResponse.model_validate(member)

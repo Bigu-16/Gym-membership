@@ -1,3 +1,5 @@
+from datetime import date as Date
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,7 @@ from app.schemas.schedule import (
     SessionStatusUpdate,
     SessionUpdate,
 )
+from app.services.catalog import sync_official_timetable
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
 
@@ -38,6 +41,17 @@ async def create_schedule_template(
     await db.commit()
     await db.refresh(template)
     return ScheduleTemplateResponse.model_validate(template)
+
+
+@router.post("/templates/sync-official")
+async def load_official_timetable(
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_admin_user),
+) -> dict[str, int]:
+    """Add any missing slots from the official Mon–Sat timetable. Never deletes or edits."""
+    result = await sync_official_timetable(db)
+    await db.commit()
+    return result
 
 
 @router.patch("/templates/{template_id}", response_model=ScheduleTemplateResponse)
@@ -78,10 +92,17 @@ async def delete_schedule_template(
 
 @router.get("/sessions", response_model=list[SessionResponse])
 async def list_sessions(
+    date_from: Date | None = None,
+    date_to: Date | None = None,
     db: AsyncSession = Depends(get_db_session),
     _: AppUser = Depends(get_current_user),
 ) -> list[SessionResponse]:
-    result = await db.scalars(select(Session).order_by(Session.date.desc()))
+    stmt = select(Session).order_by(Session.date.desc(), Session.id.desc())
+    if date_from is not None:
+        stmt = stmt.where(Session.date >= date_from)
+    if date_to is not None:
+        stmt = stmt.where(Session.date <= date_to)
+    result = await db.scalars(stmt)
     return [SessionResponse.model_validate(item) for item in result.all()]
 
 
@@ -89,8 +110,23 @@ async def list_sessions(
 async def create_session(
     payload: SessionCreate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    _: AppUser = Depends(get_current_admin_or_staff_user),
 ) -> SessionResponse:
+    if payload.template_id is not None:
+        template = await db.get(ScheduleTemplate, payload.template_id)
+        if template is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule template not found")
+        # A class runs once per day: starting it twice must not create a second session.
+        existing = await db.scalar(
+            select(Session).where(Session.template_id == payload.template_id, Session.date == payload.date).limit(1)
+        )
+        if existing is not None:
+            for field, value in payload.model_dump(exclude_unset=True, exclude={"template_id", "date"}).items():
+                setattr(existing, field, value)
+            await db.commit()
+            await db.refresh(existing)
+            return SessionResponse.model_validate(existing)
+
     session = Session(**payload.model_dump())
     db.add(session)
     await db.commit()
@@ -122,7 +158,7 @@ async def update_session_status(
     session_id: int,
     payload: SessionStatusUpdate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    _: AppUser = Depends(get_current_admin_or_staff_user),
 ) -> SessionResponse:
     session = await db.get(Session, session_id)
     if session is None:

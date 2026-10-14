@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   format, 
   addDays, 
@@ -6,7 +5,7 @@ import {
   eachDayOfInterval, 
   isToday 
 } from 'date-fns';
-import { MapPin } from 'lucide-react';
+import { formatHourLabel } from '../../utils/classSessions';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -125,12 +124,13 @@ const WeekView = ({
           </div>
 
           <div className="relative h-[600px] overflow-y-auto custom-scrollbar bg-[var(--glass-bg)]">
-            <div className="grid grid-cols-[80px_repeat(7,1fr)] h-[900px]">
+            <div className="grid grid-cols-[80px_repeat(7,1fr)]" style={{ height: `${hours.length * 60}px` }}>
               {/* Time labels */}
               <div className="relative">
                 {hours.map(hour => (
-                  <div key={hour} className="h-[60px] text-[10px] text-[var(--text-secondary)] pr-4 text-right -mt-2">
-                    {hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
+                  <div key={hour} className="h-[60px] text-[10px] text-[var(--text-secondary)] pr-4 text-right">
+                    {/* Offset only the text so labels don't drift down the grid. */}
+                    <span className="block -translate-y-1.5">{formatHourLabel(hour)}</span>
                   </div>
                 ))}
               </div>
@@ -145,7 +145,7 @@ const WeekView = ({
                   {layoutDaySessions(getSessionsForDay(day)).map(session => {
                     const startHour = session.start.getHours() + session.start.getMinutes() / 60;
                     const endHour = session.end.getHours() + session.end.getMinutes() / 60;
-                    const top = Math.max(0, (startHour - 7) * 60);
+                    const top = Math.max(0, (startHour - hours[0]) * 60);
                     const height = Math.max(40, (endHour - startHour) * 60);
 
                     const totalCols = session.totalCols || 1;
@@ -159,9 +159,15 @@ const WeekView = ({
                         onClick={() => setSelectedSession(session)}
                         className={cn(
                           "absolute rounded-xl p-2 text-xs cursor-pointer transition-all hover:scale-[1.02] hover:z-20 group overflow-hidden border",
-                          session.status === 'in-progress' 
-                            ? "bg-[var(--text-primary)] text-[var(--bg-primary)] border-transparent shadow-xl ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[var(--bg-primary)] z-10" 
-                            : "bg-[var(--bg-secondary)] border-[var(--glass-border)] hover:border-[var(--text-secondary)] shadow-md"
+                          session.status === 'in-progress'
+                            ? "bg-[var(--text-primary)] text-[var(--bg-primary)] border-transparent shadow-xl ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[var(--bg-primary)] z-10"
+                            : session.status === 'cancelled'
+                              ? "bg-[var(--bg-secondary)] border-rose-500/30 opacity-60 line-through"
+                              : session.status === 'completed'
+                                ? "bg-[var(--bg-secondary)] border-sky-500/30 opacity-80"
+                                : session.status === 'not-recorded'
+                                  ? "bg-[var(--bg-secondary)] border-amber-500/30 border-dashed opacity-70"
+                                  : "bg-[var(--bg-secondary)] border-[var(--glass-border)] hover:border-[var(--text-secondary)] shadow-md"
                         )}
                         style={{ 
                           top: `${top}px`, 
@@ -171,17 +177,11 @@ const WeekView = ({
                         }}
                       >
                         <div className="font-bold mb-0.5 truncate" title={session.title}>{session.title}</div>
-                        <div className="opacity-70 text-[9px] flex items-center gap-1 mb-1 truncate">
-                          <MapPin size={8} className="shrink-0" /> <span className="truncate">{session.location}</span>
+                        <div className="opacity-70 text-[9px] truncate">
+                          {format(session.start, 'h:mm')}–{format(session.end, 'h:mm a')}
+                          {session.capacity ? ` • ${session.enrolled || 0}/${session.capacity}` : ''}
                         </div>
-                        {session.status === 'in-progress' && (
-                          <div className="mt-auto flex items-center gap-2">
-                            <div className="flex-grow h-1 bg-white bg-opacity-20 rounded-full overflow-hidden">
-                              <div className="h-full bg-[var(--accent-color)] animate-pulse" style={{ width: '65%' }}></div>
-                            </div>
-                            <span className="text-[8px] font-bold">LIVE</span>
-                          </div>
-                        )}
+                        {session.status === 'in-progress' && <span className="text-[8px] font-bold">LIVE</span>}
                       </div>
                     );
                   })}

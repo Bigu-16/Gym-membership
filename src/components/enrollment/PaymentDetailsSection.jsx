@@ -1,108 +1,107 @@
+import { formatMoney } from '../../utils/membership';
+import { PAYMENT_METHODS, effectiveAmount, planSummary } from './enrollmentHelpers';
+import { inputClass, labelClass, sectionTitleClass } from './fieldStyles';
 
 const PaymentDetailsSection = ({
-  payment,
-  setPayment,
+  trainees,
   trainingType,
-  selectedPackage,
-  participantCount
+  plansById,
+  paymentMethod,
+  onPaymentMethodChange,
+  onAmountChange,
+  errors = [],
+  submitting
 }) => {
-  const isGroupPackage = trainingType === 'group';
+  const rows = trainees.map((trainee, index) => {
+    const plan = trainingType === 'group' ? plansById.get(Number(trainee.planId)) : null;
+    return { trainee, index, plan, amount: effectiveAmount(trainee, plan) };
+  });
+  const total = rows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
 
   return (
     <>
-      <section className="glass-card p-8 space-y-6">
-        <div className="flex items-center gap-4 mb-2">
+      <section className="glass-card p-6 sm:p-8 space-y-6">
+        <div className="flex items-center gap-4">
           <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
             </svg>
           </div>
-          <h2 className="text-xs uppercase tracking-luxury font-bold">Payment Details</h2>
+          <h2 className={sectionTitleClass}>Payment</h2>
         </div>
 
-        {isGroupPackage && (
-          <div className="rounded-2xl border border-orange-500/25 bg-orange-500/5 p-5 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <span className="block text-[9px] uppercase tracking-luxury text-[var(--text-secondary)]">Selected package</span>
-              <span className="block text-sm font-black mt-1">
-                {selectedPackage.program} · {selectedPackage.durationMonths} {selectedPackage.durationMonths === 1 ? 'month' : 'months'} · {selectedPackage.classesPerWeek} classes/week
-              </span>
-              {selectedPackage.includedItem && (
-                <span className="inline-flex mt-2 rounded-full bg-amber-500/15 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-amber-500">
-                  {selectedPackage.includedItem}
-                </span>
-              )}
-            </div>
-            <div className="text-right">
-              <span className="block text-[9px] uppercase tracking-luxury text-[var(--text-secondary)]">
-                {participantCount} {participantCount === 1 ? 'trainee' : 'trainees'}
-              </span>
-              <span className="block text-2xl font-black mt-1">AED {payment.amount}</span>
-            </div>
-          </div>
+        {trainingType === 'personal' && (
+          <p className="text-[11px] text-[var(--text-secondary)]">
+            Personal training is priced individually — enter the agreed amount, or leave it blank to record the payment later.
+          </p>
         )}
 
-        {!isGroupPackage && (
-          <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--bg-primary)] p-4 text-[11px] text-[var(--text-secondary)]">
-            Personal training pricing is custom. Enter agreed amount; no package price is assumed.
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">
-              {isGroupPackage ? 'Total Amount' : 'Agreed Amount'}
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--text-secondary)]">AED</span>
-              <input
-                required
-                readOnly={isGroupPackage}
-                type="text"
-                value={payment.amount}
-                onChange={(event) => setPayment((current) => ({ ...current, amount: event.target.value }))}
-                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl pl-14 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20"
-                placeholder="0.00"
-              />
+        <div className="space-y-3">
+          {rows.map(({ trainee, index, plan, amount }) => (
+            <div key={trainee.key} className="grid grid-cols-1 sm:grid-cols-[1fr_180px] gap-3 items-center">
+              <div>
+                <p className="text-sm font-semibold">{trainee.name.trim() || `Trainee ${index + 1}`}</p>
+                <p className="text-[10px] text-[var(--text-secondary)]">
+                  {plan ? planSummary(plan) : trainingType === 'group' ? 'No package chosen' : 'Personal training'}
+                </p>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[var(--text-secondary)]">AED</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  aria-label={`Amount paid for ${trainee.name.trim() || `trainee ${index + 1}`}`}
+                  value={amount}
+                  onChange={(event) => onAmountChange(trainee.key, event.target.value)}
+                  className={`${inputClass} pl-12`}
+                  placeholder="0"
+                />
+              </div>
             </div>
-          </div>
+          ))}
+        </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Method</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end pt-4 border-t border-[var(--glass-border)]">
+          <div>
+            <label htmlFor="payment-method" className={labelClass}>Payment method</label>
             <select
-              value={payment.method}
-              onChange={(event) => setPayment((current) => ({ ...current, method: event.target.value }))}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20"
+              id="payment-method"
+              value={paymentMethod}
+              onChange={(event) => onPaymentMethodChange(event.target.value)}
+              className={inputClass}
             >
-              <option>Cash</option>
-              <option>Credit Card</option>
-              <option>Bank Transfer</option>
-              <option>Mobile Pay</option>
+              {PAYMENT_METHODS.map((method) => (
+                <option key={method.value} value={method.value}>{method.label}</option>
+              ))}
             </select>
           </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Initial Status</label>
-            <select
-              value={payment.status}
-              onChange={(event) => setPayment((current) => ({ ...current, status: event.target.value }))}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20"
-            >
-              <option>Paid</option>
-              <option>Partial</option>
-              <option>Pending</option>
-            </select>
+          <div className="sm:text-right">
+            <span className="block text-[9px] uppercase tracking-luxury text-[var(--text-secondary)]">Total received</span>
+            <span className="block text-2xl font-black mt-1" data-testid="payment-total">{formatMoney(total)}</span>
           </div>
         </div>
       </section>
 
-      <div className="flex justify-end pt-4">
+      {errors.length > 0 && (
+        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-500 space-y-1">
+          <p className="font-bold">Registration was not saved:</p>
+          <ul className="list-disc ml-5 space-y-0.5">
+            {errors.map((error) => <li key={error}>{error}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <div className="flex justify-end pt-2">
         <button
           type="submit"
-          className="group relative px-12 py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] overflow-hidden transition-all hover:scale-[1.02] active:scale-95 shadow-xl"
+          disabled={submitting}
+          className="group relative px-12 py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] overflow-hidden transition-all hover:scale-[1.02] active:scale-95 shadow-xl disabled:opacity-60 disabled:hover:scale-100"
         >
-          <span className="relative z-10 text-xs uppercase tracking-luxury font-bold">Confirm Enrollment</span>
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <span className="relative z-10 text-xs uppercase tracking-luxury font-bold">
+            {submitting ? 'Saving…' : 'Confirm Enrollment'}
+          </span>
         </button>
       </div>
     </>

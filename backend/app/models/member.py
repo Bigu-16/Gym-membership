@@ -13,7 +13,11 @@ class Member(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
-    phone: Mapped[str] = mapped_column(String(30), nullable=False, unique=True, index=True)
+    # Children registered under a family are reached through the parent, so their own
+    # phone is optional and may repeat the parent's number.
+    phone: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)
+    whatsapp_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    emirates_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     parent_phone: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)
@@ -29,5 +33,6 @@ class Member(TimestampMixin, Base):
     family = relationship("Family", back_populates="members")
     plan = relationship("MembershipPlan", back_populates="members")
     enrollments = relationship("Enrollment", back_populates="member", cascade="all, delete-orphan")
+    payments = relationship("Payment", back_populates="member", cascade="all, delete-orphan")
     check_ins = relationship("CheckIn", back_populates="member", cascade="all, delete-orphan")
     notification_jobs = relationship("NotificationJob", cascade="all, delete-orphan")

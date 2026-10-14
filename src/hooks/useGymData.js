@@ -1,25 +1,53 @@
-import { useState, useEffect, useCallback } from 'react';
-import { apiService } from '../services/api';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { apiService, avatarFor } from '../services/api';
+import { daysUntil, EXPIRING_SOON_DAYS } from '../utils/membership';
+
+const SESSION_HISTORY_DAYS = 120;
+
+const isoDaysAgo = (days) => {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const familyGroupFrom = (familyId, trainees, family) => {
+  const parentName = family?.parentName || trainees.find((t) => t.parentName)?.parentName || null;
+  const firstName = (parentName || trainees[0]?.name || 'Family').split(' ')[0];
+  const expiries = trainees.map((t) => t.expiryDate).filter(Boolean).sort();
+  return {
+    isGroup: true,
+    id: `family-${familyId}`,
+    familyId,
+    parentName,
+    parentPhone: family?.parentPhone || trainees[0]?.parentPhone || null,
+    parentEmail: family?.parentEmail || null,
+    trainees,
+    name: `${firstName}'s Family`,
+    plan: `Family (${trainees.length} ${trainees.length === 1 ? 'trainee' : 'trainees'})`,
+    image: avatarFor(firstName),
+    // The family needs attention as soon as any child's membership runs out.
+    expiryDate: expiries[0] || null,
+    isFrozen: trainees.length > 0 && trainees.every((t) => t.isFrozen)
+  };
+};
 
 export const useGymData = () => {
-  // Clear any legacy persistent token in localStorage so new sessions start at Login
-  if (typeof window !== 'undefined' && window.localStorage?.getItem('gym_api_token')) {
-    localStorage.removeItem('gym_api_token');
-  }
-
   const [isAuthenticated, setIsAuthenticated] = useState(
     typeof window !== 'undefined' && !!sessionStorage.getItem('gym_api_token')
   );
   const [currentUser, setCurrentUser] = useState(null);
   const [members, setMembers] = useState([]);
+  const [families, setFamilies] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [inClubList, setInClubList] = useState([]);
   const [scheduleTemplates, setScheduleTemplates] = useState([]);
   const [membershipPlans, setMembershipPlans] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState('');
   const [notificationJobs, setNotificationJobs] = useState([]);
-  const [selectedMember, setSelectedMember] = useState(null);
+  const [selectedMemberKey, setSelectedMemberKey] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
 
@@ -28,144 +56,61 @@ export const useGymData = () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
     setMembers([]);
+    setFamilies([]);
     setSessions([]);
     setInClubList([]);
     setScheduleTemplates([]);
     setMembershipPlans([]);
+    setEnrollments([]);
     setNotificationJobs([]);
-    setSelectedMember(null);
+    setSelectedMemberKey(null);
+    setHasLoaded(false);
   }, []);
+
+  const handleApiError = useCallback((err, fallback) => {
+    console.error(err);
+    if (err?.message === 'Unauthenticated') {
+      handleLogout();
+      return;
+    }
+    setError(fallback);
+  }, [handleLogout]);
 
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
     setLoading(true);
     setError('');
     try {
-      const userProfile = await apiService.getMe().catch(() => ({
-        id: 1,
-        email: 'admin@example.com',
-        full_name: 'Administrator',
-        role: 'admin'
-      }));
+      const userProfile = await apiService.getMe();
       setCurrentUser(userProfile);
 
-      const [rawTemplatesData, rawMembersData, familiesData, enrollmentsData, plansData] = await Promise.all([
-        apiService.getTemplates().catch(() => []),
-        apiService.getMembers().catch(() => []),
-        apiService.getFamilies().catch(() => []),
-        apiService.getEnrollments().catch(() => []),
-        apiService.getPlans().catch(() => [])
-      ]);
-      setMembershipPlans(Array.isArray(plansData) ? plansData : []);
+      const [templatesData, membersData, familiesData, enrollmentsData, plansData, activeCheckIns, jobsData] =
+        await Promise.all([
+          apiService.getTemplates(),
+          apiService.getMembers(),
+          apiService.getFamilies(),
+          apiService.getEnrollments(),
+          apiService.getPlans(),
+          apiService.getActiveCheckIns(),
+          apiService.getNotificationJobs().catch(() => [])
+        ]);
+      const sessionsData = await apiService.getSessions(templatesData, { date_from: isoDaysAgo(SESSION_HISTORY_DAYS) });
 
-      const templatesData = Array.isArray(rawTemplatesData) ? rawTemplatesData : [];
-
-      const membersData = Array.isArray(rawMembersData) ? [...rawMembersData] : [];
-
-      const familyParentMap = new Map();
-      familiesData.forEach(f => {
-        if (f.parentPhone && f.parentName) {
-          familyParentMap.set(f.parentPhone, f.parentName);
-        }
-      });
-
-      const enrichedMembers = membersData.map(m => {
-        const parentName = m.parentName || (m.parentPhone ? familyParentMap.get(m.parentPhone) : null);
-        const userEnrollment = enrollmentsData.find(e => e.member_id === m.id);
-        const enrolledTemplate = userEnrollment ? templatesData.find(t => t.id === userEnrollment.template_id) : null;
-        const fallbackTemplate = !enrolledTemplate && m.plan 
-          ? templatesData.find(t => t.className && (m.plan.toLowerCase().includes(t.className.toLowerCase()) || t.className.toLowerCase().includes(m.plan.toLowerCase()))) 
-          : null;
-        const resolvedTemplate = enrolledTemplate || fallbackTemplate;
-
-        const enrolledClass = resolvedTemplate ? {
-          id: resolvedTemplate.id,
-          className: resolvedTemplate.className || resolvedTemplate.title,
-          days: Array.isArray(resolvedTemplate.days) ? resolvedTemplate.days.join(', ') : resolvedTemplate.days,
-          time: resolvedTemplate.time,
-          location: resolvedTemplate.location || 'Main Studio',
-          slot: `${resolvedTemplate.className || resolvedTemplate.title}: ${Array.isArray(resolvedTemplate.days) ? resolvedTemplate.days.join(', ') : resolvedTemplate.days} @ ${resolvedTemplate.time}`
-        } : (m.schedule?.slot ? {
-          className: m.plan || 'General Class',
-          slot: m.schedule.slot,
-          days: m.schedule.slot.includes(' @ ') ? m.schedule.slot.split(' @ ')[0] : 'Scheduled',
-          time: m.schedule.slot.includes(' @ ') ? m.schedule.slot.split(' @ ')[1] : '',
-          location: m.schedule.location || 'Main Studio'
-        } : null);
-
-        return {
-          ...m,
-          ...(parentName ? { parentName } : {}),
-          ...(enrolledClass ? { enrolledClass } : {})
-        };
-      });
-
-      setMembers(enrichedMembers);
-      setSelectedMember(prev => {
-        if (!prev) return null;
-        if (prev.isGroup) {
-          const familyMembers = enrichedMembers.filter(m => m.parentPhone === prev.parentPhone);
-          if (familyMembers.length === 0) return null;
-          
-          const matchedFamily = familiesData.find(f => f.parentPhone === prev.parentPhone);
-          const parentName = matchedFamily?.parentName || familyMembers.find(m => m.parentName)?.parentName || (prev.parentName !== prev.parentPhone ? prev.parentName : null);
-          const displayName = parentName || familyMembers[0].name.split(' ')[0];
-          const firstName = displayName.split(' ')[0];
-          const isFrozen = familyMembers.some(m => m.isFrozen);
-          const expiryDate = familyMembers[0].expiryDate;
-          
-          return {
-            isGroup: true,
-            id: prev.parentPhone,
-            parentName: parentName || prev.parentPhone,
-            parentPhone: prev.parentPhone,
-            trainees: familyMembers,
-            name: `${firstName}'s Family`,
-            plan: `Family Group (${familyMembers.length} Kids)`,
-            image: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=random&color=fff`,
-            expiryDate: expiryDate,
-            isFrozen: isFrozen
-          };
-        } else {
-          const fresh = enrichedMembers.find(m => m.id === prev.id);
-          return fresh || null;
-        }
-      });
-
-      const templatesWithEnrolled = templatesData.map(t => {
-        const enrolledCount = enrollmentsData.filter(e => e.template_id === t.id).length;
-        const matchingMembers = enrichedMembers.filter(m => {
-          if (m.schedule?.slot) {
-            return m.schedule.slot.includes(t.className || t.title) && m.schedule.slot.includes(t.time);
-          }
-          return false;
-        }).length;
-        return {
-          ...t,
-          enrolled: Math.max(t.enrolled || 0, enrolledCount, matchingMembers)
-        };
-      });
-      setScheduleTemplates(templatesWithEnrolled);
-
-      const activeCheckIns = await apiService.getActiveCheckIns();
-      setInClubList(activeCheckIns.map(c => c.member_id));
-
-      const sessionsData = await apiService.getSessions(templatesData);
+      setMembershipPlans(plansData);
+      setEnrollments(enrollmentsData);
+      setFamilies(familiesData);
+      setScheduleTemplates(templatesData);
+      setMembers(membersData);
       setSessions(sessionsData);
-
-      const jobsData = await apiService.getNotificationJobs();
+      setInClubList(activeCheckIns.map((c) => c.member_id));
       setNotificationJobs(jobsData);
+      setHasLoaded(true);
     } catch (err) {
-      console.error(err);
-      if (err.message === 'Unauthenticated' || err.message.includes('401')) {
-        handleLogout();
-      } else {
-        setError('Error syncing with Azyab Backend. Make sure the backend server is running.');
-      }
+      handleApiError(err, 'Could not reach the N & T server. Check your connection and press Retry.');
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, handleLogout]);
+  }, [isAuthenticated, handleApiError]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -175,88 +120,202 @@ export const useGymData = () => {
     }
   }, [isAuthenticated, loadData]);
 
-  const handleEnroll = async (newMembers, newSessions) => {
-    try {
-      const enrolled = await apiService.enrollMembers(newMembers);
-      
-      for (let i = 0; i < newMembers.length; i++) {
-        const mem = newMembers[i];
-        if (mem.trainingType === 'group' && mem.schedule?.slot) {
-          const template = scheduleTemplates.find(t => {
-            const daysStr = Array.isArray(t.days) ? t.days.join(', ') : (t.days || '');
-            const slotText = `${t.className || 'General Class'}: ${daysStr} @ ${t.time}`;
-            if (slotText === mem.schedule.slot) return true;
-            if (mem.schedule?.slot) {
-              const nameMatch = t.className && mem.schedule.slot.toLowerCase().includes(t.className.toLowerCase());
-              const timeMatch = t.time && mem.schedule.slot.includes(t.time);
-              if (nameMatch && timeMatch) return true;
-              if (nameMatch) return true;
-            }
-            return false;
-          });
-          if (template) {
-            const backendMember = enrolled.find(em => em.phone === mem.phone);
-            if (backendMember) {
-              await apiService.enrollMemberInClass(backendMember.id, template.id);
-            }
-          }
-        }
-      }
+  // ----- Derived data -------------------------------------------------------
+  const plansById = useMemo(() => new Map(membershipPlans.map((p) => [p.id, p])), [membershipPlans]);
 
-      for (const sess of newSessions) {
-        if (sess.type === 'personal') {
-          try {
-            await apiService.createSession({
-              start: sess.start,
-              trainer: sess.trainer || 'Coach',
-              status: sess.status || 'upcoming',
-              checklist: sess.checklist || []
-            });
-          } catch (e) {
-            console.warn('Session creation note:', e);
-          }
-        }
-      }
+  const templatesWithEnrollment = useMemo(() => {
+    const counts = new Map();
+    enrollments.forEach((e) => {
+      if (e.template_id) counts.set(e.template_id, (counts.get(e.template_id) || 0) + 1);
+    });
+    return scheduleTemplates.map((t) => ({ ...t, enrolled: counts.get(t.id) || 0 }));
+  }, [scheduleTemplates, enrollments]);
 
-      await loadData();
-    } catch (err) {
-      console.error(err);
-      alert('Enrollment failed: ' + err.message);
+  const enrichedMembers = useMemo(() => {
+    const familyById = new Map(families.map((f) => [f.id, f]));
+    const templateById = new Map(templatesWithEnrollment.map((t) => [t.id, t]));
+    return members.map((m) => {
+      const plan = m.planId ? plansById.get(m.planId) : null;
+      const family = m.familyId ? familyById.get(m.familyId) : null;
+      const memberEnrollments = enrollments.filter((e) => e.member_id === m.id && e.template_id);
+      const enrolledClasses = memberEnrollments
+        .map((e) => templateById.get(e.template_id))
+        .filter(Boolean)
+        .map((t) => ({
+          id: t.id,
+          className: t.className,
+          days: t.days,
+          time: t.time,
+          slot: `${t.className}: ${t.days} @ ${t.time}`
+        }));
+      return {
+        ...m,
+        plan: plan?.name || (m.planId ? 'Unknown package' : 'No package'),
+        planDetails: plan || null,
+        parentName: m.parentName || family?.parentName || null,
+        enrollmentIds: memberEnrollments.map((e) => e.id),
+        enrolledTemplateIds: enrolledClasses.map((c) => c.id),
+        enrolledClasses,
+        enrolledClass: enrolledClasses[0] || null
+      };
+    });
+  }, [members, families, enrollments, plansById, templatesWithEnrollment]);
+
+  const memberGroups = useMemo(() => {
+    const familyById = new Map(families.map((f) => [f.id, f]));
+    const groups = new Map();
+    const result = [];
+    enrichedMembers.forEach((m) => {
+      if (m.familyId) {
+        if (!groups.has(m.familyId)) groups.set(m.familyId, []);
+        groups.get(m.familyId).push(m);
+      } else {
+        result.push(m);
+      }
+    });
+    groups.forEach((trainees, familyId) => result.push(familyGroupFrom(familyId, trainees, familyById.get(familyId))));
+    return result;
+  }, [enrichedMembers, families]);
+
+  const processedMembers = useMemo(() => {
+    let filtered = memberGroups;
+    if (filterType === 'expiring') {
+      const attention = (item) => {
+        const days = daysUntil(item.expiryDate);
+        return days !== null && days <= EXPIRING_SOON_DAYS;
+      };
+      filtered = filtered.filter((item) => (item.isGroup ? item.trainees.some(attention) : attention(item)));
     }
+    if (!searchQuery) return filtered;
+    const q = searchQuery.toLowerCase();
+    const matches = (m) =>
+      m.name.toLowerCase().includes(q) ||
+      (m.phone || '').toLowerCase().includes(q) ||
+      (m.emiratesId || '').toLowerCase().includes(q);
+    return filtered.filter((item) =>
+      item.isGroup
+        ? item.name.toLowerCase().includes(q) ||
+          (item.parentName || '').toLowerCase().includes(q) ||
+          (item.parentPhone || '').includes(q) ||
+          item.trainees.some(matches)
+        : matches(item)
+    );
+  }, [memberGroups, filterType, searchQuery]);
+
+  // The selected member/family is always derived from fresh data, never a stale copy.
+  const selectedMember = useMemo(() => {
+    if (!selectedMemberKey) return null;
+    return memberGroups.find((item) => item.id === selectedMemberKey)
+      || enrichedMembers.find((m) => m.id === selectedMemberKey)
+      || null;
+  }, [selectedMemberKey, memberGroups, enrichedMembers]);
+
+  const setSelectedMember = useCallback((item) => {
+    setSelectedMemberKey(item ? item.id : null);
+  }, []);
+
+  // ----- Members ------------------------------------------------------------
+  /**
+   * registration = { parent: {name, phone, email} | null,
+   *                  trainees: [{ ...member fields, payment, templateIds: [] }],
+   *                  personalSessions: [{ start, end, trainer }] }
+   * Returns { members, warnings }. Throws if the members could not be created.
+   */
+  const handleEnroll = async ({ parent = null, trainees = [], personalSessions = [] }) => {
+    const created = await apiService.enrollMembers(trainees, parent);
+    const warnings = [];
+
+    // The API returns members in the order they were sent.
+    for (let i = 0; i < trainees.length; i += 1) {
+      const member = created[i];
+      if (!member) continue;
+      for (const templateId of trainees[i].templateIds || []) {
+        try {
+          await apiService.enrollMemberInClass(member.id, templateId);
+        } catch (err) {
+          const template = scheduleTemplates.find((t) => t.id === templateId);
+          warnings.push(`${member.name} was registered but not added to ${template?.className || 'the class'}: ${err.message}`);
+        }
+      }
+    }
+
+    for (const session of personalSessions) {
+      try {
+        await apiService.createPersonalSession(session);
+      } catch (err) {
+        warnings.push(`Personal session on ${session.start.toLocaleDateString()} was not saved: ${err.message}`);
+      }
+    }
+
+    await loadData();
+    return { members: created, warnings };
   };
 
-  const handleAddTemplate = async (newTemplate) => {
-    try {
-      const created = await apiService.createTemplate(newTemplate);
-      setScheduleTemplates((current) => [...current, created]);
-      return created;
-    } catch (err) {
-      console.error(err);
-      throw err;
+  const handleUpdateMember = async (updatedMember) => {
+    if (updatedMember.isGroup) {
+      await apiService.freezeFamily(String(updatedMember.familyId), updatedMember.isFrozen);
+    } else {
+      const original = members.find((m) => m.id === updatedMember.id);
+      await apiService.updateMember(updatedMember.id, updatedMember);
+      if (original && original.isFrozen !== updatedMember.isFrozen) {
+        await apiService.freezeMember(updatedMember.id, updatedMember.isFrozen);
+      }
     }
+    await loadData();
+  };
+
+  /** renewal = { planId, startFrom: 'expiry'|'today', payment: {amount, method} } per trainee. */
+  const handleRenewMember = async (target, renewal) => {
+    const people = target.isGroup ? target.trainees : [target];
+    for (const person of people) {
+      const perPerson = typeof renewal === 'function' ? renewal(person) : renewal;
+      await apiService.renewMember(person.id, perPerson);
+    }
+    await loadData();
+  };
+
+  const handleDeleteMember = async (memberId) => {
+    await apiService.deleteMember(memberId);
+    setSelectedMemberKey(null);
+    await loadData();
+  };
+
+  const handleSetMemberClasses = async (member, templateIds) => {
+    const wanted = new Set(templateIds);
+    const current = enrollments.filter((e) => e.member_id === member.id && e.template_id);
+    for (const enrollment of current) {
+      if (!wanted.has(enrollment.template_id)) await apiService.removeEnrollment(enrollment.id);
+    }
+    const existing = new Set(current.map((e) => e.template_id));
+    for (const templateId of templateIds) {
+      if (!existing.has(templateId)) await apiService.enrollMemberInClass(member.id, templateId);
+    }
+    await loadData();
+  };
+
+  // ----- Timetable & packages -------------------------------------------------
+  const handleAddTemplate = async (newTemplate) => {
+    const created = await apiService.createTemplate(newTemplate);
+    setScheduleTemplates((current) => [...current, created]);
+    return created;
   };
 
   const handleDeleteTemplate = async (id) => {
-    try {
-      await apiService.deleteTemplate(id);
-      setScheduleTemplates((current) => current.filter((template) => template.id !== id));
-    } catch (err) {
-      console.error('Failed to delete template from backend:', err);
-      throw err;
-    }
+    await apiService.deleteTemplate(id);
+    setScheduleTemplates((current) => current.filter((template) => template.id !== id));
+    setEnrollments((current) => current.filter((e) => e.template_id !== id));
   };
 
   const handleUpdateTemplate = async (updatedTemplate) => {
-    try {
-      const updated = await apiService.updateTemplate(updatedTemplate.id, updatedTemplate);
-      setScheduleTemplates((current) => current.map((template) => template.id === updated.id
-        ? { ...updated, enrolled: template.enrolled || 0 }
-        : template));
-      return updated;
-    } catch (err) {
-      console.error('Failed to update template on backend:', err);
-      throw err;
-    }
+    const updated = await apiService.updateTemplate(updatedTemplate.id, updatedTemplate);
+    setScheduleTemplates((current) => current.map((template) => (template.id === updated.id ? updated : template)));
+    return updated;
+  };
+
+  const handleLoadOfficialTimetable = async () => {
+    const result = await apiService.loadOfficialTimetable();
+    await loadData();
+    return result;
   };
 
   const handleAddPlan = async (plan) => {
@@ -271,7 +330,7 @@ export const useGymData = () => {
     delete payload.created_at;
     delete payload.updated_at;
     const updated = await apiService.updatePlan(plan.id, payload);
-    setMembershipPlans((current) => current.map((item) => item.id === updated.id ? updated : item));
+    setMembershipPlans((current) => current.map((item) => (item.id === updated.id ? updated : item)));
     return updated;
   };
 
@@ -280,193 +339,52 @@ export const useGymData = () => {
     setMembershipPlans((current) => current.filter((plan) => plan.id !== id));
   };
 
-  const handleUpdateSessionStatus = async (sessionId, newStatus) => {
-    try {
-      try {
-        localStorage.setItem(`gym_session_status_${sessionId}`, newStatus);
-      } catch {
-        // Browser storage can be unavailable in private contexts.
-      }
-      await apiService.updateSessionStatus(sessionId, newStatus);
-      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: newStatus } : s));
-      await loadData();
-    } catch (err) {
-      console.warn('Could not update session status on backend, keeping local state:', err);
-      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: newStatus } : s));
-    }
+  const handleLoadOfficialPackages = async () => {
+    const result = await apiService.loadOfficialPackages();
+    setMembershipPlans(await apiService.getPlans());
+    return result;
   };
 
-  const handleUpdateMember = async (updatedMember) => {
-    try {
-      if (updatedMember.isGroup) {
-        const enrolled = await apiService.freezeFamily(updatedMember.parentPhone, updatedMember.isFrozen);
-        setMembers(prev => prev.map(m => {
-          if (m.parentPhone === updatedMember.parentPhone) {
-            const updatedTrainee = enrolled.find(t => t.id === m.id);
-            return updatedTrainee || m;
-          }
-          return m;
-        }));
-        setSelectedMember(updatedMember);
-      } else {
-        const saved = await apiService.updateMember(updatedMember.id, updatedMember);
-        await apiService.freezeMember(updatedMember.id, updatedMember.isFrozen);
-        setMembers(prev => prev.map(m => m.id === updatedMember.id ? saved : m));
-        
-        if (updatedMember.parentPhone) {
-          setSelectedMember(prev => {
-            if (prev && prev.isGroup && prev.parentPhone === updatedMember.parentPhone) {
-              return prev;
-            }
-            return saved;
-          });
-        } else {
-          setSelectedMember(saved);
-        }
-      }
-      await loadData();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to update member: ' + err.message);
-    }
-  };
-
-  const handleRenewMember = async (target, newExpiryDate, planId = null) => {
-    try {
-      if (target.isGroup && target.trainees) {
-        await Promise.all(
-          target.trainees.map(t =>
-            apiService.updateMember(t.id, {
-              ...t,
-              expiryDate: newExpiryDate,
-              ...(planId ? { planId } : {})
-            })
-          )
-        );
-      } else {
-        await apiService.updateMember(target.id, {
-          ...target,
-          expiryDate: newExpiryDate,
-          ...(planId ? { planId } : {})
-        });
-      }
-      await loadData();
-    } catch (err) {
-      console.error('Renewal error:', err);
-      alert('Failed to renew membership: ' + (err.message || 'Unknown error'));
-      throw err;
-    }
-  };
-
-  const handleDeleteMember = async (memberId) => {
-    try {
-      await apiService.deleteMember(memberId);
-      setMembers(prev => prev.filter(m => m.id !== memberId));
-      setSelectedMember(null);
-      await loadData();
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
-  };
-
-  const calculateDaysRemaining = (date) => {
-    if (!date) return 9999;
-    const today = new Date();
-    const expiry = new Date(date);
-    const diffTime = expiry - today;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const getProcessedMembers = () => {
-    const groups = new Map();
-    const result = [];
-
-    members.forEach(m => {
-      if (m.parentPhone) {
-        if (!groups.has(m.parentPhone)) {
-          const parentName = m.parentName || m.parentPhone;
-          const firstName = (m.parentName && m.parentName !== m.parentPhone)
-            ? m.parentName.split(' ')[0]
-            : m.name.split(' ')[0];
-          groups.set(m.parentPhone, {
-            isGroup: true,
-            id: m.parentPhone,
-            parentName: parentName,
-            parentPhone: m.parentPhone,
-            trainees: [m],
-            name: `${firstName}'s Family`,
-            plan: 'Family Group',
-            image: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=random&color=fff`,
-            expiryDate: m.expiryDate,
-            isFrozen: m.isFrozen
-          });
-        } else {
-          const group = groups.get(m.parentPhone);
-          group.trainees.push(m);
-          if (m.parentName && (!group.parentName || group.parentName === group.parentPhone)) {
-            group.parentName = m.parentName;
-            const firstName = m.parentName.split(' ')[0];
-            group.name = `${firstName}'s Family`;
-            group.image = `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=random&color=fff`;
-          }
-          if (m.isFrozen) group.isFrozen = true;
-        }
-      } else {
-        result.push(m);
-      }
+  // ----- Sessions -------------------------------------------------------------
+  /** Persist status/checklist changes; projected classes become recorded sessions. */
+  const saveSession = useCallback(async (session, changes) => {
+    const saved = await apiService.saveSession(session, changes, scheduleTemplates);
+    setSessions((current) => {
+      const withoutOld = current.filter((s) => s.id !== saved.id);
+      return [saved, ...withoutOld];
     });
+    return saved;
+  }, [scheduleTemplates]);
 
-    groups.forEach(g => {
-      g.plan = `Family Group (${g.trainees.length} Kids)`;
-      result.push(g);
-    });
+  const checkIn = async (memberId, options) => {
+    await apiService.checkInMember(memberId, options);
+    setInClubList((prev) => (prev.includes(memberId) ? prev : [...prev, memberId]));
+  };
 
-    let filtered = result;
+  const checkOut = async (memberId) => {
+    await apiService.checkOutMember(memberId);
+    setInClubList((prev) => prev.filter((id) => id !== memberId));
+  };
 
-    if (filterType === 'expiring') {
-      filtered = filtered.filter(item => {
-        if (item.isGroup) {
-          return (item.trainees || []).some(t => {
-            const days = calculateDaysRemaining(t.expiryDate);
-            return days <= 7;
-          }) || (item.expiryDate && calculateDaysRemaining(item.expiryDate) <= 7);
-        } else {
-          const days = calculateDaysRemaining(item.expiryDate);
-          return days <= 7;
-        }
-      });
-    }
-
-    if (!searchQuery) return filtered;
-    
-    const lowerQ = searchQuery.toLowerCase();
-    return filtered.filter(item => {
-      if (item.isGroup) {
-        if (item.name.toLowerCase().includes(lowerQ) || item.parentPhone.includes(lowerQ)) return true;
-        return item.trainees.some(t => t.name.toLowerCase().includes(lowerQ) || (t.phone && t.phone.toLowerCase().includes(lowerQ)));
-      } else {
-        return item.name.toLowerCase().includes(lowerQ) || (item.phone && item.phone.toLowerCase().includes(lowerQ));
-      }
-    });
+  const refreshNotificationJobs = async () => {
+    setNotificationJobs(await apiService.getNotificationJobs());
   };
 
   return {
     isAuthenticated,
     setIsAuthenticated,
     currentUser,
-    members,
-    setMembers,
+    members: enrichedMembers,
+    families,
     sessions,
-    setSessions,
     inClubList,
-    setInClubList,
-    scheduleTemplates,
+    scheduleTemplates: templatesWithEnrollment,
     membershipPlans,
+    enrollments,
     loading,
+    hasLoaded,
     error,
     notificationJobs,
-    setNotificationJobs,
     selectedMember,
     setSelectedMember,
     searchQuery,
@@ -479,13 +397,19 @@ export const useGymData = () => {
     handleAddTemplate,
     handleDeleteTemplate,
     handleUpdateTemplate,
+    handleLoadOfficialTimetable,
     handleAddPlan,
     handleUpdatePlan,
     handleDeletePlan,
-    handleUpdateSessionStatus,
+    handleLoadOfficialPackages,
+    saveSession,
+    checkIn,
+    checkOut,
+    refreshNotificationJobs,
     handleUpdateMember,
     handleRenewMember,
     handleDeleteMember,
-    processedMembers: getProcessedMembers()
+    handleSetMemberClasses,
+    processedMembers
   };
 };

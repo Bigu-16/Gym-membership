@@ -1,110 +1,68 @@
-import { ACTIVITIES, PERSONAL_TRAINING_PROGRAMS } from '../../config/scheduleConfig';
+import { toggleButtonClass, sectionTitleClass } from './fieldStyles';
 
-const ProgramTypeSelector = ({
-  trainingType,
-  setTrainingType,
-  personalType,
-  setPersonalType,
-  families,
-  setFamilies,
-  selectedPackage
-}) => {
-  return (
-    <section className="space-y-6">
-      <div className="flex items-center gap-4 mb-2">
-        <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <h2 className="text-xs uppercase tracking-luxury font-bold">Select Training Program</h2>
+const OPTIONS = [
+  {
+    value: 'group',
+    title: 'Group Training',
+    description: 'Package with weekly classes at the center'
+  },
+  {
+    value: 'personal',
+    title: 'Personal Training',
+    description: 'One-to-one sessions inside opening hours (4–9 PM)'
+  }
+];
+
+const ProgramTypeSelector = ({ trainingType, onTrainingTypeChange, registrant, onRegistrantChange }) => (
+  <section className="space-y-6">
+    <div className="flex items-center gap-4 mb-2">
+      <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)]">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <button 
+      <h2 className={sectionTitleClass}>Select Training Program</h2>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {OPTIONS.map((option) => (
+        <button
+          key={option.value}
           type="button"
-          onClick={() => {
-            setTrainingType('group');
-            setFamilies([families[0]].map(fam => ({
-              ...fam,
-              trainees: fam.trainees.map(t => {
-                return {
-                  ...t,
-                  service: selectedPackage?.program || ACTIVITIES[0],
-                  frequency: `${selectedPackage?.classesPerWeek || 3} classes/week`,
-                  packageTemplateId: selectedPackage?.id
-                };
-              })
-            })));
-          }}
-          className={`training-type-btn ${trainingType === 'group' ? 'active' : ''}`}
+          aria-pressed={trainingType === option.value}
+          onClick={() => onTrainingTypeChange(option.value)}
+          className={`training-type-btn ${trainingType === option.value ? 'active' : ''}`}
         >
-          <div className="icon-container">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider mb-1">Group Training</h3>
-            <p className="text-[10px] opacity-60">Standard classes at the gym facility</p>
+            <h3 className="text-sm font-bold uppercase tracking-wider mb-1">{option.title}</h3>
+            <p className="text-[10px] opacity-60">{option.description}</p>
           </div>
         </button>
+      ))}
+    </div>
 
-        <div className="space-y-4">
-          <button 
-            type="button"
-            onClick={() => {
-              setTrainingType('personal');
-              setFamilies(prev => prev.map(fam => ({
-                ...fam,
-                trainees: fam.trainees.map(t => {
-                  const current = t.service || 'Taekwondo';
-                  const matchedPT = PERSONAL_TRAINING_PROGRAMS.find(p => p.toLowerCase().includes(current.toLowerCase()));
-                  return {
-                    ...t,
-                    service: matchedPT || PERSONAL_TRAINING_PROGRAMS[0]
-                  };
-                })
-              })));
-            }}
-            className={`training-type-btn w-full ${trainingType === 'personal' ? 'active' : ''}`}
-          >
-            <div className="icon-container">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider mb-1">Personal Training</h3>
-              <p className="text-[10px] opacity-60">Tailored sessions and flexible timing</p>
-            </div>
-          </button>
-          
-          {trainingType === 'personal' && (
-            <div className="flex gap-2 p-1 glass-card rounded-xl">
-              <button 
-                type="button"
-                onClick={() => {
-                  setPersonalType('individual');
-                  setFamilies([families[0]]);
-                }}
-                className={`flex-1 py-2 text-[10px] uppercase tracking-luxury font-bold rounded-lg transition-all ${personalType === 'individual' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'text-[var(--text-secondary)]'}`}
-              >
-                Individual
-              </button>
-              <button 
-                type="button"
-                onClick={() => setPersonalType('group')}
-                className={`flex-1 py-2 text-[10px] uppercase tracking-luxury font-bold rounded-lg transition-all ${personalType === 'group' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'text-[var(--text-secondary)]'}`}
-              >
-                Group (Multi-Family)
-              </button>
-            </div>
-          )}
-        </div>
+    <div className="space-y-2">
+      <p className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Who is registering?</p>
+      <div className="flex flex-col sm:flex-row gap-2 p-1 glass-card rounded-xl max-w-xl" role="group" aria-label="Who is registering">
+        <button
+          type="button"
+          aria-pressed={registrant === 'child'}
+          onClick={() => onRegistrantChange('child')}
+          className={toggleButtonClass(registrant === 'child')}
+        >
+          Child (parent/guardian registers)
+        </button>
+        <button
+          type="button"
+          aria-pressed={registrant === 'adult'}
+          onClick={() => onRegistrantChange('adult')}
+          className={toggleButtonClass(registrant === 'adult')}
+        >
+          Adult (registers themself)
+        </button>
       </div>
-    </section>
-  );
-};
+    </div>
+  </section>
+);
 
 export default ProgramTypeSelector;

@@ -28,3 +28,17 @@ def test_communication_migration_creates_each_enum_once():
 
     assert sql.count("CREATE TYPE notification_channel_enum") == 1
     assert sql.count("CREATE TYPE announcement_status_enum") == 1
+
+
+def test_gym_operations_migration_sql():
+    sql = render_migration_sql("20261014_0006_gym_operations.py")
+
+    assert "CREATE TABLE business_profiles" in sql
+    assert "DROP CONSTRAINT IF EXISTS members_phone_key" in sql
+    assert "ALTER TABLE members ALTER COLUMN phone DROP NOT NULL" in sql
+    assert sql.count("CREATE TYPE payment_method_enum") == 1
+    assert sql.count("CREATE TYPE payment_kind_enum") == 1
+    assert "CREATE TABLE payments" in sql
+    # Duplicate open visits are closed before the one-open-visit index is created.
+    assert sql.index("UPDATE check_ins SET check_out_time") < sql.index("CREATE UNIQUE INDEX uq_check_ins_open_member")
+    assert "WHERE check_out_time IS NULL" in sql

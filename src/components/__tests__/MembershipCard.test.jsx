@@ -1,7 +1,7 @@
-import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import MembershipCard from '../MembershipCard';
+import { toDateKey } from '../../utils/classSessions';
 
 describe('MembershipCard Component', () => {
   const mockOnManage = vi.fn();
@@ -14,7 +14,7 @@ describe('MembershipCard Component', () => {
     id: 1,
     name: 'Alice Cooper',
     plan: 'Elite Performance',
-    expiryDate: futureDate.toISOString(),
+    expiryDate: toDateKey(futureDate),
     image: 'https://avatar.com/alice',
     isFrozen: false,
     isGroup: false
@@ -89,5 +89,25 @@ describe('MembershipCard Component', () => {
     expect(screen.getByText("Jack's Family")).toBeInTheDocument();
     expect(screen.getByText('Kid 1')).toBeInTheDocument();
     expect(screen.getByText('Kid 2')).toBeInTheDocument();
+  });
+
+  it('sizes the progress bar from the package duration, not a fixed 30 days', () => {
+    const in45 = new Date();
+    in45.setDate(in45.getDate() + 45);
+    const threeMonthPlan = { id: 3, duration_months: 3, duration_days: null };
+    const { rerender } = render(
+      <MembershipCard member={{ ...activeMember, expiryDate: toDateKey(in45), planDetails: threeMonthPlan }} onManage={mockOnManage} />
+    );
+    // 45 of 90 days left = 50%, where the old fixed 30-day bar showed 100%.
+    expect(screen.getByTestId('membership-progress')).toHaveStyle({ width: '50%' });
+
+    const yearPlan = { id: 5, duration_months: 12 };
+    rerender(<MembershipCard member={{ ...activeMember, expiryDate: toDateKey(in45), planDetails: yearPlan }} onManage={mockOnManage} />);
+    expect(screen.getByTestId('membership-progress')).toHaveStyle({ width: '13%' });
+  });
+
+  it('shows "No expiry set" when there is no expiry date', () => {
+    render(<MembershipCard member={{ ...activeMember, expiryDate: null }} onManage={mockOnManage} />);
+    expect(screen.getByText('No expiry set')).toBeInTheDocument();
   });
 });

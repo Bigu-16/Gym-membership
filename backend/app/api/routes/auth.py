@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.config import settings
-from app.core.rate_limit import login_rate_limiter
+from app.core.rate_limit import email_lookup_rate_limiter, login_rate_limiter
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db import get_db_session
 from app.models import AppUser
@@ -17,9 +17,11 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/check-email", response_model=CheckEmailResponse)
 async def check_email(
+    request: Request,
     payload: CheckEmailRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> CheckEmailResponse:
+    await email_lookup_rate_limiter.check(request)
     email = payload.email.strip().lower()
     user_id = await db.scalar(select(AppUser.id).where(AppUser.email == email))
     return CheckEmailResponse(exists=user_id is not None)

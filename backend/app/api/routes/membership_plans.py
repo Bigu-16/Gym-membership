@@ -6,6 +6,7 @@ from app.api.deps import get_current_admin_user, get_current_user
 from app.db import get_db_session
 from app.models import AppUser, Member, MembershipPlan
 from app.schemas.membership_plan import MembershipPlanCreate, MembershipPlanResponse, MembershipPlanUpdate
+from app.services.catalog import sync_official_packages
 
 router = APIRouter(prefix="/plans", tags=["plans"])
 
@@ -42,6 +43,17 @@ async def create_plan(
     await db.commit()
     await db.refresh(plan)
     return MembershipPlanResponse.model_validate(plan)
+
+
+@router.post("/sync-official")
+async def load_official_packages(
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_admin_user),
+) -> dict[str, int]:
+    """Create missing official packages and correct their prices. Never deletes plans."""
+    result = await sync_official_packages(db)
+    await db.commit()
+    return result
 
 
 @router.get("/{plan_id}", response_model=MembershipPlanResponse)

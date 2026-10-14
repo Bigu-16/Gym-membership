@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.timeutils import gym_today
 from app.models import Announcement, Member, MembershipPlan
 from app.models.enums import AnnouncementStatus, NotificationChannel, NotificationType
 from app.services.messaging.templates import build_announcement_message
@@ -31,7 +32,7 @@ async def resolve_recipients(session: AsyncSession, filters: dict) -> list[Membe
 
     expired = filters.get("expired")
     if expired is not None:
-        today = date.today()
+        today = gym_today()
         if expired:
             stmt = stmt.where(Member.expiry_date.is_not(None), Member.expiry_date < today)
         else:

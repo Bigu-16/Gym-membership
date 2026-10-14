@@ -25,3 +25,4 @@ class MembershipPlan(TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     members = relationship("Member", back_populates="plan")
+    payments = relationship("Payment", back_populates="plan")

@@ -16,14 +16,15 @@ const Notifications = ({ jobs = [], members = [], onTriggerTask }) => {
     if (member) {
       return {
         name: member.name,
-        phone: member.phone,
+        // Children have no phone of their own; messages go to the parent.
+        phone: job.recipient || member.phone || member.parentPhone || '—',
         image: member.image,
       };
     }
     // Fallback to payload
     return {
-      name: job.payload?.member_name || 'System Operator',
-      phone: job.payload?.phone || 'N/A',
+      name: job.payload?.member_name || 'Former member',
+      phone: job.recipient || job.payload?.phone || '—',
       image: `https://ui-avatars.com/api/?name=${encodeURIComponent(job.payload?.member_name || 'System')}&background=random&color=fff`,
     };
   };
@@ -61,7 +62,7 @@ const Notifications = ({ jobs = [], members = [], onTriggerTask }) => {
       recipient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       recipient.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (job.error_message && job.error_message.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      job.provider.toLowerCase().includes(searchTerm.toLowerCase());
+      (job.provider || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || job.status === statusFilter;
     const matchesType = typeFilter === 'all' || job.notification_type === typeFilter;
@@ -88,7 +89,7 @@ const Notifications = ({ jobs = [], members = [], onTriggerTask }) => {
         minute: '2-digit',
         second: '2-digit',
       });
-    } catch (e) {
+    } catch {
       return dateString;
     }
   };
@@ -98,7 +99,7 @@ const Notifications = ({ jobs = [], members = [], onTriggerTask }) => {
       {/* Task Controls & Task Feedback Banner */}
       <section className="glass-card p-6 border border-[var(--glass-border)]">
         <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold mb-4">
-          Control Panel & Celery Routines
+          Message tasks
         </h2>
         
         {taskStatus && (

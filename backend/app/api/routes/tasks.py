@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,26 +11,35 @@ from app.services.demo_data import ADMIN_EMAIL, ADMIN_PASSWORD, STAFF_EMAIL, STA
 from app.tasks.notifications import process_pending_notification_jobs, send_membership_expiry_reminders
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+logger = logging.getLogger(__name__)
+
+
+def enqueue(task) -> dict[str, str]:
+    try:
+        result = task.delay()
+    except Exception as exc:  # broker (Redis) unreachable or misconfigured
+        logger.exception("Failed to queue %s", task.name)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The background message queue is unavailable. Try again later.",
+        ) from exc
+    if not result.id:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to queue task")
+    return {"task_id": result.id, "status": "queued"}
 
 
 @router.post("/membership-expiry-reminders", status_code=status.HTTP_202_ACCEPTED)
 async def trigger_membership_expiry_reminders(
     _: AppUser = Depends(get_current_admin_user),
 ) -> dict[str, str]:
-    task = send_membership_expiry_reminders.delay()
-    if not task.id:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to queue task")
-    return {"task_id": task.id, "status": "queued"}
+    return enqueue(send_membership_expiry_reminders)
 
 
 @router.post("/process-notification-jobs", status_code=status.HTTP_202_ACCEPTED)
 async def trigger_process_notification_jobs(
     _: AppUser = Depends(get_current_admin_user),
 ) -> dict[str, str]:
-    task = process_pending_notification_jobs.delay()
-    if not task.id:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to queue task")
-    return {"task_id": task.id, "status": "queued"}
+    return enqueue(process_pending_notification_jobs)
 
 
 @router.post("/seed-demo-data", status_code=status.HTTP_200_OK)

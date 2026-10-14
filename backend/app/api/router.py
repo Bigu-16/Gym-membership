@@ -10,6 +10,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.members import router as members_router
 from app.api.routes.membership_plans import router as membership_plans_router
 from app.api.routes.notifications import router as notifications_router
+from app.api.routes.payments import router as payments_router
 from app.api.routes.schedule import router as schedule_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.users import router as users_router
@@ -23,6 +24,7 @@ api_router.include_router(dashboard_router)
 api_router.include_router(members_router)
 api_router.include_router(membership_plans_router)
 api_router.include_router(notifications_router)
+api_router.include_router(payments_router)
 api_router.include_router(schedule_router)
 api_router.include_router(enrollments_router)
 api_router.include_router(check_ins_router)

@@ -1,138 +1,74 @@
-import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import Schedule from '../Schedule';
 
-describe('Schedule Component', () => {
-  const mockOnAddTemplate = vi.fn();
-  const mockOnDeleteTemplate = vi.fn();
-  const mockOnUpdateTemplate = vi.fn();
-  const mockOnUpdateSessionStatus = vi.fn();
+const NOW = new Date(2026, 9, 14, 16, 30, 0); // Wednesday, during the 4 PM class
 
-  const mockTemplates = [
-    {
-      id: 1,
-      className: 'Kids Taekwondo',
-      days: 'Mon, Wed',
-      time: '04:00 PM - 05:00 PM',
-      capacity: 10,
-      enrolled: 2
-    }
-  ];
+const templates = [
+  { id: 1, className: 'Kids Taekwondo', days: 'Mon, Wed, Fri', time: '16:00 - 17:00', capacity: 15, enrolled: 1, trainer: 'Coach Nasser' },
+  { id: 2, className: 'Kids Taekwondo', days: 'Mon, Wed', time: '17:00 - 18:00', capacity: 15, enrolled: 0 },
+  { id: 3, className: 'Little Kids Karate', days: 'Tue, Thu, Sat', time: '16:00 - 17:00', capacity: 12, enrolled: 1 }
+];
 
-  const mockSessions = [
-    {
-      id: 101,
-      title: 'Kids Taekwondo Session',
-      trainer: 'Master Kim',
-      location: 'Studio B',
-      start: new Date(),
-      end: new Date(Date.now() + 3600000),
-      status: 'upcoming',
-      type: 'group',
-      checklist: [
-        { id: 1, text: 'Warm up', checked: false }
-      ]
-    }
-  ];
+const members = [
+  { id: 1, name: 'Hamdan Al Muharrami', age: 8, parentName: 'Safiya Al Muharrami', image: 'h.png', enrolledTemplateIds: [1] },
+  { id: 2, name: 'Mouza Al Muharrami', age: 3, parentName: 'Safiya Al Muharrami', image: 'm.png', enrolledTemplateIds: [3] }
+];
 
-  const mockMembers = [
-    { id: 1, name: 'Bran Stark', schedule: { slot: 'Kids Taekwondo: Mon, Wed @ 04:00 PM - 05:00 PM' } }
-  ];
-
+describe('Schedule', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(NOW);
   });
 
-  it('renders schedule header and default week view calendars', () => {
-    render(
-      <Schedule
-        sessions={mockSessions}
-        scheduleTemplates={mockTemplates}
-        members={mockMembers}
-        onAddTemplate={mockOnAddTemplate}
-        onDeleteTemplate={mockOnDeleteTemplate}
-        onUpdateTemplate={mockOnUpdateTemplate}
-        onUpdateSessionStatus={mockOnUpdateSessionStatus}
-      />
-    );
-
-    // Should render view select buttons
-    expect(screen.getByText('Week')).toBeInTheDocument();
-    expect(screen.getByText('Month')).toBeInTheDocument();
-    expect(screen.getByText('Day')).toBeInTheDocument();
-    expect(screen.queryByText('Templates')).not.toBeInTheDocument();
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it('projects recurring templates onto calendar days and shows enrolled trainees when selected', async () => {
-    render(
-      <Schedule
-        sessions={[]}
-        scheduleTemplates={mockTemplates}
-        members={mockMembers}
-        onAddTemplate={mockOnAddTemplate}
-        onDeleteTemplate={mockOnDeleteTemplate}
-        onUpdateTemplate={mockOnUpdateTemplate}
-        onUpdateSessionStatus={mockOnUpdateSessionStatus}
-      />
-    );
+  it('shows the week with one-hour classes on the right days and 12-hour labels', () => {
+    render(<Schedule sessions={[]} scheduleTemplates={templates} members={members} saveSession={vi.fn()} />);
 
-    // Switch to month view
-    fireEvent.click(screen.getByText('Month'));
-    const classBadges = await screen.findAllByText(/Kids Taekwondo/i);
-    expect(classBadges.length).toBeGreaterThan(0);
-
-    // Click on the projected session badge to open drawer
-    fireEvent.click(classBadges[0]);
-
-    // Drawer should show details, checklist, and enrolled trainees
-    expect(screen.getByText('Session Checklist')).toBeInTheDocument();
-    expect(screen.getByText('Enrolled Trainees')).toBeInTheDocument();
-    expect(screen.getByText('Bran Stark')).toBeInTheDocument();
+    expect(screen.getAllByText('Kids Taekwondo')).toHaveLength(5); // Mon x2, Wed x2, Fri x1
+    expect(screen.getAllByText('Little Kids Karate')).toHaveLength(3);
+    expect(screen.getAllByText(/4:00–5:00 PM/).length).toBeGreaterThan(0);
+    expect(screen.getByText('4 PM')).toBeInTheDocument();
+    expect(screen.queryByText('12 AM')).not.toBeInTheDocument();
   });
 
-  it('correctly handles 24h template times and splits overlapping sessions side-by-side in week view', () => {
-    const multiTemplates = [
-      {
-        id: 1,
-        className: 'Elite Performance',
-        days: 'Mon, Wed, Fri',
-        time: '14:00', // 2:00 PM
-        capacity: 12
-      },
-      {
-        id: 2,
-        className: 'Personal Training',
-        days: 'Mon, Tue, Wed, Thu, Fri',
-        time: '14:00', // Same time to test collision layout
-        capacity: 1
-      }
-    ];
+  it('opens a class with its enrolled trainees and live time remaining', () => {
+    render(<Schedule sessions={[]} scheduleTemplates={templates} members={members} saveSession={vi.fn()} />);
 
-    render(
-      <Schedule
-        sessions={[]}
-        scheduleTemplates={multiTemplates}
-        members={[]}
-        onAddTemplate={mockOnAddTemplate}
-        onDeleteTemplate={mockOnDeleteTemplate}
-        onUpdateTemplate={mockOnUpdateTemplate}
-        onUpdateSessionStatus={mockOnUpdateSessionStatus}
-      />
+    fireEvent.click(screen.getByRole('button', { name: 'Day' }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Kids Taekwondo/ })[0]);
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Hamdan Al Muharrami, 8')).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Mouza/)).not.toBeInTheDocument();
+    expect(within(dialog).getByText('30 min')).toBeInTheDocument();
+  });
+
+  it('keeps the dialog on the class after it is saved and gets a real id', async () => {
+    const saveSession = vi.fn();
+    const { rerender } = render(
+      <Schedule sessions={[]} scheduleTemplates={templates} members={members} saveSession={saveSession} />
     );
+    saveSession.mockImplementation(async (session, changes) => {
+      const saved = { ...session, ...changes, id: 900, isProjected: false };
+      rerender(<Schedule sessions={[saved]} scheduleTemplates={templates} members={members} saveSession={saveSession} />);
+      return saved;
+    });
 
-    // Both sessions should be rendered
-    const eliteCards = screen.getAllByText('Elite Performance');
-    const ptCards = screen.getAllByText('Personal Training');
-    expect(eliteCards.length).toBeGreaterThan(0);
-    expect(ptCards.length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Day' }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Kids Taekwondo/ })[0]);
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Start class' }));
 
-    // Verify sub-column collision styling: width should be ~50%
-    const eliteCardContainer = eliteCards[0].closest('.absolute');
-    const ptCardContainer = ptCards[0].closest('.absolute');
-    expect(eliteCardContainer).toBeInTheDocument();
-    expect(ptCardContainer).toBeInTheDocument();
-    expect(eliteCardContainer.style.width).toContain('50%');
-    expect(ptCardContainer.style.width).toContain('50%');
+    await waitFor(() => expect(within(screen.getByRole('dialog')).getByText('In progress')).toBeInTheDocument());
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Mark completed' })).toBeInTheDocument();
+    expect(saveSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('points to the timetable loader when no classes exist', () => {
+    render(<Schedule sessions={[]} scheduleTemplates={[]} members={[]} saveSession={vi.fn()} />);
+    expect(screen.getByText(/Load official timetable/)).toBeInTheDocument();
   });
 });

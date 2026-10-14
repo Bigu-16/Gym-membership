@@ -43,7 +43,8 @@ const PackageTemplateModal = ({ plan, isOpen, onClose, onSave }) => {
         currency: 'AED',
         included_items: includedItems.split(',').map((item) => item.trim()).filter(Boolean),
         description: form.description?.trim() || null,
-        duration_days: Number(form.duration_days || durationMonths * 30),
+        // Always follows the months field so an edited package never keeps a stale length.
+        duration_days: durationMonths % 12 === 0 ? (durationMonths / 12) * 365 : durationMonths * 30,
         sort_order: Number(form.sort_order || 0),
         is_active: Boolean(form.is_active)
       });

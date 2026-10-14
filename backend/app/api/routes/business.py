@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_admin_user, get_current_user
 from app.db import get_db_session
-from app.models import BusinessProfile
+from app.models import AppUser, BusinessProfile
 from app.schemas.business import BusinessProfileRequest, BusinessProfileResponse, PaymentProvider
 from app.services.payment_providers import get_payment_providers, normalize_account_details
 
@@ -16,7 +17,10 @@ async def payment_providers() -> list[PaymentProvider]:
 
 
 @router.get("/business", response_model=BusinessProfileResponse)
-async def get_business(db: AsyncSession = Depends(get_db_session)) -> BusinessProfileResponse:
+async def get_business(
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_user),
+) -> BusinessProfileResponse:
     profile = await _get_or_create_business_profile(db)
     return BusinessProfileResponse(
         accountDetails=[normalize_account_details_item for normalize_account_details_item in profile.account_details],
@@ -28,6 +32,7 @@ async def get_business(db: AsyncSession = Depends(get_db_session)) -> BusinessPr
 async def patch_business(
     payload: BusinessProfileRequest,
     db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_admin_user),
 ) -> BusinessProfileResponse:
     profile = await _get_or_create_business_profile(db)
     account_details = normalize_account_details(payload.accountDetails)

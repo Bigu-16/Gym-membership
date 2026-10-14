@@ -21,7 +21,11 @@ const AppHeader = ({
             ) : activeTab === 'schedule' ? (
               <>Training <span className="font-bold">Schedule</span></>
             ) : activeTab === 'templates' ? (
-              <>Template <span className="font-bold">Studio</span></>
+              <>Weekly <span className="font-bold">Timetable</span></>
+            ) : activeTab === 'packages' ? (
+              <>Membership <span className="font-bold">Packages</span></>
+            ) : activeTab === 'notifications' ? (
+              <>Member <span className="font-bold">Messages</span></>
             ) : activeTab === 'analytics' ? (
               <>Business <span className="font-bold">Analytics</span></>
             ) : (
@@ -74,7 +78,7 @@ const AppHeader = ({
           <span className="text-xl sm:text-2xl font-semibold">{totalMembersCount}</span>
         </div>
         <div className="glass-card px-4 py-2.5 sm:px-6 sm:py-3 text-center md:text-left">
-          <span className="text-[9px] sm:text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-0.5">Active Now</span>
+          <span className="text-[9px] sm:text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-0.5">In Center</span>
           <span className="text-xl sm:text-2xl font-semibold text-emerald-500 dark:text-emerald-400">{activeNowCount}</span>
         </div>
       </div>

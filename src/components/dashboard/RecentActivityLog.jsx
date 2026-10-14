@@ -1,4 +1,11 @@
-import React from 'react';
+const formatWhen = (timestamp) => {
+  if (!timestamp) return '';
+  const when = new Date(timestamp);
+  const time = when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return when.toDateString() === new Date().toDateString()
+    ? time
+    : `${when.toLocaleDateString([], { day: 'numeric', month: 'short' })}, ${time}`;
+};
 
 const RecentActivityLog = ({
   recentActivities = [],
@@ -10,7 +17,7 @@ const RecentActivityLog = ({
         <svg className="w-4 h-4 text-[var(--text-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        Recent Activity Log
+        Recent activity
         {loadingStats && (
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-primary)] animate-ping ml-auto"></span>
         )}
@@ -18,7 +25,7 @@ const RecentActivityLog = ({
       
       {recentActivities.length === 0 ? (
         <p className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] italic text-center py-4">
-          No recent activity recorded today.
+          No check-ins recorded yet.
         </p>
       ) : (
         <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
@@ -49,7 +56,7 @@ const RecentActivityLog = ({
                   </div>
                 </div>
                 <div className="text-[9px] text-[var(--text-secondary)] whitespace-nowrap pt-0.5 font-mono">
-                  {act.timestamp ? new Date(act.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+                  {formatWhen(act.timestamp)}
                 </div>
               </div>
             );

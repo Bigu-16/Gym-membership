@@ -1,21 +1,34 @@
 from datetime import date, datetime
+from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.models.enums import Gender
-from app.schemas.validation import sanitize_plain_text, validate_person_name
+from app.models.enums import Gender, PaymentMethod
+from app.schemas.validation import (
+    normalize_emirates_id,
+    normalize_phone,
+    sanitize_plain_text,
+    validate_person_name,
+)
+
+# Little Kids Karate takes children from age 3; allow a little headroom below that.
+MIN_MEMBER_AGE = 2
+MAX_MEMBER_AGE = 100
 
 
 class MemberBase(BaseModel):
     name: str
-    phone: str
+    phone: str | None = None
+    whatsapp_number: str | None = None
+    emirates_id: str | None = None
     email: str | None = None
     telegram_chat_id: str | None = None
     parent_phone: str | None = None
     family_id: int | None = None
     gender: Gender | None = None
     medical_issues: str | None = None
-    age: int = Field(ge=0, le=130)
+    age: int = Field(ge=MIN_MEMBER_AGE, le=MAX_MEMBER_AGE)
     plan_id: int | None = None
     expiry_date: date | None = None
     messaging_opt_in: bool = True
@@ -25,26 +38,56 @@ class MemberBase(BaseModel):
     def validate_name(cls, value: str) -> str:
         return validate_person_name(value)
 
+    @field_validator("phone", "whatsapp_number", "parent_phone", mode="before")
+    @classmethod
+    def validate_phone(cls, value: str | None) -> str | None:
+        return normalize_phone(value)
+
+    @field_validator("emirates_id", mode="before")
+    @classmethod
+    def validate_emirates_id(cls, value: str | None) -> str | None:
+        return normalize_emirates_id(value)
+
     @field_validator("medical_issues", mode="before")
     @classmethod
     def sanitize_medical_issues(cls, value: str | None) -> str | None:
-        return sanitize_plain_text(value) if value is not None else None
+        if value is None:
+            return None
+        return sanitize_plain_text(value) or None
+
+
+class PaymentInput(BaseModel):
+    """Fee collected together with a registration or renewal."""
+
+    amount: Decimal = Field(ge=0)
+    method: PaymentMethod = PaymentMethod.cash
+    currency: str = Field(default="AED", min_length=3, max_length=3)
+    note: str | None = None
 
 
 class MemberCreate(MemberBase):
     is_frozen: bool = False
+    payment: PaymentInput | None = None
+
+    @model_validator(mode="after")
+    def require_contact(self) -> "MemberCreate":
+        if not self.phone and not self.parent_phone and self.family_id is None:
+            raise ValueError("phone is required for members registered without a parent/guardian")
+        return self
 
 
 class MemberUpdate(BaseModel):
     name: str | None = None
     phone: str | None = None
+    whatsapp_number: str | None = None
+    emirates_id: str | None = None
     email: str | None = None
     telegram_chat_id: str | None = None
     parent_phone: str | None = None
     family_id: int | None = None
     gender: Gender | None = None
     medical_issues: str | None = None
-    age: int | None = Field(default=None, ge=0, le=130)
+    age: int | None = Field(default=None, ge=MIN_MEMBER_AGE, le=MAX_MEMBER_AGE)
     plan_id: int | None = None
     expiry_date: date | None = None
     is_frozen: bool | None = None
@@ -55,23 +98,49 @@ class MemberUpdate(BaseModel):
     def validate_name(cls, value: str | None) -> str | None:
         return validate_person_name(value) if value is not None else None
 
+    @field_validator("phone", "whatsapp_number", "parent_phone", mode="before")
+    @classmethod
+    def validate_phone(cls, value: str | None) -> str | None:
+        return normalize_phone(value)
+
+    @field_validator("emirates_id", mode="before")
+    @classmethod
+    def validate_emirates_id(cls, value: str | None) -> str | None:
+        return normalize_emirates_id(value)
+
     @field_validator("medical_issues", mode="before")
     @classmethod
     def sanitize_medical_issues(cls, value: str | None) -> str | None:
-        return sanitize_plain_text(value) if value is not None else None
-
-    @field_validator("age")
-    @classmethod
-    def validate_age(cls, value: int | None) -> int:
         if value is None:
-            raise ValueError("age cannot be null")
-        return value
+            return None
+        return sanitize_plain_text(value) or None
+
+    @model_validator(mode="after")
+    def reject_null_required(self) -> "MemberUpdate":
+        for field in {"name", "age", "is_frozen", "messaging_opt_in"} & self.model_fields_set:
+            if getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
+        return self
 
 
-class MemberResponse(MemberBase):
+class MemberResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    name: str
+    phone: str | None
+    whatsapp_number: str | None = None
+    emirates_id: str | None = None
+    email: str | None = None
+    telegram_chat_id: str | None = None
+    parent_phone: str | None = None
+    family_id: int | None = None
+    gender: Gender | None = None
+    medical_issues: str | None = None
+    age: int
+    plan_id: int | None = None
+    expiry_date: date | None = None
+    messaging_opt_in: bool
     is_frozen: bool
     created_at: datetime
     updated_at: datetime
@@ -83,6 +152,13 @@ class FreezeRequest(BaseModel):
 
 class FamilyFreezeRequest(BaseModel):
     is_frozen: bool
+
+
+class RenewRequest(BaseModel):
+    plan_id: int | None = None
+    # "expiry" keeps any remaining days (renew early); "today" restarts from today.
+    start_from: Literal["expiry", "today"] = "expiry"
+    payment: PaymentInput | None = None
 
 
 class FamilyParentCreate(BaseModel):
@@ -97,6 +173,14 @@ class FamilyParentCreate(BaseModel):
     @classmethod
     def validate_name(cls, value: str) -> str:
         return validate_person_name(value)
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def validate_phone(cls, value: str) -> str:
+        normalized = normalize_phone(value)
+        if not normalized:
+            raise ValueError("parent phone is required")
+        return normalized
 
     @field_validator("address", "relationship", "notes", mode="before")
     @classmethod
@@ -113,16 +197,16 @@ class FamilyParentResponse(BaseModel):
     notes: str | None = None
 
 
+class FamilyMemberCreate(MemberCreate):
+    @model_validator(mode="after")
+    def require_contact(self) -> "FamilyMemberCreate":
+        # Family trainees are reached through the parent/guardian.
+        return self
+
+
 class FamilyCreate(BaseModel):
     parent: FamilyParentCreate
-    members: list[MemberCreate]
-
-    @model_validator(mode="after")
-    def validate_child_ages(self) -> "FamilyCreate":
-        for member in self.members:
-            if not 4 <= member.age <= 18:
-                raise ValueError("family child trainee age must be between 4 and 18")
-        return self
+    members: list[FamilyMemberCreate] = Field(min_length=1)
 
 
 class FamilyGroupResponse(BaseModel):

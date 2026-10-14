@@ -119,7 +119,7 @@ async def test_session_checklist_can_be_persisted(client, session_factory):
 
 
 def test_names_are_restricted_and_html_is_removed_before_validation():
-    member = MemberCreate(name="<b>Mary-Jane O'Neil</b>", phone="123", age=25, medical_issues="<p>Asthma</p>")
+    member = MemberCreate(name="<b>Mary-Jane O'Neil</b>", phone="+971500000123", age=25, medical_issues="<p>Asthma</p>")
     update = MemberUpdate(medical_issues="<script>alert(1)</script><b>None</b>")
     user = UserCreateRequest(full_name="<i>Jane Doe</i>", email="jane@example.com", password="secret")
     bootstrap = BootstrapAdminRequest(full_name="Admin User", email="admin@example.com", password="secret")
@@ -131,18 +131,33 @@ def test_names_are_restricted_and_html_is_removed_before_validation():
     assert bootstrap.full_name == "Admin User"
 
     with pytest.raises(ValidationError):
-        MemberCreate(name="<img src=x onerror=alert(1)>", phone="124", age=25)
+        MemberCreate(name="<img src=x onerror=alert(1)>", phone="+971500000124", age=25)
     with pytest.raises(ValidationError):
         UserCreateRequest(full_name="Jane123", email="jane2@example.com", password="secret")
 
 
-def test_family_members_must_be_child_trainees():
-    base = {"parent": {"name": "Jane Doe", "phone": "100"}}
-    valid = FamilyCreate(**base, members=[{"name": "John Doe", "phone": "101", "age": 4}])
-    assert valid.members[0].age == 4
+def test_family_trainees_need_no_phone_and_little_kids_are_allowed():
+    base = {"parent": {"name": "Safiya Al Muharrami", "phone": "+971500000100"}}
+    valid = FamilyCreate(**base, members=[{"name": "Mouza Al Muharrami", "age": 3}])
+    assert valid.members[0].age == 3
+    assert valid.members[0].phone is None
 
-    with pytest.raises(ValidationError, match="between 4 and 18"):
-        FamilyCreate(**base, members=[{"name": "John Doe", "phone": "102", "age": 19}])
+    with pytest.raises(ValidationError):
+        FamilyCreate(**base, members=[{"name": "Too Young", "age": 1}])
+
+
+def test_arabic_names_and_emirates_id_are_accepted():
+    member = MemberCreate(name="موزة المحرمي", phone="+971500000200", age=30, emirates_id="784198712345671")
+    assert member.name == "موزة المحرمي"
+    assert member.emirates_id == "784-1987-1234567-1"
+
+    with pytest.raises(ValidationError):
+        MemberCreate(name="Bad Id", phone="+971500000201", age=30, emirates_id="12345")
+
+
+def test_independent_members_need_a_phone():
+    with pytest.raises(ValidationError, match="phone is required"):
+        MemberCreate(name="No Phone", age=30)
 
 
 @pytest.mark.asyncio

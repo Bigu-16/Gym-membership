@@ -1,138 +1,93 @@
-import React from 'react';
+import { planOptionLabel } from './memberDetailsHelpers';
 
-const MemberEditForm = ({
-  editForm,
-  setEditForm,
-  setEditingMemberId,
-  handleSaveEdit
-}) => {
+const inputClass =
+  'w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)]';
+const labelClass = 'block text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1 mb-2';
+
+const MemberEditForm = ({ editForm, setEditForm, planOptions = [], isChild, onCancel, onSave, saving, errors = [] }) => {
+  const set = (field) => (event) => setEditForm({ ...editForm, [field]: event.target.value });
+
   return (
     <div className="glass-card p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       <div className="flex justify-between items-center pb-2 border-b border-[var(--glass-border)]">
-        <h4 className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold">
-          Edit Member Profile
-        </h4>
-        <button 
-          type="button"
-          onClick={() => setEditingMemberId(null)}
-          className="text-[10px] uppercase tracking-luxury text-rose-500 hover:text-rose-400 font-bold"
-        >
+        <h4 className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Edit Member Profile</h4>
+        <button type="button" onClick={onCancel} className="text-[10px] uppercase tracking-luxury text-rose-500 hover:text-rose-400 font-bold">
           Cancel
         </button>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Full Name</label>
-          <input 
-            required
-            type="text"
-            pattern="^[a-zA-Z\s\-']+$"
-            title="Names should only contain letters, spaces, hyphens, and apostrophes."
-            value={editForm.name}
-            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)]"
-            placeholder="Full name"
-          />
+        <div>
+          <label htmlFor="edit-name" className={labelClass}>Full Name</label>
+          <input id="edit-name" type="text" value={editForm.name} onChange={set('name')} className={inputClass} placeholder="Full name" />
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Phone Number</label>
-          <input 
-            required
-            type="text"
-            value={editForm.phone}
-            onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)]"
-            placeholder="Phone number"
-          />
+        <div>
+          <label htmlFor="edit-phone" className={labelClass}>Mobile {isChild ? '(optional)' : ''}</label>
+          <input id="edit-phone" type="tel" value={editForm.phone} onChange={set('phone')} className={inputClass} placeholder="Phone number" />
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Parent/Guardian Name (Optional)</label>
-          <input 
-            type="text"
-            value={editForm.parentName}
-            onChange={(e) => setEditForm({ ...editForm, parentName: e.target.value })}
-            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)]"
-            placeholder="Parent/guardian full name"
-          />
+        <div>
+          <label htmlFor="edit-whatsapp" className={labelClass}>WhatsApp Number</label>
+          <input id="edit-whatsapp" type="tel" value={editForm.whatsappNumber} onChange={set('whatsappNumber')} className={inputClass} placeholder="Same as mobile if blank" />
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Parent Phone (Optional)</label>
-          <input 
-            type="text"
-            value={editForm.parentPhone}
-            onChange={(e) => setEditForm({ ...editForm, parentPhone: e.target.value })}
-            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)]"
-            placeholder="Parent phone number"
-          />
+        <div>
+          <label htmlFor="edit-emirates" className={labelClass}>Emirates ID (optional)</label>
+          <input id="edit-emirates" type="text" value={editForm.emiratesId} onChange={set('emiratesId')} className={`${inputClass} font-mono`} placeholder="784-YYYY-NNNNNNN-N" />
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Gender</label>
-          <div className="relative">
-            <select 
-              value={editForm.gender}
-              onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)] appearance-none cursor-pointer pr-8"
-            >
+        <div>
+          <label htmlFor="edit-email" className={labelClass}>Email (optional)</label>
+          <input id="edit-email" type="email" value={editForm.email} onChange={set('email')} className={inputClass} placeholder="name@example.com" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="edit-gender" className={labelClass}>Gender</label>
+            <select id="edit-gender" value={editForm.gender} onChange={set('gender')} className={inputClass}>
+              {!editForm.gender && <option value="">—</option>}
               <option value="Male">Male</option>
               <option value="Female">Female</option>
-              <option value="Other">Other</option>
             </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
+          </div>
+          <div>
+            <label htmlFor="edit-age" className={labelClass}>Age</label>
+            <input id="edit-age" type="number" min={2} max={100} value={editForm.age} onChange={set('age')} className={inputClass} />
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Membership Plan</label>
-          <div className="relative">
-            <select 
-              value={editForm.planId}
-              onChange={(e) => setEditForm({ ...editForm, planId: parseInt(e.target.value, 10) })}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)] appearance-none cursor-pointer pr-8"
-            >
-              <option value={1}>Starter Access</option>
-              <option value={2}>Wellness Pro</option>
-              <option value={3}>Elite Performance</option>
-              <option value={4}>Family Group</option>
-            </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
+        <div>
+          <label htmlFor="edit-plan" className={labelClass}>Package</label>
+          <select id="edit-plan" value={editForm.planId} onChange={set('planId')} className={inputClass}>
+            <option value="">No package</option>
+            {planOptions.map((plan) => (
+              <option key={plan.id} value={plan.id}>{planOptionLabel(plan)}</option>
+            ))}
+          </select>
+          <p className="text-[10px] text-[var(--text-secondary)] mt-1 ml-1">
+            Changing the package here does not record a payment — use Renew Membership for a paid renewal.
+          </p>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Expiry Date</label>
-          <input 
-            type="date"
-            value={editForm.expiryDate}
-            onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })}
-            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)] cursor-pointer"
-          />
+        <div>
+          <label htmlFor="edit-expiry" className={labelClass}>Expiry Date</label>
+          <input id="edit-expiry" type="date" value={editForm.expiryDate} onChange={set('expiryDate')} className={`${inputClass} cursor-pointer`} />
         </div>
 
-        <div className="md:col-span-2 space-y-2">
-          <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">Medical Issues</label>
-          <textarea 
+        <div className="md:col-span-2">
+          <label htmlFor="edit-medical" className={labelClass}>Medical Conditions</label>
+          <textarea
+            id="edit-medical"
             value={editForm.medicalIssues}
-            onChange={(e) => setEditForm({ ...editForm, medicalIssues: e.target.value })}
-            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)] h-24 resize-none"
-            placeholder="List medical issues or 'None'"
+            onChange={set('medicalIssues')}
+            className={`${inputClass} h-24 resize-none`}
+            placeholder="Leave blank if none"
           />
         </div>
 
         <div className="md:col-span-2 flex items-center gap-3 py-2 px-1">
-          <input 
+          <input
             type="checkbox"
             id="messagingOptIn"
             checked={editForm.messagingOptIn}
@@ -140,25 +95,32 @@ const MemberEditForm = ({
             className="w-4 h-4 rounded border-[var(--glass-border)] accent-[var(--text-primary)] cursor-pointer"
           />
           <label htmlFor="messagingOptIn" className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] cursor-pointer select-none">
-            Opt-in to SMS/Whatsapp Messaging
+            Opt-in to SMS/WhatsApp messaging
           </label>
         </div>
       </div>
 
+      {errors.length > 0 && (
+        <div role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-500 space-y-0.5">
+          {errors.map((error) => <p key={error}>{error}</p>)}
+        </div>
+      )}
+
       <div className="flex gap-4 pt-4 border-t border-[var(--glass-border)]">
-        <button 
+        <button
           type="button"
-          onClick={() => setEditingMemberId(null)}
+          onClick={onCancel}
           className="flex-1 py-3 rounded-xl bg-transparent border border-[var(--glass-border)] text-[10px] uppercase tracking-luxury font-bold hover:bg-[var(--glass-border)] transition-all"
         >
           Cancel
         </button>
-        <button 
+        <button
           type="button"
-          onClick={handleSaveEdit}
-          className="flex-1 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:opacity-90 transition-all shadow-lg"
+          onClick={onSave}
+          disabled={saving}
+          className="flex-1 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:opacity-90 transition-all shadow-lg disabled:opacity-50"
         >
-          Save Changes
+          {saving ? 'Saving…' : 'Save Changes'}
         </button>
       </div>
     </div>

@@ -1,257 +1,130 @@
-import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import DashboardOverview from '../DashboardOverview';
 import { apiService } from '../../services/api';
 
-vi.mock('../../services/api', () => {
-  return {
-    apiService: {
-      getDashboardStats: vi.fn(),
-      getRecentActivities: vi.fn(),
-      checkInMember: vi.fn(),
-      checkOutMember: vi.fn(),
-      updateSessionStatus: vi.fn(),
-      updateSession: vi.fn(),
-      createSession: vi.fn()
-    }
+vi.mock('../../services/api', () => ({
+  apiService: {
+    getDashboardStats: vi.fn(),
+    getRecentActivities: vi.fn()
+  }
+}));
+
+// Wednesday 14 Oct 2026, 15:00 local
+const NOW = new Date(2026, 9, 14, 15, 0, 0);
+
+const templates = [
+  { id: 1, className: 'Kids Taekwondo', days: 'Mon, Wed, Fri', time: '16:00 - 17:00', capacity: 15, enrolled: 1, trainer: 'Coach Nasser' },
+  { id: 2, className: 'Kids Taekwondo', days: 'Mon, Wed', time: '17:00 - 18:00', capacity: 15, enrolled: 0 },
+  { id: 3, className: 'Adult Karate', days: 'Tue, Thu, Sat', time: '20:00 - 21:00', capacity: 15, enrolled: 0 }
+];
+
+const members = [
+  { id: 10, name: 'Rashid Al Ketbi', plan: 'Taekwondo One Month - 3 Classes', expiryDate: '2026-11-01', isFrozen: false, image: 'r.png', enrolledTemplateIds: [1] },
+  { id: 11, name: 'Priya Nair', plan: 'Fitness One Month - 3 Classes', expiryDate: '2026-10-01', isFrozen: false, image: 'p.png', enrolledTemplateIds: [] }
+];
+
+const renderDashboard = (overrides = {}) => {
+  const props = {
+    members,
+    sessions: [],
+    scheduleTemplates: templates,
+    inClubList: [],
+    onTabChange: vi.fn(),
+    saveSession: vi.fn().mockImplementation(async (session, changes) => ({ ...session, ...changes, id: 501, isProjected: false })),
+    checkIn: vi.fn().mockResolvedValue({}),
+    checkOut: vi.fn().mockResolvedValue({}),
+    ...overrides
   };
-});
+  render(<DashboardOverview {...props} />);
+  return props;
+};
 
-describe('DashboardOverview Component', () => {
-  const mockOnTabChange = vi.fn();
-  const mockOnUpdateSessionStatus = vi.fn();
-  const mockSetSessions = vi.fn();
-  const mockSetInClubList = vi.fn();
-
-  const mockMembers = [
-    { id: 1, name: 'Alice Cooper', plan: 'Elite Performance', isFrozen: false, image: '' },
-    { id: 2, name: 'Bob Dylan', plan: 'Wellness Pro', isFrozen: false, image: '' }
-  ];
-
-  const mockSessions = [
-    {
-      id: 10,
-      title: 'Zumba Fitness',
-      trainer: 'Marcus Thorne',
-      location: 'Studio B',
-      start: new Date(),
-      end: new Date(Date.now() + 3600000),
-      status: 'upcoming',
-      type: 'group',
-      checklist: []
-    }
-  ];
-
-  const mockStats = {
-    total_members: 15,
-    active_members: 3,
-    weekly_growth: 8,
-    today_sessions: 2
-  };
-
-  const mockActivities = [
-    { member_name: 'Alice Cooper', action: 'check-in', timestamp: '2026-07-16T12:00:00Z' },
-    { member_name: 'Bob Dylan', action: 'checkout', timestamp: '2026-07-16T11:00:00Z' }
-  ];
-
+describe('DashboardOverview', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    apiService.getDashboardStats.mockResolvedValue(mockStats);
-    apiService.getRecentActivities.mockResolvedValue(mockActivities);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(NOW);
+    apiService.getDashboardStats.mockResolvedValue({ total_members: 2, active_members: 0, today_sessions: 2, recent_activities: 3 });
+    apiService.getRecentActivities.mockResolvedValue([
+      { check_in_id: 1, member_id: 10, member_name: 'Rashid Al Ketbi', action: 'check_out', timestamp: '2026-10-13T14:00:00Z' }
+    ]);
   });
 
-  it('fetches and displays performance stats and recent activities on mount', async () => {
-    render(
-      <DashboardOverview
-        members={mockMembers}
-        sessions={mockSessions}
-        setSessions={mockSetSessions}
-        scheduleTemplates={[]}
-        onTabChange={mockOnTabChange}
-        inClubList={[1]}
-        setInClubList={mockSetInClubList}
-        onUpdateSessionStatus={mockOnUpdateSessionStatus}
-      />
-    );
-
-    expect(apiService.getDashboardStats).toHaveBeenCalled();
-    expect(apiService.getRecentActivities).toHaveBeenCalled();
-
-    // Verify stats appear
-    await waitFor(() => {
-      expect(screen.getByText('15')).toBeInTheDocument(); // total registered
-      expect(screen.getAllByText('Alice Cooper').length).toBeGreaterThan(0);
-      expect(screen.getByText('Checked in')).toBeInTheDocument();
-      expect(screen.getByText('Checked out')).toBeInTheDocument();
-    });
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it('searches for members and checks them in', async () => {
-    apiService.checkInMember.mockResolvedValue({ id: 99, member_id: 2 });
-    
-    render(
-      <DashboardOverview
-        members={mockMembers}
-        sessions={mockSessions}
-        setSessions={mockSetSessions}
-        scheduleTemplates={[]}
-        onTabChange={mockOnTabChange}
-        inClubList={[1]} // Alice in club, Bob not
-        setInClubList={mockSetInClubList}
-        onUpdateSessionStatus={mockOnUpdateSessionStatus}
-      />
-    );
+  it("shows today's real timetable classes with real numbers (no invented stats)", async () => {
+    renderDashboard();
 
-    await waitFor(() => {
-      expect(screen.getByText('15')).toBeInTheDocument();
-    });
-
-    const searchInput = screen.getByPlaceholderText('Search member name...');
-    fireEvent.change(searchInput, { target: { value: 'Bob' } });
-
-    // Roster dropdown lists matching name
-    const dropdownResult = screen.getAllByText('Bob Dylan')[0];
-    expect(dropdownResult).toBeInTheDocument();
-
-    // Click check in
-    const checkInBtn = screen.getByRole('button', { name: /Check In/i });
-    fireEvent.click(checkInBtn);
-
-    await waitFor(() => {
-      expect(apiService.checkInMember).toHaveBeenCalledWith(2);
-      expect(mockSetInClubList).toHaveBeenCalled();
-    });
+    await waitFor(() => expect(screen.getByText('3 check-ins today')).toBeInTheDocument());
+    const classes = screen.getAllByRole('article');
+    expect(classes).toHaveLength(2);
+    expect(within(classes[0]).getByText('Kids Taekwondo')).toBeInTheDocument();
+    expect(within(classes[0]).getByText(/Coach Nasser/)).toBeInTheDocument();
+    expect(within(classes[0]).getByText('1/15 enrolled')).toBeInTheDocument();
+    expect(screen.queryByText(/Adult Karate/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\+8%/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Capacity reached/i)).not.toBeInTheDocument();
   });
 
-  it('checks out a checked-in member', async () => {
-    apiService.checkOutMember.mockResolvedValue({ id: 5 });
+  it('starting a class saves that exact class slot and date', async () => {
+    const props = renderDashboard();
+    const [first] = screen.getAllByRole('article');
 
-    render(
-      <DashboardOverview
-        members={mockMembers}
-        sessions={mockSessions}
-        setSessions={mockSetSessions}
-        scheduleTemplates={[]}
-        onTabChange={mockOnTabChange}
-        inClubList={[1]} // Alice is in club
-        setInClubList={mockSetInClubList}
-        onUpdateSessionStatus={mockOnUpdateSessionStatus}
-      />
-    );
+    fireEvent.click(within(first).getByRole('button', { name: 'Start class' }));
 
-    await waitFor(() => {
-      expect(screen.getByText('Alice Cooper')).toBeInTheDocument();
-    });
-
-    // Find the checkout button
-    const checkoutBtn = screen.getByRole('button', { name: 'Checkout' });
-    fireEvent.click(checkoutBtn);
-
-    await waitFor(() => {
-      expect(apiService.checkOutMember).toHaveBeenCalledWith(1);
-      expect(mockSetInClubList).toHaveBeenCalled();
-    });
+    await waitFor(() => expect(props.saveSession).toHaveBeenCalledTimes(1));
+    const [session, changes] = props.saveSession.mock.calls[0];
+    expect(session).toMatchObject({ templateId: 1, dateKey: '2026-10-14', isProjected: true });
+    expect(changes).toEqual({ status: 'in-progress' });
   });
 
-  it('toggles session status', async () => {
-    render(
-      <DashboardOverview
-        members={mockMembers}
-        sessions={mockSessions}
-        setSessions={mockSetSessions}
-        scheduleTemplates={[]}
-        onTabChange={mockOnTabChange}
-        inClubList={[]}
-        setInClubList={mockSetInClubList}
-        onUpdateSessionStatus={mockOnUpdateSessionStatus}
-      />
-    );
+  it('checklist edits go to the backend, with an in-app confirmation before removing', async () => {
+    const props = renderDashboard();
+    const [first] = screen.getAllByRole('article');
 
-    await waitFor(() => {
-      expect(screen.getByText('Zumba Fitness')).toBeInTheDocument();
-    });
+    fireEvent.click(within(first).getByLabelText('Roll call & attendance'));
+    await waitFor(() => expect(props.saveSession).toHaveBeenCalledTimes(1));
+    expect(props.saveSession.mock.calls[0][1].checklist[0]).toMatchObject({ text: 'Roll call & attendance', checked: true });
 
-    const startSessionBtn = screen.getByRole('button', { name: /Start Session/i });
-    fireEvent.click(startSessionBtn);
-
-    expect(mockOnUpdateSessionStatus).toHaveBeenCalledWith(10, 'in-progress');
+    fireEvent.click(within(first).getByRole('button', { name: 'Remove Warm-up & stretching' }));
+    expect(props.saveSession).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(first).getByRole('button', { name: 'Confirm removing Warm-up & stretching' }));
+    await waitFor(() => expect(props.saveSession).toHaveBeenCalledTimes(2));
+    expect(props.saveSession.mock.calls[1][1].checklist.map((i) => i.text)).not.toContain('Warm-up & stretching');
   });
 
-  it('filters session cards by categories', async () => {
-    render(
-      <DashboardOverview
-        members={mockMembers}
-        sessions={mockSessions}
-        setSessions={mockSetSessions}
-        scheduleTemplates={[]}
-        onTabChange={mockOnTabChange}
-        inClubList={[]}
-        setInClubList={mockSetInClubList}
-        onUpdateSessionStatus={mockOnUpdateSessionStatus}
-      />
-    );
+  it("lists members enrolled in today's classes and checks them in", async () => {
+    const props = renderDashboard();
 
-    await waitFor(() => {
-      expect(screen.getByText('Zumba Fitness')).toBeInTheDocument();
-    });
+    const desk = screen.getByRole('region', { name: 'Desk check-in' });
+    expect(within(desk).getByText('Rashid Al Ketbi')).toBeInTheDocument();
+    expect(within(desk).queryByText('Priya Nair')).not.toBeInTheDocument();
 
-    // Check category pills exist
-    expect(screen.getByRole('button', { name: 'Fitness' })).toBeInTheDocument();
+    fireEvent.click(within(desk).getByRole('button', { name: 'Check in' }));
+    await waitFor(() => expect(props.checkIn).toHaveBeenCalledWith(10, undefined));
   });
 
-  it('toggles checklist items individually even when items lack explicit IDs', async () => {
-    apiService.updateSession.mockResolvedValueOnce({ id: 10 });
+  it('explains a blocked check-in and lets the desk override it', async () => {
+    const checkIn = vi.fn()
+      .mockRejectedValueOnce(new Error('Membership has expired'))
+      .mockResolvedValueOnce({});
+    renderDashboard({ checkIn });
 
-    const sessionWithChecklist = [{
-      id: 10,
-      title: 'Zumba Fitness',
-      trainer: 'Elena Vance',
-      location: 'Studio B',
-      start: new Date(Date.now() - 30 * 60 * 1000),
-      end: new Date(Date.now() + 30 * 60 * 1000),
-      status: 'in-progress',
-      type: 'group',
-      checklist: [
-        { text: 'Warm up', checked: true },
-        { text: 'Cardio routine', checked: false },
-        { text: 'Cool down', checked: false }
-      ]
-    }];
+    fireEvent.change(screen.getByLabelText('Search members to check in'), { target: { value: 'priya' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Check in' }));
 
-    render(
-      <DashboardOverview
-        members={mockMembers}
-        sessions={sessionWithChecklist}
-        setSessions={mockSetSessions}
-        scheduleTemplates={[]}
-        onTabChange={mockOnTabChange}
-        inClubList={[]}
-        setInClubList={mockSetInClubList}
-        onUpdateSessionStatus={mockOnUpdateSessionStatus}
-      />
-    );
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Membership has expired');
+    fireEvent.click(within(alert).getByRole('button', { name: 'Let in anyway' }));
+    await waitFor(() => expect(checkIn).toHaveBeenLastCalledWith(11, { override: true }));
+  });
 
-    const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(3);
-    expect(checkboxes[0]).toBeChecked();
-    expect(checkboxes[1]).not.toBeChecked();
-    expect(checkboxes[2]).not.toBeChecked();
+  it('check-out is always visible (works on touch screens)', async () => {
+    const props = renderDashboard({ inClubList: [10] });
 
-    // Toggle the second checkbox (Cardio routine)
-    fireEvent.click(checkboxes[1]);
-
-    await waitFor(() => {
-      expect(apiService.updateSession).toHaveBeenCalledWith(
-        10,
-        expect.objectContaining({
-          checklist: [
-            { text: 'Warm up', checked: true },
-            { text: 'Cardio routine', checked: true },
-            { text: 'Cool down', checked: false }
-          ]
-        })
-      );
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Check out' }));
+    await waitFor(() => expect(props.checkOut).toHaveBeenCalledWith(10));
   });
 });

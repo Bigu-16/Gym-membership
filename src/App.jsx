@@ -9,12 +9,18 @@ import Analytics from './components/Analytics';
 import Login from './components/Login';
 import Notifications from './components/Notifications';
 import TemplateManagement from './components/TemplateManagement';
+import PackagesPage from './components/PackagesPage';
 import AppHeader from './components/layout/AppHeader';
 import { useGymData } from './hooks/useGymData';
-import { apiService } from './services/api';
 
 const App = () => {
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('theme') || 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const {
@@ -23,15 +29,13 @@ const App = () => {
     currentUser,
     members,
     sessions,
-    setSessions,
     inClubList,
-    setInClubList,
     scheduleTemplates,
     membershipPlans,
     loading,
+    hasLoaded,
     error,
     notificationJobs,
-    setNotificationJobs,
     selectedMember,
     setSelectedMember,
     searchQuery,
@@ -44,13 +48,19 @@ const App = () => {
     handleAddTemplate,
     handleDeleteTemplate,
     handleUpdateTemplate,
+    handleLoadOfficialTimetable,
     handleAddPlan,
     handleUpdatePlan,
     handleDeletePlan,
-    handleUpdateSessionStatus,
+    handleLoadOfficialPackages,
+    saveSession,
+    checkIn,
+    checkOut,
+    refreshNotificationJobs,
     handleUpdateMember,
     handleRenewMember,
     handleDeleteMember,
+    handleSetMemberClasses,
     processedMembers
   } = useGymData();
 
@@ -61,7 +71,11 @@ const App = () => {
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('theme', theme);
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {
+      // Theme preference is a convenience; ignore unavailable storage.
+    }
   }, [theme]);
 
   const toggleTheme = () => {
@@ -74,7 +88,11 @@ const App = () => {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row gap-6 lg:gap-12 p-4 sm:p-8 lg:p-12 pb-24 lg:pb-12 text-[var(--text-primary)]">
-      <Sidebar activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setSelectedMember(null); }} />
+      <Sidebar
+        activeTab={activeTab}
+        scheduleTemplates={scheduleTemplates}
+        onTabChange={(tab) => { setActiveTab(tab); setSelectedMember(null); }}
+      />
       
       <div className="flex-grow max-w-7xl mx-auto w-full">
         {error && (
@@ -90,7 +108,7 @@ const App = () => {
               onClick={loadData} 
               className="px-3 py-1 rounded-lg bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold text-[10px] uppercase tracking-luxury hover:opacity-80"
             >
-              Retry Sync
+              Retry
             </button>
           </div>
         )}
@@ -106,13 +124,14 @@ const App = () => {
         />
 
         <main className="transition-all duration-500">
-          {loading && (
+          {/* Full-page spinner only for the first load; later refreshes keep the current screen mounted. */}
+          {loading && !hasLoaded && (
             <div className="flex justify-center items-center py-12">
               <span className="w-8 h-8 border-4 border-[var(--text-primary)] border-t-transparent rounded-full animate-spin"></span>
             </div>
           )}
 
-          {!loading && (
+          {hasLoaded && (
             <>
               {activeTab === 'members' ? (
                 selectedMember ? (
@@ -122,7 +141,9 @@ const App = () => {
                     onUpdateMember={handleUpdateMember} 
                     onDeleteMember={handleDeleteMember}
                     onRenewMember={handleRenewMember}
+                    onSetMemberClasses={handleSetMemberClasses}
                     scheduleTemplates={scheduleTemplates}
+                    membershipPlans={membershipPlans}
                   />
                 ) : (
                   <>
@@ -133,7 +154,7 @@ const App = () => {
                         <div className="relative w-full sm:w-64">
                           <input 
                             type="text" 
-                            placeholder="Search name or phone..." 
+                            placeholder="Search name, phone or Emirates ID..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-full px-4 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]/20 pl-8"
@@ -176,46 +197,49 @@ const App = () => {
                   onEnroll={handleEnroll}
                   scheduleTemplates={scheduleTemplates}
                   membershipPlans={membershipPlans}
+                  onLoadOfficialPackages={handleLoadOfficialPackages}
                 />
               ) : activeTab === 'schedule' ? (
-                <Schedule 
-                  sessions={sessions} 
+                <Schedule
+                  sessions={sessions}
                   scheduleTemplates={scheduleTemplates}
                   members={members}
-                  onUpdateSessionStatus={handleUpdateSessionStatus}
+                  saveSession={saveSession}
                 />
               ) : activeTab === 'templates' ? (
                 <TemplateManagement
-                  membershipPlans={membershipPlans}
                   scheduleTemplates={scheduleTemplates}
-                  onAddPlan={handleAddPlan}
-                  onUpdatePlan={handleUpdatePlan}
-                  onDeletePlan={handleDeletePlan}
                   onAddScheduleTemplate={handleAddTemplate}
                   onUpdateScheduleTemplate={handleUpdateTemplate}
                   onDeleteScheduleTemplate={handleDeleteTemplate}
+                  onLoadOfficialTimetable={handleLoadOfficialTimetable}
+                />
+              ) : activeTab === 'packages' ? (
+                <PackagesPage
+                  membershipPlans={membershipPlans}
+                  onAddPlan={handleAddPlan}
+                  onUpdatePlan={handleUpdatePlan}
+                  onDeletePlan={handleDeletePlan}
+                  onLoadOfficialPackages={handleLoadOfficialPackages}
                 />
               ) : activeTab === 'dashboard' ? (
-                <DashboardOverview 
-                  members={members} 
-                  sessions={sessions} 
-                  setSessions={setSessions}
+                <DashboardOverview
+                  members={members}
+                  sessions={sessions}
                   scheduleTemplates={scheduleTemplates}
                   onTabChange={(tab) => { setActiveTab(tab); setSelectedMember(null); }}
                   inClubList={inClubList}
-                  setInClubList={setInClubList}
-                  onUpdateSessionStatus={handleUpdateSessionStatus}
+                  saveSession={saveSession}
+                  checkIn={checkIn}
+                  checkOut={checkOut}
                 />
               ) : activeTab === 'analytics' ? (
-                <Analytics members={members} scheduleTemplates={scheduleTemplates} />
+                <Analytics />
               ) : activeTab === 'notifications' ? (
                 <Notifications 
                   jobs={notificationJobs} 
                   members={members} 
-                  onTriggerTask={async () => {
-                    const jobsData = await apiService.getNotificationJobs();
-                    setNotificationJobs(jobsData);
-                  }}
+                  onTriggerTask={refreshNotificationJobs}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center min-h-[50vh] glass-card p-12 text-center">
@@ -236,11 +260,7 @@ const App = () => {
         
         <footer className="mt-16 pt-8 border-t border-[var(--glass-border)] flex flex-wrap justify-between gap-6 text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">
           <span>© 2026 N & T Taekwondo & Karate Center</span>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Privacy</a>
-            <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Security</a>
-            <a href="#" className="hover:text-[var(--text-primary)] transition-colors">System Status</a>
-          </div>
+          <span>Mon–Sat · 4–9 PM</span>
         </footer>
       </div>
     </div>

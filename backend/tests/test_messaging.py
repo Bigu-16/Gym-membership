@@ -102,7 +102,7 @@ def test_recipient_resolution_per_channel():
 async def test_adapter_dev_stub_success_when_unconfigured(monkeypatch):
     from app.core import config
 
-    monkeypatch.setattr(config.settings, "messaging_dev_mode", True)
+    monkeypatch.setattr(config.settings, "messaging_dev_mode_override", True)
     adapter = get_adapter(NotificationChannel.telegram)
     result = await adapter.send("123", RenderedMessage("s", "hello"))
     assert result.success is True
@@ -112,7 +112,7 @@ async def test_adapter_dev_stub_success_when_unconfigured(monkeypatch):
 async def test_adapter_fails_when_unconfigured_and_not_dev_mode(monkeypatch):
     from app.core import config
 
-    monkeypatch.setattr(config.settings, "messaging_dev_mode", False)
+    monkeypatch.setattr(config.settings, "messaging_dev_mode_override", False)
     adapter = get_adapter(NotificationChannel.email)
     result = await adapter.send("a@b.com", RenderedMessage("s", "hello"))
     assert result.success is False

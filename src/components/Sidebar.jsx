@@ -1,3 +1,5 @@
+import { formatClock, parseTimeRange, templateDays } from '../utils/classSessions';
+
 const SidebarItem = ({ icon, label, active = false, onClick }) => (
   <button
     onClick={onClick}
@@ -14,7 +16,27 @@ const SidebarItem = ({ icon, label, active = false, onClick }) => (
   </button>
 );
 
-const Sidebar = ({ activeTab = 'members', onTabChange }) => {
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Real opening state from today's timetable (replaces a hard-coded "morning shift").
+const todayHours = (scheduleTemplates, now) => {
+  const today = DAY_NAMES[now.getDay()];
+  const ranges = scheduleTemplates
+    .filter((t) => templateDays(t).some((d) => d.slice(0, 3) === today))
+    .map((t) => parseTimeRange(t.time));
+  if (ranges.length === 0) return null;
+  const toMinutes = ({ hours, minutes }) => hours * 60 + minutes;
+  const first = ranges.reduce((a, r) => (toMinutes(r.start) < toMinutes(a.start) ? r : a));
+  const last = ranges.reduce((a, r) => (toMinutes(r.end) > toMinutes(a.end) ? r : a));
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  let status = 'Classes finished';
+  if (nowMinutes < toMinutes(first.start)) status = `First class in ${Math.ceil((toMinutes(first.start) - nowMinutes) / 60)}h`;
+  else if (nowMinutes <= toMinutes(last.end)) status = 'Classes running now';
+  return { label: `${formatClock(first.start)} – ${formatClock(last.end)}`, status, count: ranges.length };
+};
+
+const Sidebar = ({ activeTab = 'members', onTabChange, scheduleTemplates = [] }) => {
+  const today = todayHours(scheduleTemplates, new Date());
   const menuItems = [
     { 
       id: 'dashboard', 
@@ -45,10 +67,19 @@ const Sidebar = ({ activeTab = 'members', onTabChange }) => {
     },
     {
       id: 'templates',
-      label: 'Templates',
+      label: 'Timetable',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h10M17 16l3 3m0-3l-3 3" />
+        </svg>
+      )
+    },
+    {
+      id: 'packages',
+      label: 'Packages',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
       )
     },
@@ -88,7 +119,7 @@ const Sidebar = ({ activeTab = 'members', onTabChange }) => {
         <div className="px-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center bg-[#0d0f14] border border-white/15">
-              <img src="/logo.png" alt="Azyab Logo" className="w-full h-full object-cover" />
+              <img src="/nt-logo.svg" alt="N & T Taekwondo & Karate Center logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h2 className="text-sm font-bold uppercase tracking-widest leading-none text-orange-500">N & T</h2>
@@ -109,26 +140,30 @@ const Sidebar = ({ activeTab = 'members', onTabChange }) => {
         </nav>
 
         <div className="mt-auto px-4 pb-4">
-          <div className="glass-card p-4 relative overflow-hidden group cursor-pointer">
-            <div className="relative z-10">
-              <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Current Shift</span>
-              <span className="text-xs font-semibold block">Morning Session</span>
-              <span className="text-[10px] text-emerald-500 block mt-1">Ends in 2h 15m</span>
-            </div>
-            <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-[var(--accent-color)] opacity-5 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+          <div className="glass-card p-4">
+            <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Today</span>
+            {today ? (
+              <>
+                <span className="text-xs font-semibold block">{today.count} classes · {today.label}</span>
+                <span className="text-[10px] text-emerald-500 block mt-1">{today.status}</span>
+              </>
+            ) : (
+              <span className="text-xs font-semibold block">No classes today</span>
+            )}
           </div>
         </div>
       </aside>
 
       {/* Mobile/Tablet Floating Bottom Navigation Bar */}
-      <div className="lg:hidden fixed bottom-4 left-4 right-4 z-50 glass-card px-1.5 py-1 flex justify-around items-center shadow-2xl border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-xl">
+      <nav aria-label="Main" className="lg:hidden fixed bottom-4 left-4 right-4 z-50 glass-card px-1.5 py-1 flex justify-between items-center overflow-x-auto shadow-2xl border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-xl">
         {menuItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 rounded-xl transition-all duration-300 ${
+              aria-current={isActive ? 'page' : undefined}
+              className={`flex-1 min-w-[52px] flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 rounded-xl transition-all duration-300 ${
                 isActive 
                   ? 'text-[var(--text-primary)] scale-105 font-bold' 
                   : 'text-[var(--text-secondary)] opacity-50 hover:opacity-100'
@@ -143,7 +178,7 @@ const Sidebar = ({ activeTab = 'members', onTabChange }) => {
             </button>
           );
         })}
-      </div>
+      </nav>
     </>
   );
 };
