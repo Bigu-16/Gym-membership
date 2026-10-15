@@ -45,12 +45,6 @@ STAFF_PASSWORD = "ChangeMe123!"
 LEGACY_DEMO_TEMPLATES = {"Elite Performance", "Yoga Flow", "Personal Training"}
 LEGACY_DEMO_PLANS = {"Family Group"}
 
-DEFAULT_CHECKLIST = [
-    "Roll call & attendance",
-    "Warm-up & stretching",
-    "Technique & drills",
-    "Cool down & notes",
-]
 
 
 async def get_or_create(session: AsyncSession, model, lookup: dict, defaults: dict | None = None):
@@ -126,16 +120,6 @@ async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTempla
         key = f"{spec.title.lower().replace(' ', '_')}_{'_'.join(d[:3].lower() for d in spec.days)}_{start_of(spec.time).replace(':', '')}"
         templates[key] = template
 
-    trainers = {
-        "Kids Taekwondo": "Coach Nasser",
-        "Little Kids Karate": "Coach Tasneem",
-        "Kids Karate": "Coach Tasneem",
-        "Adult Kickboxing": "Coach Omar",
-        "Adult Karate": "Coach Omar",
-    }
-    for template in templates.values():
-        template.trainer_name = template.trainer_name or trainers.get(template.title)
-
     today = gym_today()
     now_local = datetime.now(gym_tz())
     sessions: dict[str, Session] = {}
@@ -160,11 +144,9 @@ async def seed_schedule(session: AsyncSession) -> tuple[dict[str, ScheduleTempla
                     date=day,
                     start_time=start,
                     end_time=end,
-                    trainer_name=template.trainer_name or "Coach",
+                    trainer_name=template.trainer_name,
                     status=SessionStatus.completed,
-                    checklist_data={
-                        "items": [{"id": i + 1, "text": text, "checked": True} for i, text in enumerate(DEFAULT_CHECKLIST)]
-                    },
+                    checklist_data={"items": []},
                 )
                 session.add(existing)
                 await session.flush()
@@ -180,7 +162,7 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
         Family,
         {"parent_phone": "+971501110001"},
         {
-            "parent_name": "Safiya Al Muharrami",
+            "parent_name": "Sample Parent One",
             "parent_email": None,
             "parent_relationship": "mother",
             "notes": "Prefers WhatsApp",
@@ -188,8 +170,8 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
     )
     rows = [
         # name, phone, age, gender, plan, days until expiry (relative to start), family?, extra
-        ("Mouza Al Muharrami", None, 3, Gender.female, "Karate One Month - 3 Classes", 30, True, {}),
-        ("Hamdan Al Muharrami", None, 8, Gender.male, "Taekwondo Three Month - 3 Classes", 75, True, {}),
+        ("Sample Child One", None, 3, Gender.female, "Karate One Month - 3 Classes", 30, True, {}),
+        ("Sample Child Two", None, 8, Gender.male, "Taekwondo Three Month - 3 Classes", 75, True, {}),
         ("Rashid Al Ketbi", "+971502220002", 11, Gender.male, "Taekwondo One Month - 3 Classes", 2, False, {}),
         ("Layla Haddad", "+971503330003", 9, Gender.female, "Karate One Month - 2 Classes", 18, False, {"medical_issues": "Mild asthma"}),
         ("Omar Siddiqui", "+971504440004", 29, Gender.male, "Kickboxing Three Month - 3 Classes", 50, False, {}),
@@ -251,8 +233,8 @@ async def seed_enrollments(
     templates: dict[str, ScheduleTemplate],
 ) -> None:
     rows = [
-        ("Mouza Al Muharrami", "little_kids_karate_tue_thu_sat_1600"),
-        ("Hamdan Al Muharrami", "kids_taekwondo_mon_wed_1700"),
+        ("Sample Child One", "little_kids_karate_tue_thu_sat_1600"),
+        ("Sample Child Two", "kids_taekwondo_mon_wed_1700"),
         ("Rashid Al Ketbi", "kids_taekwondo_mon_wed_fri_1800"),
         ("Layla Haddad", "kids_karate_tue_thu_sat_1700"),
         ("Omar Siddiqui", "adult_kickboxing_tue_thu_sat_1900"),

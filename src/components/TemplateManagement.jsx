@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CalendarDays, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { formatTimeRange } from '../utils/classSessions';
 import TemplateModal from './schedule/TemplateModal';
 
@@ -56,7 +56,7 @@ const TemplateManagement = ({
   const [selectedDays, setSelectedDays] = useState([]);
   const [startTime, setStartTime] = useState('16:00');
   const [endTime, setEndTime] = useState('17:00');
-  const [capacity, setCapacity] = useState(15);
+  const [capacity, setCapacity] = useState(''); // '' = no limit
   const [trainer, setTrainer] = useState('');
   const [pendingDelete, setPendingDelete] = useState(null);
   const [notice, setNotice] = useState('');
@@ -88,7 +88,7 @@ const TemplateManagement = ({
     const rawEnd = template?.time?.includes(' - ') ? timeTo24(template.time.split(' - ')[1]) : addHour(nextStart);
     setStartTime(nextStart);
     setEndTime(rawEnd);
-    setCapacity(template?.capacity || 15);
+    setCapacity(template?.capacity ?? '');
     setTrainer(template?.trainer || '');
     setScheduleEditorOpen(true);
   };
@@ -146,19 +146,13 @@ const TemplateManagement = ({
         <div>
           <div className="flex items-center gap-3">
             <div className="w-1.5 h-6 rounded-full bg-orange-500" />
-            <h2 className="text-lg font-light uppercase tracking-luxury">Shift Schedule Templates</h2>
+            <h2 className="text-lg font-light uppercase tracking-luxury">Weekly timetable</h2>
           </div>
           <p className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)] mt-1 ml-4.5">
-            Recurring Monday–Saturday shift timetable
+            The repeating Monday–Saturday classes from the registration form
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] uppercase tracking-luxury bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold shadow-sm"
-          >
-            <CalendarDays size={14} /> Weekly Schedule
-          </button>
           <button
             disabled={initializing}
             type="button"
@@ -172,7 +166,7 @@ const TemplateManagement = ({
             onClick={() => openScheduleEditor()}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--glass-border)] hover:border-[var(--text-primary)] text-[10px] uppercase tracking-luxury font-bold transition-colors"
           >
-            <Plus size={14} /> New Schedule
+            <Plus size={14} /> New class
           </button>
         </div>
       </div>
@@ -228,7 +222,9 @@ const TemplateManagement = ({
                     >
                       <span className="block text-[10px] font-black uppercase tracking-wide">{template.className}</span>
                       <span className="block text-[9px] opacity-75 mt-1">{formatTimeRange(template.time)}</span>
-                      <span className="block text-[9px] opacity-75 mt-0.5">Capacity {template.capacity}</span>
+                      <span className="block text-[9px] opacity-75 mt-0.5">
+                        {template.enrolled || 0} enrolled{template.capacity ? ` / ${template.capacity}` : ''}
+                      </span>
                     </button>
                   ))}
                   <button
@@ -261,7 +257,7 @@ const TemplateManagement = ({
                   </div>
                   <p className="text-[10px] text-[var(--text-secondary)] mt-1">{template.days} · {formatTimeRange(template.time)}</p>
                   <p className="text-[9px] text-[var(--text-secondary)] mt-0.5">
-                    Enrolled {template.enrolled || 0}/{template.capacity}{template.trainer ? ` · ${template.trainer}` : ''}
+                    {template.enrolled || 0} enrolled{template.capacity ? ` of ${template.capacity}` : ''}{template.trainer ? ` · ${template.trainer}` : ''}
                   </p>
                 </div>
                 <div className="flex items-center gap-1">

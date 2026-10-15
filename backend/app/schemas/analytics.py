@@ -39,7 +39,7 @@ class ClassFill(BaseModel):
     title: str
     days: list[str]
     time: str
-    capacity: int
+    capacity: int | None
     enrolled: int
 
 

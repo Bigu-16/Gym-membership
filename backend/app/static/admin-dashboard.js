@@ -168,7 +168,7 @@ async function loadSchedule() {
     api("/api/v1/schedule/templates"),
     api("/api/v1/schedule/sessions"),
   ]);
-  renderList("#templateList", state.templates.map((t) => row(t.title, `${t.type} | ${t.days.join(", ")} at ${t.time}`, `${t.capacity} cap`)).join(""));
+  renderList("#templateList", state.templates.map((t) => row(t.title, `${t.type} | ${t.days.join(", ")} at ${t.time}`, t.capacity ? `${t.capacity} max` : "no limit")).join(""));
   renderList("#sessionList", state.sessions.map((s) => row(`${s.trainer_name} | ${s.date}`, `template #${s.template_id || "none"}`, s.status, s.status === "completed" ? "good" : "warn")).join(""));
   fillSelect("#sessionTemplateSelect", state.templates, (t) => `${t.title} #${t.id}`);
   fillSelect("#enrollTemplateSelect", state.templates, (t) => `${t.title} #${t.id}`);
@@ -312,7 +312,7 @@ function bindForms() {
         type: data.type,
         days: data.days.split(",").map((day) => day.trim()).filter(Boolean),
         time: data.time,
-        capacity: Number(data.capacity),
+        capacity: data.capacity ? Number(data.capacity) : null,
       }),
     });
     event.currentTarget.reset();

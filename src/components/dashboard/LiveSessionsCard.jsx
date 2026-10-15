@@ -101,11 +101,9 @@ const LiveSessionsCard = ({ sessions = [], selectedDate, onSelectDate, onTabChan
                         {session.start.toLocaleTimeString([], timeFormat)} – {session.end.toLocaleTimeString([], timeFormat)}
                       </span>
                       {session.trainer && <span>• {session.trainer}</span>}
-                      {session.capacity ? (
-                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--glass-border)] text-[var(--text-primary)] font-bold">
-                          {session.enrolled || 0}/{session.capacity} enrolled
-                        </span>
-                      ) : null}
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--glass-border)] text-[var(--text-primary)] font-bold">
+                        {session.enrolled || 0}{session.capacity ? `/${session.capacity}` : ''} enrolled
+                      </span>
                     </p>
                   </div>
                   <SessionActionButtons session={session} actions={actions} disabled={busy} />

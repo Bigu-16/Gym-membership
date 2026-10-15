@@ -49,8 +49,9 @@ describe('TemplateManagement', () => {
     renderPage();
 
     // The templates page must contain schedule information
-    expect(screen.getByText(/Shift Schedule Templates/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Weekly Schedule/i })).toBeInTheDocument();
+    expect(screen.getByText('Weekly timetable')).toBeInTheDocument();
+    // The old "Weekly Schedule" button did nothing and was removed.
+    expect(screen.queryByRole('button', { name: /Weekly Schedule/i })).not.toBeInTheDocument();
 
     // Package templates and pricing info must NOT be on the templates page
     expect(screen.queryByText('Taekwondo One Month - 3 Classes')).not.toBeInTheDocument();
@@ -61,7 +62,6 @@ describe('TemplateManagement', () => {
 
   it('renders shift schedule Monday-Saturday engine and edits recurring slots', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /Weekly Schedule/i }));
 
     for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']) {
       expect(screen.getByText(day)).toBeInTheDocument();

@@ -6,12 +6,8 @@
 
 export const CLASS_LENGTH_MINUTES = 60;
 
-export const DEFAULT_CHECKLIST = [
-  { id: 1, text: 'Roll call & attendance', checked: false },
-  { id: 2, text: 'Warm-up & stretching', checked: false },
-  { id: 3, text: 'Technique & drills', checked: false },
-  { id: 4, text: 'Cool down & notes', checked: false }
-];
+// Staff build each class's checklist themselves; nothing is pre-filled.
+export const DEFAULT_CHECKLIST = [];
 
 export const STATUS_META = {
   scheduled: { label: 'Scheduled', tone: 'neutral' },

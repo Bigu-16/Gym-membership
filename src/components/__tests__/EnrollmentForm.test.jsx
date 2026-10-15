@@ -45,7 +45,11 @@ const renderForm = (props = {}) =>
   );
 
 const change = (element, value) => fireEvent.change(element, { target: { value } });
-const submit = () => fireEvent.click(screen.getByRole('button', { name: /Confirm Enrollment/i }));
+const submit = () => {
+  const terms = screen.getByLabelText(/agrees to these rules and regulations/i);
+  if (!terms.checked) fireEvent.click(terms);
+  fireEvent.click(screen.getByRole('button', { name: /Confirm Enrollment/i }));
+};
 
 const fillChild = (card, { name, age }) => {
   change(within(card).getByLabelText('Full name'), name);
@@ -79,7 +83,6 @@ describe('EnrollmentForm', () => {
     await waitFor(() => expect(onEnroll).toHaveBeenCalledTimes(1));
     const registration = onEnroll.mock.calls[0][0];
     expect(registration.parent).toEqual({ name: 'John Smith', phone: '+971 50 123 4567', email: null });
-    expect(registration.personalSessions).toEqual([]);
     expect(registration.trainees).toHaveLength(2);
     expect(registration.trainees[0]).toEqual({
       name: 'Leo Smith',
@@ -87,7 +90,8 @@ describe('EnrollmentForm', () => {
       gender: 'Male',
       planId: 2,
       payment: { amount: 350, method: 'cash' },
-      templateIds: [11]
+      templateIds: [11],
+      termsAccepted: true
     });
     expect(registration.trainees[1].templateIds).toEqual([10, 13]);
     registration.trainees.forEach((t) => {
@@ -136,7 +140,8 @@ describe('EnrollmentForm', () => {
       medicalIssues: 'Asthma',
       planId: 3,
       payment: { amount: 850, method: 'card' },
-      templateIds: []
+      templateIds: [],
+      termsAccepted: true
     });
 
     expect(await screen.findByText('Enrollment Successful')).toBeInTheDocument();
@@ -186,40 +191,18 @@ describe('EnrollmentForm', () => {
     expect(await screen.findByText('Enrollment Successful')).toBeInTheDocument();
   });
 
-  it('builds personal sessions as real dates inside opening hours', async () => {
+  it('requires agreement to the registration-form terms', async () => {
     const onEnroll = vi.fn().mockResolvedValue({ members: [], warnings: [] });
     renderForm({ onEnroll });
+    expect(screen.getByText(/All activity fees are non-refundable/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Personal Training/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Adult (registers themself)' }));
-    const card = screen.getByTestId('trainee-card');
-    change(within(card).getByLabelText('Full name'), 'Omar Haddad');
-    change(within(card).getByLabelText('Age'), '35');
-    change(within(card).getByLabelText(/^Mobile/), '+971509998888');
-    change(screen.getByLabelText('First session date'), '2026-10-19'); // a Monday
-    change(screen.getByLabelText('Number of weeks'), '1');
-
-    submit();
-    await waitFor(() => expect(onEnroll).toHaveBeenCalledTimes(1));
-    const { trainees, personalSessions } = onEnroll.mock.calls[0][0];
-    expect(trainees[0].planId).toBeNull();
-    expect(trainees[0].payment).toBeNull();
-    expect(personalSessions).toHaveLength(2); // Mon + Wed
-    personalSessions.forEach((session) => {
-      expect(session.start).toBeInstanceOf(Date);
-      expect(session.end).toBeInstanceOf(Date);
-      expect(session.start.getHours()).toBe(16);
-      expect(session.end.getHours()).toBe(17);
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Confirm Enrollment/i }));
+    expect(await screen.findByText(/must agree to the center's terms/i)).toBeInTheDocument();
+    expect(onEnroll).not.toHaveBeenCalled();
   });
 
-  it('rejects personal sessions outside opening hours', async () => {
-    const onEnroll = vi.fn();
-    renderForm({ onEnroll });
-    fireEvent.click(screen.getByRole('button', { name: /Personal Training/ }));
-    change(screen.getByLabelText('Start time'), '20:30');
-    submit();
-    expect(await screen.findByText(/must fit inside opening hours/)).toBeInTheDocument();
-    expect(onEnroll).not.toHaveBeenCalled();
+  it('only offers group packages (no personal training)', () => {
+    renderForm();
+    expect(screen.queryByText(/Personal Training/i)).not.toBeInTheDocument();
   });
 });

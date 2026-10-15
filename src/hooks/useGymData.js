@@ -217,11 +217,10 @@ export const useGymData = () => {
   // ----- Members ------------------------------------------------------------
   /**
    * registration = { parent: {name, phone, email} | null,
-   *                  trainees: [{ ...member fields, payment, templateIds: [] }],
-   *                  personalSessions: [{ start, end, trainer }] }
+   *                  trainees: [{ ...member fields, payment, templateIds: [], termsAccepted }] }
    * Returns { members, warnings }. Throws if the members could not be created.
    */
-  const handleEnroll = async ({ parent = null, trainees = [], personalSessions = [] }) => {
+  const handleEnroll = async ({ parent = null, trainees = [] }) => {
     const created = await apiService.enrollMembers(trainees, parent);
     const warnings = [];
 
@@ -236,14 +235,6 @@ export const useGymData = () => {
           const template = scheduleTemplates.find((t) => t.id === templateId);
           warnings.push(`${member.name} was registered but not added to ${template?.className || 'the class'}: ${err.message}`);
         }
-      }
-    }
-
-    for (const session of personalSessions) {
-      try {
-        await apiService.createPersonalSession(session);
-      } catch (err) {
-        warnings.push(`Personal session on ${session.start.toLocaleDateString()} was not saved: ${err.message}`);
       }
     }
 

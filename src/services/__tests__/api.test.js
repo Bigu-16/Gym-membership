@@ -39,7 +39,7 @@ describe('apiService', () => {
   describe('members', () => {
     it('maps backend members including age, IDs and family', () => {
       const member = mapMemberToFrontend({
-        id: 1, name: 'Mouza Al Muharrami', phone: null, whatsapp_number: null, emirates_id: '784-2023-1234567-1',
+        id: 1, name: 'Lina Example', phone: null, whatsapp_number: null, emirates_id: '784-2023-1234567-1',
         parent_phone: '+971501110001', family_id: 4, gender: 'female', age: 3, plan_id: 7,
         expiry_date: '2026-11-14', is_frozen: false, messaging_opt_in: true
       });
@@ -55,25 +55,25 @@ describe('apiService', () => {
     it('registers children under their parent without inventing phone numbers', async () => {
       fetch.mockResolvedValueOnce(ok({
         id: 4,
-        parent: { name: 'Safiya', phone: '+971501110001' },
-        members: [{ id: 1, name: 'Mouza', age: 3, phone: null }, { id: 2, name: 'Hamdan', age: 8, phone: null }]
+        parent: { name: 'Sara', phone: '+971501110001' },
+        members: [{ id: 1, name: 'Lina', age: 3, phone: null }, { id: 2, name: 'Zaid', age: 8, phone: null }]
       }, 201));
 
       const created = await apiService.enrollMembers(
         [
-          { name: 'Mouza', age: 3, gender: 'Female', planId: 7, payment: { amount: 350, method: 'cash' } },
-          { name: 'Hamdan', age: 8, gender: 'Male', planId: 9 }
+          { name: 'Lina', age: 3, gender: 'Female', planId: 7, payment: { amount: 350, method: 'cash' } },
+          { name: 'Zaid', age: 8, gender: 'Male', planId: 9 }
         ],
-        { name: 'Safiya', phone: '+971501110001' }
+        { name: 'Sara', phone: '+971501110001' }
       );
 
       const { url, method, body } = lastCall();
       expect(url).toContain('/members/families');
       expect(method).toBe('POST');
-      expect(body.parent).toEqual({ name: 'Safiya', phone: '+971501110001' });
-      expect(body.members[0]).toEqual({ name: 'Mouza', age: 3, gender: 'female', plan_id: 7, payment: { amount: 350, method: 'cash', currency: 'AED' } });
+      expect(body.parent).toEqual({ name: 'Sara', phone: '+971501110001' });
+      expect(body.members[0]).toEqual({ name: 'Lina', age: 3, gender: 'female', plan_id: 7, payment: { amount: 350, method: 'cash', currency: 'AED' } });
       expect(body.members[1]).not.toHaveProperty('phone');
-      expect(created.map((m) => m.parentName)).toEqual(['Safiya', 'Safiya']);
+      expect(created.map((m) => m.parentName)).toEqual(['Sara', 'Sara']);
     });
 
     it('registers adults individually with their own phone', async () => {
@@ -95,10 +95,10 @@ describe('apiService', () => {
     });
 
     it('freezes a family by id and reads the group response', async () => {
-      fetch.mockResolvedValueOnce(ok({ id: 4, parent: { name: 'Safiya' }, members: [{ id: 1, name: 'Mouza', age: 3, is_frozen: true }] }));
+      fetch.mockResolvedValueOnce(ok({ id: 4, parent: { name: 'Sara' }, members: [{ id: 1, name: 'Lina', age: 3, is_frozen: true }] }));
       const members = await apiService.freezeFamily('4', true);
       expect(lastCall().url).toContain('/members/families/4/freeze');
-      expect(members[0]).toMatchObject({ isFrozen: true, parentName: 'Safiya' });
+      expect(members[0]).toMatchObject({ isFrozen: true, parentName: 'Sara' });
     });
   });
 
@@ -130,9 +130,9 @@ describe('apiService', () => {
       expect(fromTemplate.status).toBe('in-progress');
       expect(fromTemplate.checklist).toEqual([{ id: 1, text: 'a', checked: false }]);
 
-      const personal = mapSessionToFrontend({ id: 2, template_id: null, date: '2026-10-14', start_time: '18:30', end_time: '19:30', status: 'upcoming', trainer_name: 'Coach', checklist_data: {} }, templates);
-      expect(personal.title).toBe('Personal Training');
-      expect(personal.start).toEqual(new Date(2026, 9, 14, 18, 30));
+      const orphan = mapSessionToFrontend({ id: 2, template_id: null, date: '2026-10-14', start_time: '18:30', end_time: '19:30', status: 'upcoming', trainer_name: 'Coach', checklist_data: {} }, templates);
+      expect(orphan.title).toBe('Class (removed from timetable)');
+      expect(orphan.start).toEqual(new Date(2026, 9, 14, 18, 30));
     });
 
     it('records a timetable class by template and local date (backend reuses an existing one)', async () => {

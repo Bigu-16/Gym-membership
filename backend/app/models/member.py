@@ -1,6 +1,6 @@
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -29,6 +29,8 @@ class Member(TimestampMixin, Base):
     is_frozen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     messaging_opt_in: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     age: Mapped[int] = mapped_column(Integer, nullable=False)
+    # When the student/parent agreed to the center's terms printed on the registration form.
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     family = relationship("Family", back_populates="members")
     plan = relationship("MembershipPlan", back_populates="members")

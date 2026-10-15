@@ -19,9 +19,7 @@ const AppHeader = ({
             ) : activeTab === 'enrollment' ? (
               <>New <span className="font-bold">Registration</span></>
             ) : activeTab === 'schedule' ? (
-              <>Training <span className="font-bold">Schedule</span></>
-            ) : activeTab === 'templates' ? (
-              <>Weekly <span className="font-bold">Timetable</span></>
+              <>Class <span className="font-bold">Schedule</span></>
             ) : activeTab === 'packages' ? (
               <>Membership <span className="font-bold">Packages</span></>
             ) : activeTab === 'notifications' ? (

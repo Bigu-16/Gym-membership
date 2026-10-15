@@ -11,8 +11,8 @@ const templates = [
 ];
 
 const members = [
-  { id: 1, name: 'Hamdan Al Muharrami', age: 8, parentName: 'Safiya Al Muharrami', image: 'h.png', enrolledTemplateIds: [1] },
-  { id: 2, name: 'Mouza Al Muharrami', age: 3, parentName: 'Safiya Al Muharrami', image: 'm.png', enrolledTemplateIds: [3] }
+  { id: 1, name: 'Zaid Example', age: 8, parentName: 'Sara Example', image: 'h.png', enrolledTemplateIds: [1] },
+  { id: 2, name: 'Lina Example', age: 3, parentName: 'Sara Example', image: 'm.png', enrolledTemplateIds: [3] }
 ];
 
 describe('Schedule', () => {
@@ -42,8 +42,8 @@ describe('Schedule', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /Kids Taekwondo/ })[0]);
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('Hamdan Al Muharrami, 8')).toBeInTheDocument();
-    expect(within(dialog).queryByText(/Mouza/)).not.toBeInTheDocument();
+    expect(within(dialog).getByText('Zaid Example, 8')).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Lina/)).not.toBeInTheDocument();
     expect(within(dialog).getByText('30 min')).toBeInTheDocument();
   });
 
@@ -67,8 +67,18 @@ describe('Schedule', () => {
     expect(saveSession).toHaveBeenCalledTimes(1);
   });
 
-  it('points to the timetable loader when no classes exist', () => {
-    render(<Schedule sessions={[]} scheduleTemplates={[]} members={[]} saveSession={vi.fn()} />);
-    expect(screen.getByText(/Load official timetable/)).toBeInTheDocument();
+  it('opens the timetable editor on the same page when no classes exist yet', () => {
+    const onLoadOfficial = vi.fn().mockResolvedValue({ created: 11, total: 11 });
+    render(<Schedule sessions={[]} scheduleTemplates={[]} members={[]} saveSession={vi.fn()} timetableActions={{ onLoadOfficial }} />);
+    fireEvent.click(screen.getByRole('button', { name: /Load official timetable/i }));
+    expect(onLoadOfficial).toHaveBeenCalledTimes(1);
+  });
+
+  it('switches between the calendar and the timetable editor', () => {
+    render(<Schedule sessions={[]} scheduleTemplates={templates} members={members} saveSession={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Edit timetable/i }));
+    expect(screen.getByText('Weekly timetable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Week' }));
+    expect(screen.queryByText('Weekly timetable')).not.toBeInTheDocument();
   });
 });

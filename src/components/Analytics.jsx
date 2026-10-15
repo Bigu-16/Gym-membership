@@ -130,7 +130,7 @@ const Analytics = () => {
         </Card>
       </div>
 
-      <Card title="Class fill" subtitle="Enrolled vs capacity per weekly class">
+      <Card title="Class fill" subtitle="Members enrolled in each weekly class">
         <ClassFillTable rows={data.class_fill || []} />
       </Card>
     </div>

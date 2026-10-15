@@ -7,7 +7,6 @@ import { inputClass, labelClass, sectionTitleClass } from './fieldStyles';
  */
 const FamilyRegistrationSection = ({
   registrant,
-  trainingType,
   parent,
   onParentChange,
   trainees,
@@ -80,7 +79,6 @@ const FamilyRegistrationSection = ({
             trainee={trainee}
             index={index}
             registrant={registrant}
-            trainingType={trainingType}
             plans={plans}
             plansById={plansById}
             scheduleTemplates={scheduleTemplates}

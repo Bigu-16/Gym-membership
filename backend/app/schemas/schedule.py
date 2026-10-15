@@ -29,7 +29,7 @@ class ScheduleTemplateCreate(BaseModel):
     type: ScheduleType
     days: list[str] = Field(min_length=1)
     time: str = Field(pattern=TIME_PATTERN)
-    capacity: int = Field(ge=1, le=10000)
+    capacity: int | None = Field(default=None, ge=1, le=10000)
     trainer_name: str | None = Field(default=None, max_length=120)
 
     @field_validator("title", mode="before")
@@ -80,7 +80,7 @@ class ScheduleTemplateUpdate(BaseModel):
 
     @model_validator(mode="after")
     def reject_nulls(self) -> "ScheduleTemplateUpdate":
-        for field in self.model_fields_set - {"trainer_name"}:
+        for field in self.model_fields_set - {"trainer_name", "capacity"}:
             if getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
         return self
@@ -99,14 +99,14 @@ class SessionCreate(BaseModel):
     date: Date
     start_time: str | None = Field(default=None, pattern=CLOCK_PATTERN)
     end_time: str | None = Field(default=None, pattern=CLOCK_PATTERN)
-    trainer_name: str
+    trainer_name: str | None = None
     status: SessionStatus = SessionStatus.upcoming
     checklist_data: dict = Field(default_factory=dict)
 
     @field_validator("trainer_name", mode="before")
     @classmethod
-    def validate_trainer_name(cls, value: str) -> str:
-        return validate_person_name(value)
+    def validate_trainer_name(cls, value: str | None) -> str | None:
+        return validate_person_name(value) if value else None
 
     @field_validator("checklist_data", mode="before")
     @classmethod
@@ -134,7 +134,7 @@ class SessionUpdate(BaseModel):
 
     @model_validator(mode="after")
     def reject_nulls(self) -> "SessionUpdate":
-        for field in self.model_fields_set:
+        for field in self.model_fields_set - {"trainer_name"}:
             if getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
         return self
@@ -152,7 +152,7 @@ class SessionResponse(BaseModel):
     date: Date
     start_time: str | None = None
     end_time: str | None = None
-    trainer_name: str
+    trainer_name: str | None
     status: SessionStatus
     checklist_data: dict | list
     created_at: datetime

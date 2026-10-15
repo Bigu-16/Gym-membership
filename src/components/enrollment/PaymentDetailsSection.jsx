@@ -4,16 +4,17 @@ import { inputClass, labelClass, sectionTitleClass } from './fieldStyles';
 
 const PaymentDetailsSection = ({
   trainees,
-  trainingType,
   plansById,
   paymentMethod,
   onPaymentMethodChange,
+  termsAccepted,
+  onTermsAcceptedChange,
   onAmountChange,
   errors = [],
   submitting
 }) => {
   const rows = trainees.map((trainee, index) => {
-    const plan = trainingType === 'group' ? plansById.get(Number(trainee.planId)) : null;
+    const plan = plansById.get(Number(trainee.planId)) || null;
     return { trainee, index, plan, amount: effectiveAmount(trainee, plan) };
   });
   const total = rows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
@@ -30,19 +31,13 @@ const PaymentDetailsSection = ({
           <h2 className={sectionTitleClass}>Payment</h2>
         </div>
 
-        {trainingType === 'personal' && (
-          <p className="text-[11px] text-[var(--text-secondary)]">
-            Personal training is priced individually — enter the agreed amount, or leave it blank to record the payment later.
-          </p>
-        )}
-
         <div className="space-y-3">
           {rows.map(({ trainee, index, plan, amount }) => (
             <div key={trainee.key} className="grid grid-cols-1 sm:grid-cols-[1fr_180px] gap-3 items-center">
               <div>
                 <p className="text-sm font-semibold">{trainee.name.trim() || `Trainee ${index + 1}`}</p>
                 <p className="text-[10px] text-[var(--text-secondary)]">
-                  {plan ? planSummary(plan) : trainingType === 'group' ? 'No package chosen' : 'Personal training'}
+                  {plan ? planSummary(plan) : 'No package chosen'}
                 </p>
               </div>
               <div className="relative">
@@ -82,6 +77,28 @@ const PaymentDetailsSection = ({
             <span className="block text-2xl font-black mt-1" data-testid="payment-total">{formatMoney(total)}</span>
           </div>
         </div>
+      </section>
+
+      {/* Terms printed on the N & T registration form */}
+      <section className="glass-card p-6 sm:p-8 space-y-4" aria-labelledby="terms-heading">
+        <h2 id="terms-heading" className={sectionTitleClass}>Center terms</h2>
+        <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+          As per N &amp; T Taekwondo &amp; Karate Center management: all activity fees are non-refundable. The management
+          does not accept any responsibility for any loss, theft or damage caused to valuables or personal belongings
+          brought into the club. Lockers are provided for the convenience of the members for clothes and personal
+          belongings. All persons entering the club do so at their own risk. The club does not accept any responsibility
+          whatsoever for any injury, death of members/dependents, guests or damage to personal properties within the
+          club premises.
+        </p>
+        <label className="flex items-start gap-3 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(event) => onTermsAcceptedChange(event.target.checked)}
+            className="mt-0.5 w-4 h-4 accent-[var(--text-primary)]"
+          />
+          <span>The student/parent has read and agrees to these rules and regulations.</span>
+        </label>
       </section>
 
       {errors.length > 0 && (

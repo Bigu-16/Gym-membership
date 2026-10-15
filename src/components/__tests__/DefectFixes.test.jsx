@@ -56,7 +56,6 @@ describe('Gym App Defect Fixes Verification', () => {
       onDeleteScheduleTemplate={vi.fn()}
     />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Weekly Schedule/i }));
     fireEvent.click(screen.getAllByRole('button', { name: /Little Kids Karate/i })[0]);
 
     // Modal should open without throwing an error

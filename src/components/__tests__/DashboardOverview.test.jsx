@@ -80,19 +80,31 @@ describe('DashboardOverview', () => {
     expect(changes).toEqual({ status: 'in-progress' });
   });
 
-  it('checklist edits go to the backend, with an in-app confirmation before removing', async () => {
-    const props = renderDashboard();
-    const [first] = screen.getAllByRole('article');
+  it('checklist starts empty and edits go to the backend, with confirmation before removing', async () => {
+    const recorded = {
+      id: 501, templateId: 1, dateKey: '2026-10-14', title: 'Kids Taekwondo', isProjected: false, status: 'upcoming',
+      start: new Date(2026, 9, 14, 16), end: new Date(2026, 9, 14, 17),
+      checklist: [{ id: 1, text: 'Belt test sign-up', checked: false }]
+    };
+    const props = renderDashboard({ sessions: [recorded] });
+    const [first, second] = screen.getAllByRole('article');
 
-    fireEvent.click(within(first).getByLabelText('Roll call & attendance'));
+    // Nothing is pre-filled on classes that have not been recorded.
+    expect(within(second).getByText(/No checklist items/)).toBeInTheDocument();
+    fireEvent.change(within(second).getByLabelText('New checklist item'), { target: { value: 'Bring pads' } });
+    fireEvent.click(within(second).getByRole('button', { name: 'Add' }));
     await waitFor(() => expect(props.saveSession).toHaveBeenCalledTimes(1));
-    expect(props.saveSession.mock.calls[0][1].checklist[0]).toMatchObject({ text: 'Roll call & attendance', checked: true });
+    expect(props.saveSession.mock.calls[0][1].checklist).toEqual([{ id: 1, text: 'Bring pads', checked: false }]);
 
-    fireEvent.click(within(first).getByRole('button', { name: 'Remove Warm-up & stretching' }));
-    expect(props.saveSession).toHaveBeenCalledTimes(1);
-    fireEvent.click(within(first).getByRole('button', { name: 'Confirm removing Warm-up & stretching' }));
+    fireEvent.click(within(first).getByLabelText('Belt test sign-up'));
     await waitFor(() => expect(props.saveSession).toHaveBeenCalledTimes(2));
-    expect(props.saveSession.mock.calls[1][1].checklist.map((i) => i.text)).not.toContain('Warm-up & stretching');
+    expect(props.saveSession.mock.calls[1][1].checklist[0].checked).toBe(true);
+
+    fireEvent.click(within(first).getByRole('button', { name: 'Remove Belt test sign-up' }));
+    expect(props.saveSession).toHaveBeenCalledTimes(2);
+    fireEvent.click(within(first).getByRole('button', { name: 'Confirm removing Belt test sign-up' }));
+    await waitFor(() => expect(props.saveSession).toHaveBeenCalledTimes(3));
+    expect(props.saveSession.mock.calls[2][1].checklist).toEqual([]);
   });
 
   it("lists members enrolled in today's classes and checks them in", async () => {

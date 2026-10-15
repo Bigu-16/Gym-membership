@@ -116,6 +116,7 @@ export const mapMemberToFrontend = (m) => ({
   isFrozen: m.is_frozen ?? m.isFrozen ?? false,
   image: m.image || avatarFor(m.name),
   messagingOptIn: m.messaging_opt_in ?? m.messagingOptIn ?? true,
+  termsAcceptedAt: m.terms_accepted_at ?? m.termsAcceptedAt ?? null,
   createdAt: m.created_at || m.createdAt || null
 });
 
@@ -148,7 +149,8 @@ export const mapMemberToBackend = (m) => {
     plan_id: m.planId !== undefined ? (m.planId ? Number(m.planId) : null) : undefined,
     expiry_date: toDateOnly(m.expiryDate),
     messaging_opt_in: m.messagingOptIn,
-    is_frozen: m.isFrozen
+    is_frozen: m.isFrozen,
+    terms_accepted: m.termsAccepted
   };
   return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined));
 };
@@ -206,12 +208,12 @@ export const mapSessionToFrontend = (s, templates = []) => {
     id: s.id,
     templateId: s.template_id ?? null,
     dateKey: s.date,
-    title: template ? template.className : 'Personal Training',
+    title: template ? template.className : 'Class (removed from timetable)',
     trainer: s.trainer_name,
     start,
     end,
     status: fromBackendStatus(s.status),
-    type: template?.type || 'personal',
+    type: 'group',
     capacity: template?.capacity ?? null,
     checklist: normalizeChecklist(s.checklist_data),
     isProjected: false
@@ -416,7 +418,7 @@ export const apiService = {
         type: templateData.type || 'group',
         days: mapDaysToBackend(templateData.days),
         time: templateData.time,
-        capacity: Number(templateData.capacity),
+        capacity: templateData.capacity ? Number(templateData.capacity) : null,
         ...(templateData.trainer ? { trainer_name: templateData.trainer } : {})
       }
     });
@@ -429,7 +431,7 @@ export const apiService = {
     if (templateData.type !== undefined) payload.type = templateData.type;
     if (templateData.days !== undefined) payload.days = mapDaysToBackend(templateData.days);
     if (templateData.time !== undefined) payload.time = templateData.time;
-    if (templateData.capacity !== undefined) payload.capacity = Number(templateData.capacity);
+    if (templateData.capacity !== undefined) payload.capacity = templateData.capacity ? Number(templateData.capacity) : null;
     if (templateData.trainer !== undefined) payload.trainer_name = templateData.trainer || null;
 
     const t = await request(`/schedule/templates/${templateId}`, {
@@ -470,7 +472,7 @@ export const apiService = {
           date: merged.dateKey || toDateKey(merged.start),
           start_time: clockToString(merged.start),
           end_time: clockToString(merged.end),
-          trainer_name: merged.trainer || 'Coach',
+          trainer_name: merged.trainer || null,
           status: toBackendStatus(merged.status === 'not-recorded' || merged.status === 'scheduled' ? 'upcoming' : merged.status),
           checklist_data: { items: merged.checklist || [] }
         }
@@ -488,22 +490,6 @@ export const apiService = {
       fallbackError: 'Failed to update session'
     });
     return mapSessionToFrontend(updated, templates);
-  },
-
-  async createPersonalSession({ start, end, trainer, checklist = [] }) {
-    return request('/schedule/sessions', {
-      method: 'POST',
-      fallbackError: 'Failed to create session',
-      body: {
-        template_id: null,
-        date: toDateKey(start),
-        start_time: clockToString(start),
-        end_time: clockToString(end),
-        trainer_name: trainer || 'Coach',
-        status: 'upcoming',
-        checklist_data: { items: checklist }
-      }
-    });
   },
 
   // Enrollments API

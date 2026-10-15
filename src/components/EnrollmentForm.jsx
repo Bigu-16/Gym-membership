@@ -1,19 +1,10 @@
 import { useMemo, useState } from 'react';
-import { PERSONAL_DEFAULTS, PERSONAL_TRAINING_PROGRAMS } from '../config/scheduleConfig';
-import { toDateKey } from '../utils/classSessions';
 import ProgramTypeSelector from './enrollment/ProgramTypeSelector';
 import PackageTemplateSelector from './enrollment/PackageTemplateSelector';
 import FamilyRegistrationSection from './enrollment/FamilyRegistrationSection';
-import ScheduleSelectorSection from './enrollment/ScheduleSelectorSection';
 import PaymentDetailsSection from './enrollment/PaymentDetailsSection';
 import EnrollmentSuccess from './enrollment/EnrollmentSuccess';
-import {
-  activePlans,
-  buildPersonalSessions,
-  buildRegistration,
-  validatePersonalSchedule,
-  validateRegistration
-} from './enrollment/enrollmentHelpers';
+import { activePlans, buildRegistration, validateRegistration } from './enrollment/enrollmentHelpers';
 
 let nextTraineeKey = 1;
 
@@ -36,25 +27,14 @@ const createTrainee = (planId = null) => ({
 
 const createParent = () => ({ name: '', phone: '', email: '' });
 
-const createPersonalSchedule = () => ({
-  program: PERSONAL_TRAINING_PROGRAMS[0],
-  trainer: '',
-  startDate: toDateKey(new Date()),
-  startTime: PERSONAL_DEFAULTS.startTime,
-  duration: PERSONAL_DEFAULTS.duration,
-  weeks: PERSONAL_DEFAULTS.weeks,
-  days: [...PERSONAL_DEFAULTS.days]
-});
-
 const EnrollmentForm = ({ onEnroll, scheduleTemplates = [], membershipPlans = [], onLoadOfficialPackages }) => {
   const plans = useMemo(() => activePlans(membershipPlans), [membershipPlans]);
   const plansById = useMemo(() => new Map(plans.map((plan) => [plan.id, plan])), [plans]);
 
-  const [trainingType, setTrainingType] = useState('group');
   const [registrant, setRegistrant] = useState('child');
   const [parent, setParent] = useState(createParent);
   const [trainees, setTrainees] = useState(() => [createTrainee()]);
-  const [personalSchedule, setPersonalSchedule] = useState(createPersonalSchedule);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [errors, setErrors] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -64,11 +44,10 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [], membershipPlans = []
   const sharedPlanId = trainees.every((t) => t.planId === trainees[0].planId) ? trainees[0].planId : null;
 
   const resetForm = () => {
-    setTrainingType('group');
     setRegistrant('child');
     setParent(createParent());
     setTrainees([createTrainee()]);
-    setPersonalSchedule(createPersonalSchedule());
+    setTermsAccepted(false);
     setPaymentMethod('cash');
     setErrors([]);
   };
@@ -93,8 +72,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [], membershipPlans = []
     event.preventDefault();
     if (submitting) return;
 
-    const validationErrors = validateRegistration({ registrant, parent, trainees, trainingType, plansById });
-    if (trainingType === 'personal') validationErrors.push(...validatePersonalSchedule(personalSchedule));
+    const validationErrors = validateRegistration({ registrant, parent, trainees, plansById, termsAccepted });
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
       return;
@@ -104,10 +82,8 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [], membershipPlans = []
       registrant,
       parent,
       trainees,
-      trainingType,
       paymentMethod,
-      plansById,
-      personalSessions: trainingType === 'personal' ? buildPersonalSessions(personalSchedule) : []
+      plansById
     });
 
     setSubmitting(true);
@@ -163,24 +139,19 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [], membershipPlans = []
 
       <form noValidate onSubmit={handleSubmit} className="space-y-12 max-w-full animate-in fade-in slide-in-from-bottom-8 duration-700">
         <ProgramTypeSelector
-          trainingType={trainingType}
-          onTrainingTypeChange={setTrainingType}
           registrant={registrant}
           onRegistrantChange={setRegistrant}
         />
 
-        {trainingType === 'group' && (
-          <PackageTemplateSelector
-            plans={plans}
-            selectedPlanId={sharedPlanId}
-            onSelect={applyPlanToAll}
-            onLoadOfficialPackages={onLoadOfficialPackages}
-          />
-        )}
+        <PackageTemplateSelector
+          plans={plans}
+          selectedPlanId={sharedPlanId}
+          onSelect={applyPlanToAll}
+          onLoadOfficialPackages={onLoadOfficialPackages}
+        />
 
         <FamilyRegistrationSection
           registrant={registrant}
-          trainingType={trainingType}
           parent={parent}
           onParentChange={(changes) => setParent((current) => ({ ...current, ...changes }))}
           trainees={trainees}
@@ -192,19 +163,13 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [], membershipPlans = []
           scheduleTemplates={scheduleTemplates}
         />
 
-        {trainingType === 'personal' && (
-          <ScheduleSelectorSection
-            schedule={personalSchedule}
-            onChange={(changes) => setPersonalSchedule((current) => ({ ...current, ...changes }))}
-          />
-        )}
-
         <PaymentDetailsSection
           trainees={trainees}
-          trainingType={trainingType}
           plansById={plansById}
           paymentMethod={paymentMethod}
           onPaymentMethodChange={setPaymentMethod}
+          termsAccepted={termsAccepted}
+          onTermsAcceptedChange={setTermsAccepted}
           onAmountChange={(key, amount) => updateTrainee(key, { amount })}
           errors={errors}
           submitting={submitting}

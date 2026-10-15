@@ -8,7 +8,6 @@ const TraineeCard = ({
   trainee,
   index,
   registrant,
-  trainingType,
   plans,
   plansById,
   scheduleTemplates,
@@ -167,7 +166,7 @@ const TraineeCard = ({
         )}
       </div>
 
-      {trainingType === 'group' && (
+      {(
         <div className="space-y-4 pt-2 border-t border-[var(--glass-border)]">
           <div className="max-w-md">
             <label htmlFor={id('plan')} className={labelClass}>Package</label>

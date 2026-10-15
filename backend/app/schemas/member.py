@@ -68,6 +68,8 @@ class PaymentInput(BaseModel):
 class MemberCreate(MemberBase):
     is_frozen: bool = False
     payment: PaymentInput | None = None
+    # Ticked when the student/parent agrees to the terms on the registration form.
+    terms_accepted: bool = False
 
     @model_validator(mode="after")
     def require_contact(self) -> "MemberCreate":
@@ -142,6 +144,7 @@ class MemberResponse(BaseModel):
     expiry_date: date | None = None
     messaging_opt_in: bool
     is_frozen: bool
+    terms_accepted_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 

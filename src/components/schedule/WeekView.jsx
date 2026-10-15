@@ -179,7 +179,7 @@ const WeekView = ({
                         <div className="font-bold mb-0.5 truncate" title={session.title}>{session.title}</div>
                         <div className="opacity-70 text-[9px] truncate">
                           {format(session.start, 'h:mm')}–{format(session.end, 'h:mm a')}
-                          {session.capacity ? ` • ${session.enrolled || 0}/${session.capacity}` : ''}
+                          {` • ${session.enrolled || 0}${session.capacity ? `/${session.capacity}` : ''}`}
                         </div>
                         {session.status === 'in-progress' && <span className="text-[8px] font-bold">LIVE</span>}
                       </div>

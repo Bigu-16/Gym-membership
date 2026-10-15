@@ -38,6 +38,7 @@ async def count_classes_today(db: AsyncSession) -> int:
     weekday = today.strftime("%A").lower()
     templates = (await db.scalars(select(ScheduleTemplate))).all()
     group_classes = sum(1 for template in templates if weekday in {day.lower() for day in template.days})
+    # Sessions recorded for a class that has since been removed from the timetable.
     personal_sessions = await db.scalar(
         select(func.count(Session.id)).where(Session.date == today, Session.template_id.is_(None))
     )

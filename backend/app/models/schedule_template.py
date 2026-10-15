@@ -14,7 +14,8 @@ class ScheduleTemplate(TimestampMixin, Base):
     type: Mapped[ScheduleType] = mapped_column(Enum(ScheduleType, name="schedule_type_enum"), nullable=False)
     days: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     time: Mapped[str] = mapped_column(String(20), nullable=False)
-    capacity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Optional: the official timetable does not state class sizes (None = no limit).
+    capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
     trainer_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     sessions = relationship("Session", back_populates="template")

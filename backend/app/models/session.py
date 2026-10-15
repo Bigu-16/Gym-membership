@@ -17,7 +17,7 @@ class Session(TimestampMixin, Base):
     # "HH:MM" gym-local times; personal sessions need them, group sessions inherit the class slot.
     start_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
     end_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
-    trainer_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    trainer_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     status: Mapped[SessionStatus] = mapped_column(
         Enum(SessionStatus, name="session_status_enum"),
         nullable=False,

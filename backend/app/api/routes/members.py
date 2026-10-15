@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select, update
@@ -86,7 +87,8 @@ async def create_member(
         await ensure_phone_available(db, payload.phone)
     plan = await get_plan_or_404(db, payload.plan_id)
 
-    data = payload.model_dump(exclude={"payment"})
+    data = payload.model_dump(exclude={"payment", "terms_accepted"})
+    data["terms_accepted_at"] = datetime.now(UTC) if payload.terms_accepted else None
     start = gym_today()
     if data["expiry_date"] is None and plan is not None:
         data["expiry_date"] = expiry_for_plan(plan, start)
@@ -142,7 +144,8 @@ async def create_family(
     members: list[Member] = []
     for entry in payload.members:
         plan = await get_plan_or_404(db, entry.plan_id)
-        data = entry.model_dump(exclude={"family_id", "parent_phone", "payment"})
+        data = entry.model_dump(exclude={"family_id", "parent_phone", "payment", "terms_accepted"})
+        data["terms_accepted_at"] = datetime.now(UTC) if entry.terms_accepted else None
         if data["expiry_date"] is None and plan is not None:
             data["expiry_date"] = expiry_for_plan(plan, start)
         member = Member(**data, family_id=family.id, parent_phone=family.parent_phone)

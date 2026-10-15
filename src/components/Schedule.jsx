@@ -7,9 +7,14 @@ import DayView from './schedule/DayView';
 import WeekView from './schedule/WeekView';
 import MonthView from './schedule/MonthView';
 import SessionModal from './schedule/SessionModal';
+import TemplateManagement from './TemplateManagement';
 
-const Schedule = ({ sessions = [], scheduleTemplates = [], members = [], saveSession }) => {
-  const [view, setView] = useState('week');
+/**
+ * One page for classes: the calendar of real dated classes (day/week/month) and the
+ * weekly timetable those classes come from ("Edit timetable").
+ */
+const Schedule = ({ sessions = [], scheduleTemplates = [], members = [], saveSession, timetableActions = {} }) => {
+  const [view, setView] = useState(() => (scheduleTemplates.length === 0 ? 'timetable' : 'week'));
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selectedId, setSelectedId] = useState(null);
   const [now, setNow] = useState(() => new Date());
@@ -64,10 +69,20 @@ const Schedule = ({ sessions = [], scheduleTemplates = [], members = [], saveSes
         </div>
       )}
 
-      {scheduleTemplates.length === 0 && (
+      {scheduleTemplates.length === 0 && view !== 'timetable' && (
         <p className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400">
-          No weekly timetable yet. Open <strong>Templates</strong> and press “Load official timetable”.
+          No weekly timetable yet. Press <strong>Edit timetable</strong>, then “Load official timetable”.
         </p>
+      )}
+
+      {view === 'timetable' && (
+        <TemplateManagement
+          scheduleTemplates={scheduleTemplates}
+          onAddScheduleTemplate={timetableActions.onAdd}
+          onUpdateScheduleTemplate={timetableActions.onUpdate}
+          onDeleteScheduleTemplate={timetableActions.onDelete}
+          onLoadOfficialTimetable={timetableActions.onLoadOfficial}
+        />
       )}
 
       {view === 'week' && (

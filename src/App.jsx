@@ -8,7 +8,6 @@ import DashboardOverview from './components/DashboardOverview';
 import Analytics from './components/Analytics';
 import Login from './components/Login';
 import Notifications from './components/Notifications';
-import TemplateManagement from './components/TemplateManagement';
 import PackagesPage from './components/PackagesPage';
 import AppHeader from './components/layout/AppHeader';
 import { useGymData } from './hooks/useGymData';
@@ -205,14 +204,12 @@ const App = () => {
                   scheduleTemplates={scheduleTemplates}
                   members={members}
                   saveSession={saveSession}
-                />
-              ) : activeTab === 'templates' ? (
-                <TemplateManagement
-                  scheduleTemplates={scheduleTemplates}
-                  onAddScheduleTemplate={handleAddTemplate}
-                  onUpdateScheduleTemplate={handleUpdateTemplate}
-                  onDeleteScheduleTemplate={handleDeleteTemplate}
-                  onLoadOfficialTimetable={handleLoadOfficialTimetable}
+                  timetableActions={{
+                    onAdd: handleAddTemplate,
+                    onUpdate: handleUpdateTemplate,
+                    onDelete: handleDeleteTemplate,
+                    onLoadOfficial: handleLoadOfficialTimetable
+                  }}
                 />
               ) : activeTab === 'packages' ? (
                 <PackagesPage
@@ -248,9 +245,9 @@ const App = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                   </div>
-                  <h2 className="text-xl font-light uppercase tracking-luxury mb-2">Module Initializing</h2>
+                  <h2 className="text-xl font-light uppercase tracking-luxury mb-2">Page not found</h2>
                   <p className="text-[var(--text-secondary)] text-sm max-w-md">
-                    The <span className="text-[var(--text-primary)] font-semibold uppercase">{activeTab}</span> interface is being optimized for your personalized trainer experience.
+                    The <span className="text-[var(--text-primary)] font-semibold uppercase">{activeTab}</span> page could not be found.
                   </p>
                 </div>
               )}

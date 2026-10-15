@@ -54,20 +54,22 @@ async def test_member_expiry_comes_from_package_and_payment_is_recorded(client, 
             "age": 29,
             "plan_id": plan_id,
             "payment": {"amount": "900", "method": "card"},
+            "terms_accepted": True,
         },
     )
 
     assert response.status_code == 201
     body = response.json()
     assert body["expiry_date"] == add_months(gym_today(), 3).isoformat()
+    assert body["terms_accepted_at"] is not None
     payments = (await client.get(f"/api/v1/payments/?member_id={body['id']}")).json()
     assert [(p["amount"], p["method"], p["kind"]) for p in payments] == [("900.00", "card", "new")]
 
 
 async def test_returning_parent_adds_children_to_existing_family(client):
-    parent = {"name": "Safiya Al Muharrami", "phone": "+971501110001"}
-    first = await client.post("/api/v1/members/families", json={"parent": parent, "members": [{"name": "Mouza Al Muharrami", "age": 3}]})
-    second = await client.post("/api/v1/members/families", json={"parent": parent, "members": [{"name": "Hamdan Al Muharrami", "age": 8}]})
+    parent = {"name": "Sara Example", "phone": "+971501110001"}
+    first = await client.post("/api/v1/members/families", json={"parent": parent, "members": [{"name": "Lina Example", "age": 3}]})
+    second = await client.post("/api/v1/members/families", json={"parent": parent, "members": [{"name": "Zaid Example", "age": 8}]})
 
     assert first.status_code == 201 and second.status_code == 201
     assert first.json()["id"] == second.json()["id"]
@@ -143,10 +145,13 @@ async def test_official_catalog_endpoints_are_idempotent(client):
     first = (await client.post("/api/v1/schedule/templates/sync-official")).json()
     second = (await client.post("/api/v1/schedule/templates/sync-official")).json()
     assert first == {"created": 11, "total": 11}
+    templates = (await client.get("/api/v1/schedule/templates")).json()
+    # Class sizes and coaches are not printed on the form, so none are invented.
+    assert all(t["capacity"] is None and t["trainer_name"] is None for t in templates)
     assert second == {"created": 0, "total": 11}
 
     packages = (await client.post("/api/v1/plans/sync-official")).json()
-    assert packages["created"] == 25
+    assert packages["created"] == 23
     assert (await client.post("/api/v1/plans/sync-official")).json()["created"] == 0
 
 

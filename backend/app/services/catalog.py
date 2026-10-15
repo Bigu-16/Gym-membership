@@ -10,6 +10,8 @@ Pricing reconciles the two printed sources:
 * Registration form (adds the longer packages the card does not list):
   6 months 1400 AED (Zumba fitness 1450 AED) and 1 year 2550 AED.
 Where the two disagree (form: 1 month 300 / 3 months 800) the price card wins.
+Kung Fu is only on the price card, so it only has the 1- and 3-month packages.
+Class sizes are not printed anywhere, so official classes have no capacity limit.
 """
 
 from dataclasses import dataclass, field
@@ -34,6 +36,8 @@ PROGRAM_DESCRIPTIONS = {
 }
 
 SIX_MONTH_PRICE_OVERRIDES = {"Fitness": Decimal("1450.00")}
+# Programs that appear on the registration form's 6-month / 1-year price table.
+LONG_TERM_PROGRAMS = {"Taekwondo", "Karate", "Kickboxing", "Fitness"}
 
 
 @dataclass(frozen=True)
@@ -55,6 +59,30 @@ def official_packages() -> list[PackageSpec]:
     for index, program in enumerate(PROGRAMS):
         base = (index + 1) * 10
         description = PROGRAM_DESCRIPTIONS.get(program)
+        long_term = [
+            PackageSpec(
+                name=f"{program} Six Month - 3 Classes",
+                program=program,
+                duration_label="6 Months",
+                duration_months=6,
+                duration_days=180,
+                classes_per_week=3,
+                price=SIX_MONTH_PRICE_OVERRIDES.get(program, Decimal("1400.00")),
+                sort_order=base + 3,
+                description=description,
+            ),
+            PackageSpec(
+                name=f"{program} One Year - 3 Classes",
+                program=program,
+                duration_label="1 Year",
+                duration_months=12,
+                duration_days=365,
+                classes_per_week=3,
+                price=Decimal("2550.00"),
+                sort_order=base + 4,
+                description=description,
+            ),
+        ]
         packages.extend(
             [
                 PackageSpec(
@@ -91,29 +119,8 @@ def official_packages() -> list[PackageSpec]:
                     included_items=list(THREE_MONTH_PERKS.get(program, [])),
                     description=description,
                 ),
-                PackageSpec(
-                    name=f"{program} Six Month - 3 Classes",
-                    program=program,
-                    duration_label="6 Months",
-                    duration_months=6,
-                    duration_days=180,
-                    classes_per_week=3,
-                    price=SIX_MONTH_PRICE_OVERRIDES.get(program, Decimal("1400.00")),
-                    sort_order=base + 3,
-                    description=description,
-                ),
-                PackageSpec(
-                    name=f"{program} One Year - 3 Classes",
-                    program=program,
-                    duration_label="1 Year",
-                    duration_months=12,
-                    duration_days=365,
-                    classes_per_week=3,
-                    price=Decimal("2550.00"),
-                    sort_order=base + 4,
-                    description=description,
-                ),
             ]
+            + (long_term if program in LONG_TERM_PROGRAMS else [])
         )
     return packages
 
@@ -123,7 +130,7 @@ class ClassSpec:
     title: str
     days: list[str]
     time: str
-    capacity: int
+    capacity: int | None = None
 
 
 MWF = ["Monday", "Wednesday", "Friday"]
@@ -131,17 +138,17 @@ TTS = ["Tuesday", "Thursday", "Saturday"]
 
 # Mirrors the timetable printed on the official registration form (Mon–Sat, 4–9 PM).
 OFFICIAL_TIMETABLE: list[ClassSpec] = [
-    ClassSpec("Kids Taekwondo", MWF, "16:00 - 17:00", 15),
-    ClassSpec("Kids Taekwondo", ["Monday", "Wednesday"], "17:00 - 18:00", 15),
-    ClassSpec("Kids Karate", ["Friday"], "17:00 - 18:00", 15),
-    ClassSpec("Kids Taekwondo", MWF, "18:00 - 19:00", 15),
-    ClassSpec("Kids Taekwondo", MWF, "19:00 - 20:00", 15),
-    ClassSpec("Kids Taekwondo", MWF, "20:00 - 21:00", 15),
-    ClassSpec("Little Kids Karate", TTS, "16:00 - 17:00", 12),
-    ClassSpec("Kids Karate", TTS, "17:00 - 18:00", 15),
-    ClassSpec("Kids Karate", TTS, "18:00 - 19:00", 15),
-    ClassSpec("Adult Kickboxing", TTS, "19:00 - 20:00", 15),
-    ClassSpec("Adult Karate", TTS, "20:00 - 21:00", 15),
+    ClassSpec("Kids Taekwondo", MWF, "16:00 - 17:00"),
+    ClassSpec("Kids Taekwondo", ["Monday", "Wednesday"], "17:00 - 18:00"),
+    ClassSpec("Kids Karate", ["Friday"], "17:00 - 18:00"),
+    ClassSpec("Kids Taekwondo", MWF, "18:00 - 19:00"),
+    ClassSpec("Kids Taekwondo", MWF, "19:00 - 20:00"),
+    ClassSpec("Kids Taekwondo", MWF, "20:00 - 21:00"),
+    ClassSpec("Little Kids Karate", TTS, "16:00 - 17:00"),
+    ClassSpec("Kids Karate", TTS, "17:00 - 18:00"),
+    ClassSpec("Kids Karate", TTS, "18:00 - 19:00"),
+    ClassSpec("Adult Kickboxing", TTS, "19:00 - 20:00"),
+    ClassSpec("Adult Karate", TTS, "20:00 - 21:00"),
 ]
 
 

@@ -137,8 +137,8 @@ def test_names_are_restricted_and_html_is_removed_before_validation():
 
 
 def test_family_trainees_need_no_phone_and_little_kids_are_allowed():
-    base = {"parent": {"name": "Safiya Al Muharrami", "phone": "+971500000100"}}
-    valid = FamilyCreate(**base, members=[{"name": "Mouza Al Muharrami", "age": 3}])
+    base = {"parent": {"name": "Sara Example", "phone": "+971500000100"}}
+    valid = FamilyCreate(**base, members=[{"name": "Lina Example", "age": 3}])
     assert valid.members[0].age == 3
     assert valid.members[0].phone is None
 

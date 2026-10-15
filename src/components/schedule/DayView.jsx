@@ -49,9 +49,9 @@ const DayView = ({ currentDate, getSessionsForDay, setSelectedSession, now = new
                   <div className="flex flex-wrap gap-4 text-[11px] opacity-70">
                     <span className="flex items-center gap-1.5"><Clock size={12} /> {format(session.start, 'h:mm a')} – {format(session.end, 'h:mm a')}</span>
                     {session.trainer && <span className="flex items-center gap-1.5"><User size={12} /> {session.trainer}</span>}
-                    {session.capacity ? (
-                      <span className="flex items-center gap-1.5"><Users size={12} /> {session.enrolled || 0}/{session.capacity}</span>
-                    ) : null}
+                    <span className="flex items-center gap-1.5">
+                      <Users size={12} /> {session.enrolled || 0}{session.capacity ? `/${session.capacity}` : ' enrolled'}
+                    </span>
                   </div>
                 </div>
               </button>
@@ -66,7 +66,10 @@ const DayView = ({ currentDate, getSessionsForDay, setSelectedSession, now = new
           <dl className="grid grid-cols-2 gap-4">
             <div className="bg-[var(--bg-primary)] p-4 rounded-2xl border border-[var(--glass-border)]">
               <dt className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Enrolled</dt>
-              <dd className="text-xl font-bold">{enrolledTotal}<span className="text-xs text-[var(--text-secondary)]">/{capacityTotal}</span></dd>
+              <dd className="text-xl font-bold">
+                {enrolledTotal}
+                {capacityTotal > 0 && <span className="text-xs text-[var(--text-secondary)]">/{capacityTotal}</span>}
+              </dd>
             </div>
             <div className="bg-[var(--bg-primary)] p-4 rounded-2xl border border-[var(--glass-border)]">
               <dt className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Completed</dt>

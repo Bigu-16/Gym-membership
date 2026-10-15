@@ -50,11 +50,15 @@ def upgrade() -> None:
     op.alter_column("members", "phone", existing_type=sa.String(length=30), nullable=True)
     op.add_column("members", sa.Column("whatsapp_number", sa.String(length=30), nullable=True))
     op.add_column("members", sa.Column("emirates_id", sa.String(length=32), nullable=True))
+    op.add_column("members", sa.Column("terms_accepted_at", sa.DateTime(timezone=True), nullable=True))
 
     # Sessions keep their own clock time (personal sessions have no class slot).
     op.add_column("sessions", sa.Column("start_time", sa.String(length=5), nullable=True))
     op.add_column("sessions", sa.Column("end_time", sa.String(length=5), nullable=True))
     op.add_column("schedule_templates", sa.Column("trainer_name", sa.String(length=120), nullable=True))
+    # Neither printed source gives class sizes or coach names, so both become optional.
+    op.alter_column("schedule_templates", "capacity", existing_type=sa.Integer(), nullable=True)
+    op.alter_column("sessions", "trainer_name", existing_type=sa.String(length=120), nullable=True)
 
     # Payments actually collected, so revenue reporting uses real money.
     payment_method_enum.create(bind, checkfirst=True)
@@ -112,9 +116,14 @@ def downgrade() -> None:
     op.drop_table("payments")
     payment_kind_enum.drop(op.get_bind(), checkfirst=True)
     payment_method_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("UPDATE sessions SET trainer_name = 'Coach' WHERE trainer_name IS NULL")
+    op.alter_column("sessions", "trainer_name", existing_type=sa.String(length=120), nullable=False)
+    op.execute("UPDATE schedule_templates SET capacity = 15 WHERE capacity IS NULL")
+    op.alter_column("schedule_templates", "capacity", existing_type=sa.Integer(), nullable=False)
     op.drop_column("schedule_templates", "trainer_name")
     op.drop_column("sessions", "end_time")
     op.drop_column("sessions", "start_time")
+    op.drop_column("members", "terms_accepted_at")
     op.drop_column("members", "emirates_id")
     op.drop_column("members", "whatsapp_number")
     op.alter_column("members", "phone", existing_type=sa.String(length=30), nullable=False)

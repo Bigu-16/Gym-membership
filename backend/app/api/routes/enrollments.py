@@ -69,7 +69,7 @@ async def create_enrollment(
         existing_count = await db.scalar(
             select(func.count(Enrollment.id)).where(Enrollment.template_id == payload.template_id)
         )
-        if (existing_count or 0) >= template.capacity:
+        if template.capacity is not None and (existing_count or 0) >= template.capacity:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Schedule template is at capacity",
@@ -88,11 +88,11 @@ async def create_enrollment(
                 select(ScheduleTemplate).where(ScheduleTemplate.id == session.template_id).with_for_update()
             )
 
-        if template is not None:
+        if template is not None and template.capacity is not None:
             existing_count = await db.scalar(
                 select(func.count(Enrollment.id)).where(Enrollment.session_id == payload.session_id)
             )
-            if (existing_count or 0) >= template.capacity:
+            if template.capacity is not None and (existing_count or 0) >= template.capacity:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Session is at capacity",

@@ -33,7 +33,8 @@ describe('enrollment packages come from the backend', () => {
   it('no longer ships hardcoded package templates', () => {
     expect(scheduleConfig.PACKAGE_TEMPLATES).toBeUndefined();
     expect(scheduleConfig.ACTIVITIES).toBeUndefined();
-    scheduleConfig.GROUP_SCHEDULE_SLOTS.forEach((slot) => expect(slot.enrolled).toBeUndefined());
+    expect(scheduleConfig.GROUP_SCHEDULE_SLOTS).toBeUndefined();
+    expect(scheduleConfig.PERSONAL_TRAINING_PROGRAMS).toBeUndefined();
   });
 
   it('renders every active backend package as a selectable card', () => {

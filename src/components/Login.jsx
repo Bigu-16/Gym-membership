@@ -34,7 +34,8 @@ const Login = ({ onLoginSuccess }) => {
       console.error(err);
       const offline = err.name === 'TypeError' || /fetch|NetworkError/i.test(err.message || '');
       setError(offline
-        ? 'Cannot reach the server. Check the internet connection or the API address below.'
+        // Also what the browser reports when the API rejects this site's address (CORS).
+        ? `Cannot reach the server from ${window.location.origin}. Check the internet connection, the API address below, and that the API allows this site (CORS_ORIGINS).`
         : err.message || 'Invalid email or password');
     } finally {
       setLoading(false);

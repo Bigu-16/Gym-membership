@@ -63,7 +63,7 @@ const TemplateModal = ({
       days: formattedDaysStr,
       // Same 24h "HH:MM - HH:MM" form as the official timetable.
       time: `${startTime} - ${endTime}`,
-      capacity: parseInt(capacity, 10),
+      capacity: capacity === '' || capacity === null ? null : parseInt(capacity, 10),
       trainer: trainer.trim() || null
     };
 
@@ -198,31 +198,21 @@ const TemplateModal = ({
               />
             </div>
 
-            {/* Capacity Input */}
+            {/* Capacity: optional, since the official timetable does not state class sizes */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center ml-1">
-                <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">Max Capacity</label>
-                <span className="text-xs font-bold text-[var(--text-primary)]">{capacity} Members</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="5"
-                  max="30"
-                  step="1"
-                  value={capacity}
-                  onChange={(e) => setCapacity(parseInt(e.target.value, 10))}
-                  className="flex-grow accent-[var(--text-primary)] cursor-pointer"
-                />
-                <input
-                  type="number"
-                  min="5"
-                  max="30"
-                  value={capacity}
-                  onChange={(e) => setCapacity(parseInt(e.target.value, 10))}
-                  className="w-16 bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-lg px-2 py-2 text-center text-xs focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]/20"
-                />
-              </div>
+              <label htmlFor="template-capacity" className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">
+                Max class size (optional)
+              </label>
+              <input
+                id="template-capacity"
+                type="number"
+                min="1"
+                max="200"
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20"
+                placeholder="No limit"
+              />
             </div>
           </div>
 

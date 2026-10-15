@@ -28,7 +28,8 @@ describe('Sidebar Component', () => {
     const notificationsBtns = screen.getAllByRole('button', { name: /Notifications/i });
     expect(notificationsBtns.length).toBeGreaterThanOrEqual(2);
 
-    expect(screen.getAllByRole('button', { name: /Timetable/i }).length).toBeGreaterThanOrEqual(2);
+    // The timetable is edited inside Schedule, so it has no separate menu item.
+    expect(screen.queryByRole('button', { name: /Timetable|Templates/i })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Packages/i }).length).toBeGreaterThanOrEqual(2);
 
     // No invented "shift" — without a timetable there are simply no classes today.
