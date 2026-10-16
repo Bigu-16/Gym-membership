@@ -588,6 +588,21 @@ export const apiService = {
     return request('/analytics/notifications', { fallbackError: 'Failed to load notification analytics' });
   },
 
+  async getReminderSettings() {
+    return request('/notifications/reminder-settings', { fallbackError: 'Failed to load reminder settings' });
+  },
+
+  /** Send today's due expiry reminders now (also runs automatically every morning). */
+  async sendDueReminders() {
+    return request('/tasks/daily-reminders', { method: 'POST', fallbackError: 'Failed to send reminders' })
+      .catch(explainOutdatedServer);
+  },
+
+  async sendTestEmail(to) {
+    return request('/notifications/test-email', { method: 'POST', body: { to }, fallbackError: 'Test email failed' })
+      .catch(explainOutdatedServer);
+  },
+
   async getNotificationJobs() {
     return request('/notifications/jobs', { fallbackError: 'Failed to load notification jobs' });
   },

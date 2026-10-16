@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +15,11 @@ from app.schemas.notification import (
     NotificationJobResponse,
 )
 from app.services.announcements import dispatch_announcement
+from app.core.config import settings
+from app.services.audit import record_audit
+from app.services.messaging.base import RenderedMessage
 from app.services.messaging.registry import channel_available, get_adapter
+from app.services.reminders import CENTER_NAME, members_missing_email
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -52,6 +57,48 @@ async def list_channel_status(
         }
         for channel in NotificationChannel
     ]
+
+
+@router.get("/reminder-settings")
+async def reminder_settings(
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_admin_user),
+) -> dict:
+    """What the Notifications page needs to show whether automatic reminders will work."""
+    return {
+        "reminder_days": settings.reminder_offsets,
+        "email_configured": get_adapter(NotificationChannel.email).is_configured,
+        "from_email": settings.smtp_from_email or None,
+        "scheduler_enabled": bool(settings.cron_secret),
+        "members_without_email": await members_missing_email(db),
+    }
+
+
+class TestEmailRequest(BaseModel):
+    to: EmailStr
+
+
+@router.post("/test-email")
+async def send_test_email(
+    payload: TestEmailRequest,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: AppUser = Depends(get_current_admin_user),
+) -> dict:
+    """Send one email right now to check the SMTP settings."""
+    adapter = get_adapter(NotificationChannel.email)
+    if not adapter.is_configured:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is not set up on the server yet (SMTP settings missing)")
+    message = RenderedMessage(
+        subject=f"Test email from {CENTER_NAME}",
+        text="This is a test. Membership reminders from the center will arrive like this one.",
+        html=f"<p>This is a test. Membership reminders from <strong>{CENTER_NAME}</strong> will arrive like this one.</p>",
+    )
+    result = await adapter.send(str(payload.to), message)
+    record_audit(db, current_user, "test_email_sent", "settings", None, f"Test email to {payload.to}: {'sent' if result.success else 'failed'}")
+    await db.commit()
+    if not result.success:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"The email server refused the message: {result.error}")
+    return {"sent": True}
 
 
 @router.post(

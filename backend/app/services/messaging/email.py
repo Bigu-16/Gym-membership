@@ -24,14 +24,19 @@ class EmailAdapter(ChannelAdapter):
         email["To"] = recipient
         email["Subject"] = message.subject or "Notification"
         email.set_content(message.text)
+        if message.html:
+            email.add_alternative(message.html, subtype="html")
 
+        implicit_tls = settings.smtp_port == 465
         result = await aiosmtplib.send(
             email,
             hostname=settings.smtp_host,
             port=settings.smtp_port,
             username=settings.smtp_user or None,
             password=settings.smtp_password or None,
-            start_tls=settings.smtp_use_tls,
+            use_tls=implicit_tls,
+            start_tls=settings.smtp_use_tls and not implicit_tls,
+            timeout=20,
         )
         # aiosmtplib.send returns (errors_dict, message_str)
         response_text = result[1] if isinstance(result, tuple) and len(result) > 1 else None

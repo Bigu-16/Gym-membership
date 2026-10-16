@@ -57,7 +57,17 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from_email: str = ""
     smtp_from_name: str = "N & T Taekwondo & Karate Center"
-    smtp_use_tls: bool = True
+    smtp_use_tls: bool = True  # STARTTLS (port 587); port 465 always uses implicit TLS
+
+    # --- Membership expiry reminders ---
+    # Days before expiry on which a reminder goes out, e.g. "5,3". A day that was
+    # missed (server asleep) is caught up on the next run, never skipped.
+    expiry_reminder_days: str = "5,3"
+    # Shared secret for the scheduled daily job (GitHub Actions / Render cron) to call
+    # POST /api/v1/tasks/daily-reminders without a staff login. Empty = disabled.
+    cron_secret: str = ""
+    # Shown at the bottom of reminder emails, e.g. "Call or WhatsApp 050 123 4567".
+    center_contact_line: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -110,6 +120,12 @@ class Settings(BaseSettings):
         if self.debug:
             problems.append("DEBUG must be false")
         return problems
+
+    @property
+    def reminder_offsets(self) -> list[int]:
+        """Reminder days, most distant first (e.g. [5, 3])."""
+        values = {int(part) for part in self.expiry_reminder_days.split(",") if part.strip().isdigit()}
+        return sorted(values, reverse=True) or [5, 3]
 
     @property
     def messaging_dev_mode(self) -> bool:

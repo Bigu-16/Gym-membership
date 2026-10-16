@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { apiService } from '../services/api';
+import ReminderSettingsCard from './notifications/ReminderSettingsCard';
 
 
 const Notifications = ({ jobs = [], members = [], onTriggerTask }) => {
@@ -7,8 +7,6 @@ const Notifications = ({ jobs = [], members = [], onTriggerTask }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedJob, setSelectedJob] = useState(null);
-  const [runningTask, setRunningTask] = useState(null);
-  const [taskStatus, setTaskStatus] = useState(null);
 
   // Helper to map member name/phone from member_id or payload fallback
   const getRecipientInfo = (job) => {
@@ -27,32 +25,6 @@ const Notifications = ({ jobs = [], members = [], onTriggerTask }) => {
       phone: job.recipient || job.payload?.phone || '—',
       image: `https://ui-avatars.com/api/?name=${encodeURIComponent(job.payload?.member_name || 'System')}&background=random&color=fff`,
     };
-  };
-
-  const handleRunTask = async (taskType, taskFn) => {
-    setRunningTask(taskType);
-    setTaskStatus(null);
-    try {
-      const response = await taskFn();
-      setTaskStatus({
-        success: true,
-        message: response.status === 'seeded' 
-          ? 'Demo data seeded successfully!'
-          : `Task queued successfully! ID: ${response.task_id || 'N/A'}`,
-      });
-      if (onTriggerTask) {
-        // Refresh notifications log list
-        await onTriggerTask();
-      }
-    } catch (err) {
-      console.error(err);
-      setTaskStatus({
-        success: false,
-        message: err.message || 'Task execution failed.',
-      });
-    } finally {
-      setRunningTask(null);
-    }
   };
 
   // Filter & Search Logic
@@ -96,85 +68,7 @@ const Notifications = ({ jobs = [], members = [], onTriggerTask }) => {
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* Task Controls & Task Feedback Banner */}
-      <section className="glass-card p-6 border border-[var(--glass-border)]">
-        <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold mb-4">
-          Message tasks
-        </h2>
-        
-        {taskStatus && (
-          <div
-            className={`mb-6 p-4 rounded-xl text-xs flex items-center justify-between transition-all ${
-              taskStatus.success
-                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'
-                : 'bg-rose-500/10 border border-rose-500/20 text-rose-500'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              {taskStatus.success ? (
-                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              <span>{taskStatus.message}</span>
-            </div>
-            <button
-              onClick={() => setTaskStatus(null)}
-              className="text-[10px] uppercase font-bold tracking-widest opacity-80 hover:opacity-100"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button
-            onClick={() => handleRunTask('expiry', () => apiService.triggerMembershipExpiryReminders())}
-            disabled={runningTask !== null}
-            className="glass-card hover:bg-[var(--card-hover)] active:scale-95 transition-all py-4 px-6 text-left flex flex-col justify-between h-28 group relative overflow-hidden disabled:opacity-50 disabled:pointer-events-none"
-          >
-            <div>
-              <span className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Expiry Checker</span>
-              <span className="text-xs font-semibold block text-[var(--text-primary)]">Scan & Queue Expiry warnings</span>
-            </div>
-            <div className="flex justify-between items-center w-full mt-auto">
-              <span className="text-[10px] text-amber-500 font-medium">Trigger Expiry Checks</span>
-              {runningTask === 'expiry' ? (
-                <span className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></span>
-              ) : (
-                <svg className="w-4 h-4 text-[var(--text-secondary)] group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              )}
-            </div>
-          </button>
-
-          <button
-            onClick={() => handleRunTask('process', () => apiService.triggerProcessNotificationJobs())}
-            disabled={runningTask !== null}
-            className="glass-card hover:bg-[var(--card-hover)] active:scale-95 transition-all py-4 px-6 text-left flex flex-col justify-between h-28 group relative overflow-hidden disabled:opacity-50 disabled:pointer-events-none"
-          >
-            <div>
-              <span className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Queue Runner</span>
-              <span className="text-xs font-semibold block text-[var(--text-primary)]">Dispatch all pending notices</span>
-            </div>
-            <div className="flex justify-between items-center w-full mt-auto">
-              <span className="text-[10px] text-indigo-500 font-medium">Process Pending Jobs</span>
-              {runningTask === 'process' ? (
-                <span className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
-              ) : (
-                <svg className="w-4 h-4 text-[var(--text-secondary)] group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              )}
-            </div>
-          </button>
-        </div>
-      </section>
+      <ReminderSettingsCard onSent={onTriggerTask} />
 
       {/* Metrics Dashboard */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">

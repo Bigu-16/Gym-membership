@@ -1,17 +1,17 @@
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.celery_app import celery_app
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.core.timeutils import gym_day_bounds_utc, gym_today
 from app.models import Member, MembershipPlan, NotificationJob
 from app.models.enums import NotificationChannel, NotificationStatus, NotificationType
 from app.services.messaging.base import RenderedMessage
 from app.services.messaging.registry import channels_for_member, get_adapter
+from app.services.reminders import queue_expiry_reminders
 from app.services.messaging.templates import (
     build_class_enrollment_message,
     build_enrollment_message,
@@ -99,57 +99,17 @@ async def _queue_class_enrollment_confirmation(member_id: int, class_label: str)
 
 
 async def _queue_membership_expiry_reminders() -> dict[str, int]:
-    today = gym_today()
-    reminder_dates = {today, today + timedelta(days=3)}
-    day_start, day_end = gym_day_bounds_utc(today)
-
-    created = 0
     async with SessionLocal() as session:
-        result = await session.scalars(
-            select(Member).where(
-                and_(
-                    Member.messaging_opt_in.is_(True),
-                    Member.expiry_date.is_not(None),
-                    Member.expiry_date.in_(reminder_dates),
-                )
-            )
-        )
-        members = result.all()
-
-        # Running the reminder twice in one day (beat + manual trigger) must not double-send.
-        already_reminded = set(
-            (
-                await session.scalars(
-                    select(NotificationJob.member_id).where(
-                        NotificationJob.notification_type == NotificationType.membership_expiry,
-                        NotificationJob.created_at >= day_start,
-                        NotificationJob.created_at < day_end,
-                    )
-                )
-            ).all()
-        )
-
-        for member in members:
-            if member.id in already_reminded:
-                continue
-            expiry = member.expiry_date.isoformat() if member.expiry_date else "soon"
-            message = RenderedMessage(
-                subject="Membership Expiry Reminder",
-                text=(
-                    f"Hi {member.name}, your N & T Taekwondo & Karate Center membership expires on {expiry}. "
-                    "Please renew at the front desk to keep training."
-                ),
-            )
-            created += await create_member_jobs(
-                session,
-                member=member,
-                notification_type=NotificationType.membership_expiry,
-                message=message,
-                scheduled_for=datetime.now(UTC),
-            )
+        result = await queue_expiry_reminders(session)
         await session.commit()
+    return result
 
-    return {"queued_jobs": created}
+
+async def run_daily_reminders() -> dict[str, int]:
+    """Queue today's due reminders and send them right away (no Celery worker needed)."""
+    queued = await _queue_membership_expiry_reminders()
+    sent = await _process_pending_notification_jobs()
+    return {**queued, **sent}
 
 
 async def _process_pending_notification_jobs(limit: int = 100) -> dict[str, int]:

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import Notifications from '../Notifications';
 import { apiService } from '../../services/api';
 
@@ -7,8 +7,11 @@ vi.mock('../../services/api', () => {
   return {
     apiService: {
       triggerSeedDemoData: vi.fn(),
-      triggerMembershipExpiryReminders: vi.fn(),
-      triggerProcessNotificationJobs: vi.fn(),
+      getReminderSettings: vi.fn().mockResolvedValue({
+        reminder_days: [5, 3], email_configured: true, from_email: 'desk@example.com', scheduler_enabled: false, members_without_email: 2
+      }),
+      sendDueReminders: vi.fn(),
+      sendTestEmail: vi.fn(),
     },
   };
 });
@@ -122,17 +125,28 @@ describe('Notifications Component', () => {
     expect(screen.queryByText('Notification Audit Inspector')).not.toBeInTheDocument();
   });
 
-  it('triggers process notification jobs task', async () => {
-    apiService.triggerProcessNotificationJobs.mockResolvedValueOnce({ task_id: 'task-abc-123' });
+  it('shows whether automatic reminders will work', async () => {
     render(<Notifications jobs={mockJobs} members={mockMembers} onTriggerTask={mockOnTriggerTask} />);
+    expect(screen.getByText(/5 and 3 days/)).toBeInTheDocument();
+    expect(await screen.findByText(/sending from desk@example.com/)).toBeInTheDocument();
+    expect(screen.getByText(/daily run is not switched on yet/)).toBeInTheDocument();
+    expect(screen.getByText(/2 member\(s\) have no email address/)).toBeInTheDocument();
+  });
 
-    const processBtn = screen.getByText('Process Pending Jobs');
-    fireEvent.click(processBtn);
-
-    expect(apiService.triggerProcessNotificationJobs).toHaveBeenCalled();
-    await waitFor(() => {
-      expect(screen.getByText('Task queued successfully! ID: task-abc-123')).toBeInTheDocument();
-    });
+  it('sends due reminders now and refreshes the log', async () => {
+    apiService.sendDueReminders.mockResolvedValueOnce({ members_due: 3, emails_queued: 2, members_without_contact: 1 });
+    render(<Notifications jobs={mockJobs} members={mockMembers} onTriggerTask={mockOnTriggerTask} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Send due reminders now' }));
+    expect(await screen.findByText('2 reminder email(s) sent for 3 member(s) due. 1 had no email address.')).toBeInTheDocument();
     expect(mockOnTriggerTask).toHaveBeenCalled();
+  });
+
+  it('sends a test email and shows server errors plainly', async () => {
+    apiService.sendTestEmail.mockRejectedValueOnce(new Error('The email server refused the message: auth failed'));
+    render(<Notifications jobs={mockJobs} members={mockMembers} onTriggerTask={mockOnTriggerTask} />);
+    fireEvent.change(screen.getByLabelText('Send a test email to'), { target: { value: 'owner@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send test email' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('auth failed');
+    expect(apiService.sendTestEmail).toHaveBeenCalledWith('owner@example.com');
   });
 });
