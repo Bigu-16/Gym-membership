@@ -1,7 +1,9 @@
 from fastapi import APIRouter
 
 from app.api.routes.analytics import router as analytics_router
+from app.api.routes.audit import router as audit_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.client_errors import router as client_errors_router
 from app.api.routes.business import router as business_router
 from app.api.routes.check_ins import router as check_ins_router
 from app.api.routes.dashboard import router as dashboard_router
@@ -18,6 +20,8 @@ from app.api.routes.users import router as users_router
 api_router = APIRouter()
 api_router.include_router(health_router)
 api_router.include_router(auth_router)
+api_router.include_router(audit_router)
+api_router.include_router(client_errors_router)
 api_router.include_router(business_router)
 api_router.include_router(users_router)
 api_router.include_router(dashboard_router)

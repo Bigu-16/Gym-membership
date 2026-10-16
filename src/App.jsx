@@ -9,6 +9,9 @@ import Analytics from './components/Analytics';
 import Login from './components/Login';
 import Notifications from './components/Notifications';
 import PackagesPage from './components/PackagesPage';
+import ActivityLog from './components/ActivityLog';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import AccountModal from './components/layout/AccountModal';
 import AppHeader from './components/layout/AppHeader';
 import { useGymData } from './hooks/useGymData';
 
@@ -21,10 +24,12 @@ const App = () => {
     }
   });
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const {
     isAuthenticated,
     setIsAuthenticated,
+    signOutNotice,
     currentUser,
     members,
     sessions,
@@ -82,13 +87,14 @@ const App = () => {
   };
 
   if (!isAuthenticated) {
-    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+    return <Login notice={signOutNotice} onLoginSuccess={() => setIsAuthenticated(true)} />;
   }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row gap-6 lg:gap-12 p-4 sm:p-8 lg:p-12 pb-24 lg:pb-12 text-[var(--text-primary)]">
       <Sidebar
         activeTab={activeTab}
+        isAdmin={currentUser?.role === 'admin'}
         scheduleTemplates={scheduleTemplates}
         onTabChange={(tab) => { setActiveTab(tab); setSelectedMember(null); }}
       />
@@ -116,7 +122,8 @@ const App = () => {
           activeTab={activeTab}
           theme={theme}
           toggleTheme={toggleTheme}
-          handleLogout={handleLogout}
+          handleLogout={() => handleLogout()}
+          onOpenAccount={() => setAccountOpen(true)}
           currentUser={currentUser}
           totalMembersCount={members.length}
           activeNowCount={inClubList.length}
@@ -131,6 +138,7 @@ const App = () => {
           )}
 
           {hasLoaded && (
+            <ErrorBoundary resetKey={activeTab} page={activeTab}>
             <>
               {activeTab === 'members' ? (
                 selectedMember ? (
@@ -230,6 +238,8 @@ const App = () => {
                   checkIn={checkIn}
                   checkOut={checkOut}
                 />
+              ) : activeTab === 'activity' ? (
+                <ActivityLog />
               ) : activeTab === 'analytics' ? (
                 <Analytics />
               ) : activeTab === 'notifications' ? (
@@ -252,7 +262,15 @@ const App = () => {
                 </div>
               )}
             </>
+            </ErrorBoundary>
           )}
+        {accountOpen && (
+          <AccountModal
+            currentUser={currentUser}
+            onClose={() => setAccountOpen(false)}
+            onSignedOut={() => { setAccountOpen(false); handleLogout('Signed out on all devices.'); }}
+          />
+        )}
         </main>
         
         <footer className="mt-16 pt-8 border-t border-[var(--glass-border)] flex flex-wrap justify-between gap-6 text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">

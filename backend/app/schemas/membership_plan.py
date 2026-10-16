@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.schemas.validation import sanitize_plain_text
+
 
 class MembershipPlanBase(BaseModel):
     name: str
@@ -26,7 +28,20 @@ class MembershipPlanBase(BaseModel):
     @field_validator("included_items")
     @classmethod
     def normalize_included_items(cls, value: list[str]) -> list[str]:
-        return [item.strip() for item in value if item.strip()]
+        return [sanitize_plain_text(item) for item in value if sanitize_plain_text(item)]
+
+    @field_validator("name", "program", "duration_label", mode="before")
+    @classmethod
+    def clean_text(cls, value: str) -> str:
+        cleaned = sanitize_plain_text(value)
+        if not cleaned:
+            raise ValueError("cannot be empty")
+        return cleaned[:100]
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def clean_description(cls, value: str | None) -> str | None:
+        return (sanitize_plain_text(value) or None) if value is not None else None
 
 
 class MembershipPlanCreate(MembershipPlanBase):
@@ -57,7 +72,22 @@ class MembershipPlanUpdate(BaseModel):
     def normalize_included_items(cls, value: list[str] | None) -> list[str] | None:
         if value is None:
             return value
-        return [item.strip() for item in value if item.strip()]
+        return [sanitize_plain_text(item) for item in value if sanitize_plain_text(item)]
+
+    @field_validator("name", "program", "duration_label", mode="before")
+    @classmethod
+    def clean_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = sanitize_plain_text(value)
+        if not cleaned:
+            raise ValueError("cannot be empty")
+        return cleaned[:100]
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def clean_description(cls, value: str | None) -> str | None:
+        return (sanitize_plain_text(value) or None) if value is not None else None
 
     @model_validator(mode="after")
     def reject_null_required_fields(self) -> "MembershipPlanUpdate":

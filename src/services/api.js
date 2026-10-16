@@ -59,11 +59,23 @@ const request = async (path, { method = 'GET', body, fallbackError = 'Request fa
   if (response.status === 204) return null;
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = new Error(describeError(data, fallbackError));
+    let message = describeError(data, fallbackError);
+    // Server errors carry an id that matches the server log, so problems can be traced.
+    const requestId = data?.request_id || response.headers?.get?.('X-Request-ID');
+    if (response.status >= 500 && requestId) message = `${message} (Error ID: ${requestId})`;
+    const error = new Error(message);
     error.status = response.status;
     throw error;
   }
   return data;
+};
+
+// A server that predates these endpoints answers 404/405; say so plainly.
+const explainOutdatedServer = (err) => {
+  if (err.status === 404 || err.status === 405) {
+    throw new Error('The server is running an older version. Deploy the latest backend and try again — the deploy also loads the official classes and packages automatically.');
+  }
+  throw err;
 };
 
 // Day name conversion helpers
@@ -250,6 +262,35 @@ export const apiService = {
 
   async getMe() {
     return request('/auth/me', { fallbackError: 'Unauthenticated' });
+  },
+
+  /** Change your own password; all other logins of this account are signed out. */
+  async changePassword(currentPassword, newPassword) {
+    const data = await request('/auth/change-password', {
+      method: 'POST',
+      body: { current_password: currentPassword, new_password: newPassword },
+      fallbackError: 'Could not change the password'
+    });
+    sessionStorage.setItem('gym_api_token', data.access_token);
+    return true;
+  },
+
+  async logoutEverywhere() {
+    await request('/auth/logout-all', { method: 'POST', fallbackError: 'Could not sign out other devices' });
+    this.logout();
+  },
+
+  async getAuditLogs(params = {}) {
+    return request('/audit-logs/', { query: params, fallbackError: 'Failed to load the activity log' });
+  },
+
+  /** Best-effort crash report from the error boundary; never throws. */
+  async reportClientError(report) {
+    try {
+      await request('/client-errors/', { method: 'POST', body: report, fallbackError: 'report failed' });
+    } catch {
+      // Reporting must never cause a second error.
+    }
   },
 
   // Members API
@@ -448,7 +489,8 @@ export const apiService = {
   },
 
   async loadOfficialTimetable() {
-    return request('/schedule/templates/sync-official', { method: 'POST', fallbackError: 'Failed to load the official timetable' });
+    return request('/schedule/templates/sync-official', { method: 'POST', fallbackError: 'Failed to load the official timetable' })
+      .catch(explainOutdatedServer);
   },
 
   // Sessions API
@@ -533,7 +575,8 @@ export const apiService = {
   },
 
   async loadOfficialPackages() {
-    return request('/plans/sync-official', { method: 'POST', fallbackError: 'Failed to load the official packages' });
+    return request('/plans/sync-official', { method: 'POST', fallbackError: 'Failed to load the official packages' })
+      .catch(explainOutdatedServer);
   },
 
   // Analytics API

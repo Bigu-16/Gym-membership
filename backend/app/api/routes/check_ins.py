@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_admin_or_staff_user, get_current_user
 from app.core.timeutils import gym_today
 from app.db import get_db_session
+from app.services.audit import record_audit
 from app.models import AppUser
 from app.models import CheckIn, Member
 from app.schemas.check_in import CheckInCreate, CheckInResponse, CheckOutRequest
@@ -44,7 +45,7 @@ async def list_check_ins(
 async def create_check_in(
     payload: CheckInCreate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_or_staff_user),
+    actor: AppUser = Depends(get_current_admin_or_staff_user),
 ) -> CheckInResponse:
     member = await db.get(Member, payload.member_id)
     if member is None:
@@ -63,6 +64,8 @@ async def create_check_in(
 
     check_in = CheckIn(member_id=payload.member_id, check_in_time=datetime.now(timezone.utc))
     db.add(check_in)
+    if payload.override:
+        record_audit(db, actor, "check_in_override", "member", member.id, f"Let {member.name} in despite membership status")
     try:
         await db.commit()
     except IntegrityError:

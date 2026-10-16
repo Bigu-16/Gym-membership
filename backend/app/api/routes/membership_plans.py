@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin_user, get_current_user
 from app.db import get_db_session
+from app.services.audit import record_audit
 from app.models import AppUser, Member, MembershipPlan
 from app.schemas.membership_plan import MembershipPlanCreate, MembershipPlanResponse, MembershipPlanUpdate
 from app.services.catalog import sync_official_packages
@@ -32,7 +33,7 @@ async def list_plans(
 async def create_plan(
     payload: MembershipPlanCreate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> MembershipPlanResponse:
     existing = await db.scalar(select(MembershipPlan.id).where(MembershipPlan.name == payload.name))
     if existing is not None:
@@ -40,6 +41,8 @@ async def create_plan(
 
     plan = MembershipPlan(**payload.model_dump())
     db.add(plan)
+    await db.flush()
+    record_audit(db, actor, "package_created", "package", plan.id, f"Created package {plan.name} at {plan.price} {plan.currency}")
     await db.commit()
     await db.refresh(plan)
     return MembershipPlanResponse.model_validate(plan)
@@ -48,10 +51,11 @@ async def create_plan(
 @router.post("/sync-official")
 async def load_official_packages(
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> dict[str, int]:
     """Create missing official packages and correct their prices. Never deletes plans."""
     result = await sync_official_packages(db)
+    record_audit(db, actor, "packages_loaded", "package", None, f"Loaded official packages: {result['created']} added, {result['updated']} corrected")
     await db.commit()
     return result
 
@@ -74,7 +78,7 @@ async def update_plan(
     plan_id: int,
     payload: MembershipPlanUpdate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> MembershipPlanResponse:
     plan = await db.get(MembershipPlan, plan_id)
     if plan is None:
@@ -91,6 +95,7 @@ async def update_plan(
     for field, value in updates.items():
         setattr(plan, field, value)
 
+    record_audit(db, actor, "package_updated", "package", plan.id, f"Updated package {plan.name}", {"changes": {k: str(v) for k, v in updates.items()}})
     await db.commit()
     await db.refresh(plan)
     return MembershipPlanResponse.model_validate(plan)
@@ -100,7 +105,7 @@ async def update_plan(
 async def delete_plan(
     plan_id: int,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> None:
     plan = await db.get(MembershipPlan, plan_id)
     if plan is None:
@@ -110,5 +115,6 @@ async def delete_plan(
     if member_count:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Plan is assigned to members; deactivate it instead")
 
+    record_audit(db, actor, "package_deleted", "package", plan.id, f"Deleted package {plan.name}")
     await db.delete(plan)
     await db.commit()

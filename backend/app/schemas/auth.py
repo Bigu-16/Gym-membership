@@ -5,6 +5,18 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from app.models.enums import UserRole
 from app.schemas.validation import validate_person_name
 
+MIN_PASSWORD_LENGTH = 10
+
+
+def validate_password_strength(value: str) -> str:
+    if len(value) < MIN_PASSWORD_LENGTH:
+        raise ValueError(f"password must be at least {MIN_PASSWORD_LENGTH} characters")
+    if len(value.encode()) > 72:
+        raise ValueError("password must be at most 72 bytes")
+    if value.lower() == value or value.upper() == value or not any(ch.isdigit() for ch in value):
+        raise ValueError("password must mix upper- and lower-case letters and include a number")
+    return value
+
 
 class BootstrapAdminRequest(BaseModel):
     full_name: str
@@ -15,6 +27,11 @@ class BootstrapAdminRequest(BaseModel):
     @classmethod
     def validate_full_name(cls, value: str) -> str:
         return validate_person_name(value)
+
+    @field_validator("password")
+    @classmethod
+    def strong_password(cls, value: str) -> str:
+        return validate_password_strength(value)
 
 
 class LoginResponse(BaseModel):
@@ -36,7 +53,8 @@ class UserResponse(BaseModel):
 
     id: int
     full_name: str
-    email: EmailStr
+    # Plain str: responses must never fail on an already-stored address.
+    email: str
     role: UserRole
     is_active: bool
     created_at: datetime
@@ -55,6 +73,11 @@ class UserCreateRequest(BaseModel):
     def validate_full_name(cls, value: str) -> str:
         return validate_person_name(value)
 
+    @field_validator("password")
+    @classmethod
+    def strong_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
 
 class UserUpdateRequest(BaseModel):
     full_name: str | None = None
@@ -70,3 +93,18 @@ class UserUpdateRequest(BaseModel):
 
 class UserPasswordResetRequest(BaseModel):
     password: str
+
+    @field_validator("password")
+    @classmethod
+    def strong_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def strong_password(cls, value: str) -> str:
+        return validate_password_strength(value)

@@ -121,8 +121,8 @@ async def test_session_checklist_can_be_persisted(client, session_factory):
 def test_names_are_restricted_and_html_is_removed_before_validation():
     member = MemberCreate(name="<b>Mary-Jane O'Neil</b>", phone="+971500000123", age=25, medical_issues="<p>Asthma</p>")
     update = MemberUpdate(medical_issues="<script>alert(1)</script><b>None</b>")
-    user = UserCreateRequest(full_name="<i>Jane Doe</i>", email="jane@example.com", password="secret")
-    bootstrap = BootstrapAdminRequest(full_name="Admin User", email="admin@example.com", password="secret")
+    user = UserCreateRequest(full_name="<i>Jane Doe</i>", email="jane@example.com", password="Str0ngPassword")
+    bootstrap = BootstrapAdminRequest(full_name="Admin User", email="admin@example.com", password="Str0ngPassword")
 
     assert member.name == "Mary-Jane O'Neil"
     assert member.medical_issues == "Asthma"
@@ -133,7 +133,7 @@ def test_names_are_restricted_and_html_is_removed_before_validation():
     with pytest.raises(ValidationError):
         MemberCreate(name="<img src=x onerror=alert(1)>", phone="+971500000124", age=25)
     with pytest.raises(ValidationError):
-        UserCreateRequest(full_name="Jane123", email="jane2@example.com", password="secret")
+        UserCreateRequest(full_name="Jane123", email="jane2@example.com", password="Str0ngPassword")
 
 
 def test_family_trainees_need_no_phone_and_little_kids_are_allowed():
@@ -166,7 +166,7 @@ async def test_production_bootstrap_and_nondevelopment_seed_are_hidden(client, m
 
     bootstrap = await client.post(
         "/api/v1/auth/bootstrap-admin",
-        json={"full_name": "New Admin", "email": "new@example.com", "password": "secret"},
+        json={"full_name": "New Admin", "email": "new@example.com", "password": "Str0ngPassword"},
     )
     seed = await client.post("/api/v1/tasks/seed-demo-data")
 

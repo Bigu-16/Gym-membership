@@ -9,6 +9,7 @@ export const PAYMENT_METHODS = [
 
 export const EMIRATES_ID_PATTERN = /^784-?\d{4}-?\d{7}-?\d$/;
 const PHONE_PATTERN = /^\+?[0-9][0-9\s\-()]{5,28}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 // Letters from any script, spaces, hyphens, apostrophes and periods (matches the backend).
 const NAME_PATTERN = /^\p{L}[\p{L}\s\-'.]*$/u;
 
@@ -111,6 +112,7 @@ export const validateRegistration = ({ registrant, parent, trainees, plansById, 
     else if (!NAME_PATTERN.test(parent.name.trim())) errors.push('Parent/guardian name may contain only letters, spaces, hyphens and apostrophes.');
     if (!clean(parent.phone)) errors.push('Parent/guardian mobile number is required.');
     else if (!PHONE_PATTERN.test(parent.phone.trim())) errors.push('Parent/guardian mobile number is not valid.');
+    if (clean(parent.email) && !EMAIL_PATTERN.test(parent.email.trim())) errors.push('Parent/guardian email address is not valid.');
   }
 
   trainees.forEach((trainee, index) => {
@@ -132,6 +134,7 @@ export const validateRegistration = ({ registrant, parent, trainees, plansById, 
     if (clean(trainee.emiratesId) && !EMIRATES_ID_PATTERN.test(trainee.emiratesId.replace(/\s/g, ''))) {
       errors.push(`${label}: Emirates ID must look like 784-YYYY-NNNNNNN-N.`);
     }
+    if (clean(trainee.email) && !EMAIL_PATTERN.test(trainee.email.trim())) errors.push(`${label}: email address is not valid.`);
     if (trainee.hasMedical && !clean(trainee.medicalIssues)) errors.push(`${label}: describe the medical condition.`);
 
     if (!plansById.get(Number(trainee.planId))) errors.push(`${label}: choose a package.`);

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { apiService, API_BASE_URL } from '../services/api';
 
-const Login = ({ onLoginSuccess }) => {
+const Login = ({ onLoginSuccess, notice = '' }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -75,6 +75,9 @@ const Login = ({ onLoginSuccess }) => {
           </div>
         )}
 
+        {notice && !error && (
+          <p role="status" className="mb-4 text-xs text-center rounded-2xl p-3 bg-amber-500/10 text-amber-400 border border-amber-500/20">{notice}</p>
+        )}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block ml-1">

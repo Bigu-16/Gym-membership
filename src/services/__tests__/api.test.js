@@ -187,11 +187,33 @@ describe('apiService', () => {
       expect(lastCall().url).toContain('/plans/sync-official');
     });
 
+    it('explains clearly when the server is too old for the official loaders', async () => {
+      fetch.mockResolvedValueOnce(fail({ detail: 'Method Not Allowed' }, 405));
+      await expect(apiService.loadOfficialTimetable()).rejects.toThrow(/older version/);
+    });
+
     it('updates plans with PATCH', async () => {
       fetch.mockResolvedValueOnce(ok({ id: 3, price: '375.00' }));
       await apiService.updatePlan(3, { price: 375 });
       expect(lastCall()).toMatchObject({ method: 'PATCH', body: { price: 375 } });
     });
+  });
+
+  it('adds the server error id to server errors so they can be traced', async () => {
+    fetch.mockResolvedValueOnce({ ok: false, status: 500, headers: { get: () => null }, json: async () => ({ detail: 'Something went wrong on the server.', request_id: 'abc123' }) });
+    await expect(apiService.getPlans()).rejects.toThrow('Something went wrong on the server. (Error ID: abc123)');
+  });
+
+  it('stores the new token after a password change', async () => {
+    fetch.mockResolvedValueOnce(ok({ access_token: 'fresh-token' }));
+    await apiService.changePassword('Old2026Desk', 'New2026Desk');
+    expect(lastCall().body).toEqual({ current_password: 'Old2026Desk', new_password: 'New2026Desk' });
+    expect(sessionStorage.setItem).toHaveBeenCalledWith('gym_api_token', 'fresh-token');
+  });
+
+  it('never throws while reporting a crash', async () => {
+    fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    await expect(apiService.reportClientError({ message: 'x' })).resolves.toBeUndefined();
   });
 
   it('loads the analytics summary', async () => {

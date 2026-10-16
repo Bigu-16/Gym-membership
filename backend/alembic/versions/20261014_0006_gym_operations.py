@@ -86,6 +86,27 @@ def upgrade() -> None:
     op.create_index(op.f("ix_payments_plan_id"), "payments", ["plan_id"], unique=False)
     op.create_index(op.f("ix_payments_paid_on"), "payments", ["paid_on"], unique=False)
 
+    # Session revocation: bumping a user's token_version signs out all their logins.
+    op.add_column("app_users", sa.Column("token_version", sa.Integer(), nullable=False, server_default="0"))
+
+    # Activity log: who changed members, payments, packages, classes, users, settings.
+    op.create_table(
+        "audit_logs",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("actor_user_id", sa.Integer(), nullable=True),
+        sa.Column("actor_email", sa.String(length=255), nullable=True),
+        sa.Column("action", sa.String(length=60), nullable=False),
+        sa.Column("entity_type", sa.String(length=40), nullable=False),
+        sa.Column("entity_id", sa.String(length=40), nullable=True),
+        sa.Column("summary", sa.String(length=500), nullable=False),
+        sa.Column("details", sa.JSON(), nullable=True),
+        sa.ForeignKeyConstraint(["actor_user_id"], ["app_users.id"], ondelete="SET NULL"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    for column in ("id", "created_at", "actor_user_id", "action", "entity_type"):
+        op.create_index(op.f(f"ix_audit_logs_{column}"), "audit_logs", [column], unique=False)
+
     # Close duplicate open check-ins (keep each member's latest) before enforcing one open visit.
     op.execute(
         """
@@ -109,6 +130,10 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("uq_check_ins_open_member", table_name="check_ins")
+    for column in ("id", "created_at", "actor_user_id", "action", "entity_type"):
+        op.drop_index(op.f(f"ix_audit_logs_{column}"), table_name="audit_logs")
+    op.drop_table("audit_logs")
+    op.drop_column("app_users", "token_version")
     op.drop_index(op.f("ix_payments_paid_on"), table_name="payments")
     op.drop_index(op.f("ix_payments_plan_id"), table_name="payments")
     op.drop_index(op.f("ix_payments_member_id"), table_name="payments")

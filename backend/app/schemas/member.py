@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic.networks import validate_email
 
 from app.models.enums import Gender, PaymentMethod
 from app.schemas.validation import (
@@ -11,6 +12,15 @@ from app.schemas.validation import (
     sanitize_plain_text,
     validate_person_name,
 )
+
+def normalize_email(value: str | None) -> str | None:
+    if value is None or not str(value).strip():
+        return None
+    try:
+        return validate_email(str(value).strip())[1].lower()
+    except Exception as exc:  # pydantic raises PydanticCustomError
+        raise ValueError("email address is not valid") from exc
+
 
 # Little Kids Karate takes children from age 3; allow a little headroom below that.
 MIN_MEMBER_AGE = 2
@@ -47,6 +57,11 @@ class MemberBase(BaseModel):
     @classmethod
     def validate_emirates_id(cls, value: str | None) -> str | None:
         return normalize_emirates_id(value)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def validate_email_address(cls, value: str | None) -> str | None:
+        return normalize_email(value)
 
     @field_validator("medical_issues", mode="before")
     @classmethod
@@ -109,6 +124,11 @@ class MemberUpdate(BaseModel):
     @classmethod
     def validate_emirates_id(cls, value: str | None) -> str | None:
         return normalize_emirates_id(value)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def validate_email_address(cls, value: str | None) -> str | None:
+        return normalize_email(value)
 
     @field_validator("medical_issues", mode="before")
     @classmethod
@@ -184,6 +204,11 @@ class FamilyParentCreate(BaseModel):
         if not normalized:
             raise ValueError("parent phone is required")
         return normalized
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def validate_email_address(cls, value: str | None) -> str | None:
+        return normalize_email(value)
 
     @field_validator("address", "relationship", "notes", mode="before")
     @classmethod

@@ -3,6 +3,8 @@ import { apiService, avatarFor } from '../services/api';
 import { daysUntil, EXPIRING_SOON_DAYS } from '../utils/membership';
 
 const SESSION_HISTORY_DAYS = 120;
+// Desk computers are shared: sign out after this long without any activity.
+export const IDLE_LOGOUT_MINUTES = 60;
 
 const isoDaysAgo = (days) => {
   const d = new Date();
@@ -50,9 +52,11 @@ export const useGymData = () => {
   const [selectedMemberKey, setSelectedMemberKey] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [signOutNotice, setSignOutNotice] = useState('');
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback((notice = '') => {
     apiService.logout();
+    setSignOutNotice(typeof notice === 'string' ? notice : '');
     setIsAuthenticated(false);
     setCurrentUser(null);
     setMembers([]);
@@ -70,7 +74,7 @@ export const useGymData = () => {
   const handleApiError = useCallback((err, fallback) => {
     console.error(err);
     if (err?.message === 'Unauthenticated') {
-      handleLogout();
+      handleLogout('Your session ended. Please sign in again.');
       return;
     }
     setError(fallback);
@@ -111,6 +115,26 @@ export const useGymData = () => {
       setLoading(false);
     }
   }, [isAuthenticated, handleApiError]);
+
+  // Automatic sign-out after inactivity on shared front-desk computers.
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let timer;
+    const restart = () => {
+      clearTimeout(timer);
+      timer = setTimeout(
+        () => handleLogout(`Signed out after ${IDLE_LOGOUT_MINUTES} minutes without activity.`),
+        IDLE_LOGOUT_MINUTES * 60000
+      );
+    };
+    const events = ['pointerdown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach((name) => window.addEventListener(name, restart, { passive: true }));
+    restart();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((name) => window.removeEventListener(name, restart));
+    };
+  }, [isAuthenticated, handleLogout]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -364,6 +388,7 @@ export const useGymData = () => {
   return {
     isAuthenticated,
     setIsAuthenticated,
+    signOutNotice,
     currentUser,
     members: enrichedMembers,
     families,

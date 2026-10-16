@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_admin_or_staff_user, get_current_user
 from app.core.timeutils import gym_today
 from app.db import get_db_session
+from app.services.audit import record_audit
 from app.models import AppUser, Member, Payment
 from app.schemas.payment import PaymentCreate, PaymentResponse
 from app.services.memberships import get_plan_or_404
@@ -30,7 +31,7 @@ async def list_payments(
 async def create_payment(
     payload: PaymentCreate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_or_staff_user),
+    actor: AppUser = Depends(get_current_admin_or_staff_user),
 ) -> PaymentResponse:
     if await db.get(Member, payload.member_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
@@ -41,6 +42,8 @@ async def create_payment(
     data["paid_on"] = data["paid_on"] or gym_today()
     payment = Payment(**data)
     db.add(payment)
+    await db.flush()
+    record_audit(db, actor, "payment_recorded", "payment", payment.id, f"Recorded {payment.amount} {payment.currency} ({payment.method.value}) for member #{payment.member_id}")
     await db.commit()
     await db.refresh(payment)
     return PaymentResponse.model_validate(payment)

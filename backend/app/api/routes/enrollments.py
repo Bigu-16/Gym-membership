@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_admin_user, get_current_user
 from app.core.timeutils import gym_today
 from app.db import get_db_session
+from app.services.audit import record_audit
 from app.models import AppUser
 from app.models import Enrollment, Member, ScheduleTemplate, Session
 from app.schemas.enrollment import EnrollmentCreate, EnrollmentResponse
@@ -29,7 +30,7 @@ async def list_enrollments(
 async def create_enrollment(
     payload: EnrollmentCreate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> EnrollmentResponse:
     member = await db.scalar(select(Member).where(Member.id == payload.member_id).with_for_update())
     if member is None:
@@ -100,6 +101,8 @@ async def create_enrollment(
 
     enrollment = Enrollment(**payload.model_dump())
     db.add(enrollment)
+    await db.flush()
+    record_audit(db, actor, "class_enrollment_added", "member", member.id, f"Enrolled {member.name} in {class_label}")
     await db.commit()
     await db.refresh(enrollment)
 
@@ -116,10 +119,11 @@ async def create_enrollment(
 async def delete_enrollment(
     enrollment_id: int,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> None:
     enrollment = await db.get(Enrollment, enrollment_id)
     if enrollment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enrollment not found")
+    record_audit(db, actor, "class_enrollment_removed", "member", enrollment.member_id, f"Removed class enrollment #{enrollment.id}")
     await db.delete(enrollment)
     await db.commit()

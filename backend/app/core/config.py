@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     sql_echo: bool = False
     # All "today", expiry and reporting calculations use the gym's local clock.
     gym_timezone: str = "Asia/Dubai"
+    # Optional error tracking (https://sentry.io). Leave empty to disable.
+    sentry_dsn: str = ""
+    # Front-desk computers are shared: the web app signs out after this much inactivity.
+    idle_logout_minutes: int = Field(default=60, ge=5)
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60 * 24
     redis_host: str = "redis"
@@ -96,6 +100,16 @@ class Settings(BaseSettings):
     @property
     def allows_development_endpoints(self) -> bool:
         return self.app_env.lower() in {"development", "dev", "test", "testing", "local"}
+
+    def production_problems(self) -> list[str]:
+        """Settings that make a production deployment unsafe."""
+        problems = []
+        weak = {"change-me-in-production", "secret", "changeme", ""}
+        if self.secret_key in weak or len(self.secret_key) < 32:
+            problems.append("SECRET_KEY must be a random value of at least 32 characters")
+        if self.debug:
+            problems.append("DEBUG must be false")
+        return problems
 
     @property
     def messaging_dev_mode(self) -> bool:

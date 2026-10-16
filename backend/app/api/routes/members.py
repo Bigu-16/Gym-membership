@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_current_admin_or_staff_user, get_current_admin_user, get_current_user
 from app.core.timeutils import gym_today
 from app.db import get_db_session
+from app.services.audit import record_audit
 from app.models import AppUser
 from app.models import Family
 from app.models import Member
@@ -81,7 +82,7 @@ async def list_members(
 async def create_member(
     payload: MemberCreate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> MemberResponse:
     if not payload.parent_phone and payload.family_id is None:
         await ensure_phone_available(db, payload.phone)
@@ -106,6 +107,7 @@ async def create_member(
             period_start=start,
             period_end=member.expiry_date,
         )
+    record_audit(db, actor, "member_created", "member", member.id, f"Registered {member.name}", {"plan_id": member.plan_id, "payment": str(payload.payment.amount) if payload.payment else None})
     await db.commit()
     await db.refresh(member)
     if member.messaging_opt_in:
@@ -120,7 +122,7 @@ async def create_member(
 async def create_family(
     payload: FamilyCreate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> FamilyGroupResponse:
     # A returning parent registers more children into their existing family.
     family = await db.scalar(select(Family).where(Family.parent_phone == payload.parent.phone))
@@ -162,6 +164,7 @@ async def create_family(
                 period_end=member.expiry_date,
             )
         members.append(member)
+    record_audit(db, actor, "family_registered", "family", family.id, f"Registered {len(members)} trainee(s) under {family.parent_name}", {"member_ids": [m.id for m in members]})
     await db.commit()
     await db.refresh(family)
     for member in members:
@@ -205,7 +208,7 @@ async def update_member(
     member_id: int,
     payload: MemberUpdate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> MemberResponse:
     member = await db.get(Member, member_id)
     if member is None:
@@ -220,6 +223,7 @@ async def update_member(
     for field, value in updates.items():
         setattr(member, field, value)
 
+    record_audit(db, actor, "member_updated", "member", member.id, f"Updated {member.name}", {"fields": sorted(updates)})
     await db.commit()
     await db.refresh(member)
     return MemberResponse.model_validate(member)
@@ -230,7 +234,7 @@ async def renew_member(
     member_id: int,
     payload: RenewRequest,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_or_staff_user),
+    actor: AppUser = Depends(get_current_admin_or_staff_user),
 ) -> MemberResponse:
     member = await db.get(Member, member_id)
     if member is None:
@@ -258,6 +262,7 @@ async def renew_member(
             period_start=start,
             period_end=member.expiry_date,
         )
+    record_audit(db, actor, "member_renewed", "member", member.id, f"Renewed {member.name} on {plan.name} until {member.expiry_date}", {"payment": str(payload.payment.amount) if payload.payment else None})
     await db.commit()
     await db.refresh(member)
     return MemberResponse.model_validate(member)
@@ -267,11 +272,12 @@ async def renew_member(
 async def delete_member(
     member_id: int,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> None:
     member = await db.get(Member, member_id)
     if member is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+    record_audit(db, actor, "member_deleted", "member", member.id, f"Deleted {member.name}")
     await db.delete(member)
     await db.commit()
 
@@ -281,13 +287,14 @@ async def freeze_member(
     member_id: int,
     payload: FreezeRequest,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> MemberResponse:
     member = await db.get(Member, member_id)
     if member is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
 
     member.is_frozen = payload.is_frozen
+    record_audit(db, actor, "member_frozen" if payload.is_frozen else "member_unfrozen", "member", member.id, f"{'Froze' if payload.is_frozen else 'Unfroze'} {member.name}")
     await db.commit()
     await db.refresh(member)
     return MemberResponse.model_validate(member)
@@ -298,7 +305,7 @@ async def freeze_family(
     family_key: str,
     payload: FamilyFreezeRequest,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> FamilyGroupResponse:
     stmt = select(Family)
     if family_key.isdigit():
@@ -311,6 +318,7 @@ async def freeze_family(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family not found")
 
     await db.execute(update(Member).where(Member.family_id == family.id).values(is_frozen=payload.is_frozen))
+    record_audit(db, actor, "family_frozen" if payload.is_frozen else "family_unfrozen", "family", family.id, f"{'Froze' if payload.is_frozen else 'Unfroze'} family of {family.parent_name}")
     await db.commit()
 
     result = await db.scalars(select(Member).where(Member.family_id == family.id).order_by(Member.name))

@@ -78,3 +78,5 @@ class LoginRateLimiter:
 login_rate_limiter = LoginRateLimiter()
 # Separate bucket so probing which staff emails exist is throttled without locking out logins.
 email_lookup_rate_limiter = LoginRateLimiter(key_prefix="check-email")
+password_change_rate_limiter = LoginRateLimiter(key_prefix="change-password")
+client_error_rate_limiter = LoginRateLimiter(key_prefix="client-error")

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin_or_staff_user, get_current_admin_user, get_current_user
 from app.db import get_db_session
+from app.services.audit import record_audit
 from app.models import AppUser, Enrollment, ScheduleTemplate, Session
 from app.schemas.schedule import (
     ScheduleTemplateCreate,
@@ -34,10 +35,12 @@ async def list_schedule_templates(
 async def create_schedule_template(
     payload: ScheduleTemplateCreate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> ScheduleTemplateResponse:
     template = ScheduleTemplate(**payload.model_dump())
     db.add(template)
+    await db.flush()
+    record_audit(db, actor, "class_created", "class", template.id, f"Added class {template.title} {', '.join(template.days)} {template.time}")
     await db.commit()
     await db.refresh(template)
     return ScheduleTemplateResponse.model_validate(template)
@@ -46,10 +49,11 @@ async def create_schedule_template(
 @router.post("/templates/sync-official")
 async def load_official_timetable(
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> dict[str, int]:
     """Add any missing slots from the official Mon–Sat timetable. Never deletes or edits."""
     result = await sync_official_timetable(db)
+    record_audit(db, actor, "timetable_loaded", "class", None, f"Loaded official timetable: {result['created']} class(es) added")
     await db.commit()
     return result
 
@@ -59,7 +63,7 @@ async def update_schedule_template(
     template_id: int,
     payload: ScheduleTemplateUpdate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> ScheduleTemplateResponse:
     template = await db.get(ScheduleTemplate, template_id)
     if template is None:
@@ -68,6 +72,7 @@ async def update_schedule_template(
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(template, field, value)
 
+    record_audit(db, actor, "class_updated", "class", template.id, f"Updated class {template.title} {template.time}", {"fields": sorted(payload.model_dump(exclude_unset=True))})
     await db.commit()
     await db.refresh(template)
     return ScheduleTemplateResponse.model_validate(template)
@@ -77,7 +82,7 @@ async def update_schedule_template(
 async def delete_schedule_template(
     template_id: int,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> None:
     template = await db.get(ScheduleTemplate, template_id)
     if template is None:
@@ -86,6 +91,7 @@ async def delete_schedule_template(
     # Preserve session and enrollment history while removing their template reference.
     await db.execute(update(Session).where(Session.template_id == template_id).values(template_id=None))
     await db.execute(update(Enrollment).where(Enrollment.template_id == template_id).values(template_id=None))
+    record_audit(db, actor, "class_deleted", "class", template.id, f"Deleted class {template.title} {', '.join(template.days)} {template.time}")
     await db.delete(template)
     await db.commit()
 
