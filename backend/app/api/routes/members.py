@@ -2,7 +2,7 @@ import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -24,6 +24,7 @@ from app.schemas.member import (
     MemberUpdate,
     RenewRequest,
 )
+from app.services.freezes import freeze_member as apply_freeze, release_due_freezes, unfreeze_member
 from app.services.memberships import ensure_phone_available, expiry_for_plan, get_plan_or_404, record_payment
 from app.tasks.notifications import queue_enrollment_confirmation
 
@@ -56,6 +57,9 @@ async def list_members(
     db: AsyncSession = Depends(get_db_session),
     _: AppUser = Depends(get_current_user),
 ) -> list[MemberResponse]:
+    # Freezes whose end date has arrived resume here as well as in the daily job.
+    if await release_due_freezes(db):
+        await db.commit()
     stmt = select(Member).order_by(Member.created_at.desc())
 
     if search:
@@ -95,6 +99,8 @@ async def create_member(
         data["expiry_date"] = expiry_for_plan(plan, start)
 
     member = Member(**data)
+    if member.is_frozen:
+        member.frozen_since = start
     db.add(member)
     await db.flush()
     if payload.payment is not None:
@@ -215,6 +221,12 @@ async def update_member(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
 
     updates = payload.model_dump(exclude_unset=True)
+    # Freezing has its own rules (pausing days); never flip the flag directly.
+    wants_frozen = updates.pop("is_frozen", None)
+    if wants_frozen is True:
+        apply_freeze(member, member.freeze_until)
+    elif wants_frozen is False:
+        unfreeze_member(member)
     if "phone" in updates and not member.family_id and not member.parent_phone:
         await ensure_phone_available(db, updates["phone"], exclude_member_id=member.id)
     if "plan_id" in updates:
@@ -245,12 +257,13 @@ async def renew_member(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose a package to renew")
 
     today = gym_today()
+    # A frozen member resumes first, so the paused days are kept before adding the new period.
+    restored = unfreeze_member(member, resume_on=today)
     start = today
     if payload.start_from == "expiry" and member.expiry_date and member.expiry_date > today:
         start = member.expiry_date
     member.plan_id = plan.id
     member.expiry_date = expiry_for_plan(plan, start)
-    member.is_frozen = False
 
     if payload.payment is not None:
         record_payment(
@@ -262,7 +275,7 @@ async def renew_member(
             period_start=start,
             period_end=member.expiry_date,
         )
-    record_audit(db, actor, "member_renewed", "member", member.id, f"Renewed {member.name} on {plan.name} until {member.expiry_date}", {"payment": str(payload.payment.amount) if payload.payment else None})
+    record_audit(db, actor, "member_renewed", "member", member.id, f"Renewed {member.name} on {plan.name} until {member.expiry_date}", {"payment": str(payload.payment.amount) if payload.payment else None, "days_restored_from_freeze": restored})
     await db.commit()
     await db.refresh(member)
     return MemberResponse.model_validate(member)
@@ -293,8 +306,13 @@ async def freeze_member(
     if member is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
 
-    member.is_frozen = payload.is_frozen
-    record_audit(db, actor, "member_frozen" if payload.is_frozen else "member_unfrozen", "member", member.id, f"{'Froze' if payload.is_frozen else 'Unfroze'} {member.name}")
+    if payload.is_frozen:
+        apply_freeze(member, payload.until)
+        until = f" until {payload.until.isoformat()}" if payload.until else " until further notice"
+        record_audit(db, actor, "member_frozen", "member", member.id, f"Froze {member.name}{until}", {"until": payload.until.isoformat() if payload.until else None})
+    else:
+        restored = unfreeze_member(member)
+        record_audit(db, actor, "member_unfrozen", "member", member.id, f"Unfroze {member.name}: {restored} paused day(s) restored, now ends {member.expiry_date}")
     await db.commit()
     await db.refresh(member)
     return MemberResponse.model_validate(member)
@@ -317,8 +335,15 @@ async def freeze_family(
     if family is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family not found")
 
-    await db.execute(update(Member).where(Member.family_id == family.id).values(is_frozen=payload.is_frozen))
-    record_audit(db, actor, "family_frozen" if payload.is_frozen else "family_unfrozen", "family", family.id, f"{'Froze' if payload.is_frozen else 'Unfroze'} family of {family.parent_name}")
+    children = (await db.scalars(select(Member).where(Member.family_id == family.id))).all()
+    for child in children:
+        if payload.is_frozen:
+            apply_freeze(child, payload.until)
+        else:
+            unfreeze_member(child)
+    action = "family_frozen" if payload.is_frozen else "family_unfrozen"
+    verb = "Froze" if payload.is_frozen else "Unfroze"
+    record_audit(db, actor, action, "family", family.id, f"{verb} family of {family.parent_name}", {"until": payload.until.isoformat() if payload.until else None})
     await db.commit()
 
     result = await db.scalars(select(Member).where(Member.family_id == family.id).order_by(Member.name))

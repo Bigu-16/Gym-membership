@@ -205,6 +205,7 @@ export const useGymData = () => {
     let filtered = memberGroups;
     if (filterType === 'expiring') {
       const attention = (item) => {
+        if (item.isFrozen) return false; // paused, not running out
         const days = daysUntil(item.expiryDate);
         return days !== null && days <= EXPIRING_SOON_DAYS;
       };
@@ -268,12 +269,16 @@ export const useGymData = () => {
 
   const handleUpdateMember = async (updatedMember) => {
     if (updatedMember.isGroup) {
-      await apiService.freezeFamily(String(updatedMember.familyId), updatedMember.isFrozen);
+      await apiService.freezeFamily(String(updatedMember.familyId), updatedMember.isFrozen, updatedMember.freezeUntil);
     } else {
       const original = members.find((m) => m.id === updatedMember.id);
       await apiService.updateMember(updatedMember.id, updatedMember);
-      if (original && original.isFrozen !== updatedMember.isFrozen) {
-        await apiService.freezeMember(updatedMember.id, updatedMember.isFrozen);
+      const freezeChanged = original && (
+        original.isFrozen !== updatedMember.isFrozen ||
+        (updatedMember.isFrozen && (original.freezeUntil || null) !== (updatedMember.freezeUntil || null))
+      );
+      if (freezeChanged) {
+        await apiService.freezeMember(updatedMember.id, updatedMember.isFrozen, updatedMember.freezeUntil);
       }
     }
     await loadData();

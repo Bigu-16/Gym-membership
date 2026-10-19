@@ -82,17 +82,22 @@ describe('MemberDetails', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('freezes and unfreezes an individual', async () => {
+  it('freezes until a date, pausing the days left (expiry is not edited by hand)', async () => {
     const { onUpdateMember } = setup();
     fireEvent.click(screen.getByRole('button', { name: /Freeze Membership/i }));
     expect(screen.getByText('Hold Configuration')).toBeInTheDocument();
+    expect(screen.getByText(/days? left are paused and continue when the freeze ends/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Frozen until/), { target: { value: daysFromToday(30) } });
     fireEvent.click(screen.getByRole('button', { name: /Confirm Hold/i }));
-    await waitFor(() => expect(onUpdateMember).toHaveBeenCalledWith(expect.objectContaining({ id: 101, isFrozen: true, expiryDate: baseMember.expiryDate })));
+    await waitFor(() => expect(onUpdateMember).toHaveBeenCalledWith(expect.objectContaining({
+      id: 101, isFrozen: true, freezeUntil: daysFromToday(30), expiryDate: baseMember.expiryDate
+    })));
   });
 
-  it('unfreezes immediately when frozen', async () => {
-    const { onUpdateMember } = setup({ isFrozen: true });
-    fireEvent.click(screen.getByRole('button', { name: /Unfreeze Membership/i }));
+  it('shows the paused days of a frozen member and resumes them on unfreeze', async () => {
+    const { onUpdateMember } = setup({ isFrozen: true, frozenSince: daysFromToday(-2), expiryDate: daysFromToday(10), freezeUntil: daysFromToday(20) });
+    expect(screen.getByText(/12 days paused · resumes/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Unfreeze now/i }));
     await waitFor(() => expect(onUpdateMember).toHaveBeenCalledWith(expect.objectContaining({ id: 101, isFrozen: false })));
   });
 

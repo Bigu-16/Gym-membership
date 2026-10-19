@@ -200,6 +200,8 @@ async def seed_members(session: AsyncSession, plans: dict[str, MembershipPlan]) 
                 "plan_id": plan.id,
                 "expiry_date": expiry,
                 "is_frozen": extra.get("is_frozen", False),
+                "frozen_since": today - timedelta(days=10) if extra.get("is_frozen") else None,
+                "freeze_until": today + timedelta(days=20) if extra.get("is_frozen") else None,
                 "medical_issues": extra.get("medical_issues"),
                 "messaging_opt_in": True,
             },

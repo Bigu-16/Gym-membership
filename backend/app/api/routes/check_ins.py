@@ -52,7 +52,8 @@ async def create_check_in(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
     if not payload.override:
         if member.is_frozen:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Membership is frozen")
+            until = f" until {member.freeze_until.strftime('%d %b %Y')}" if member.freeze_until else ""
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Membership is frozen{until}")
         if member.expiry_date is not None and member.expiry_date < gym_today():
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Membership has expired")
 

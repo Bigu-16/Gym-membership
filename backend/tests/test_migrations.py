@@ -75,3 +75,10 @@ def test_official_catalog_migration_loads_once_and_keeps_existing_rows():
         assert conn.scalar(select(MembershipPlan.price).where(MembershipPlan.name == "Karate One Month - 3 Classes")) == 350
         # The center's existing class keeps its own settings.
         assert conn.scalar(select(ScheduleTemplate.capacity).where(ScheduleTemplate.time == "4:00 PM - 5:00 PM")) == 20
+
+
+def test_freeze_migration_sql():
+    sql = render_migration_sql("20261016_0008_freeze_pauses_membership.py")
+    assert "ADD COLUMN frozen_since DATE" in sql
+    assert "ADD COLUMN freeze_until DATE" in sql
+    assert "UPDATE members SET frozen_since = CURRENT_DATE WHERE is_frozen" in sql

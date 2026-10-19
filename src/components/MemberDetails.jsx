@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { addMonths } from '../utils/membership';
-import { toDateKey } from '../utils/classSessions';
 import MemberHeader from './member-details/MemberHeader';
 import MemberProfileCard from './member-details/MemberProfileCard';
 import MemberEditForm from './member-details/MemberEditForm';
@@ -49,17 +47,9 @@ const MemberDetails = ({
     }
   };
 
-  const handleFreeze = (extendMonths = 0) =>
-    run(async () => {
-      if (member.isGroup) {
-        await onUpdateMember({ ...member, isFrozen: true });
-        return;
-      }
-      const expiryDate = extendMonths > 0 && member.expiryDate
-        ? toDateKey(addMonths(member.expiryDate, extendMonths))
-        : member.expiryDate;
-      await onUpdateMember({ ...member, isFrozen: true, expiryDate });
-    }, 'Could not freeze membership');
+  // Freezing pauses the remaining days; the server gives them back when the freeze ends.
+  const handleFreeze = (until = null) =>
+    run(() => onUpdateMember({ ...member, isFrozen: true, freezeUntil: until || null }), 'Could not freeze membership');
 
   const handleUnfreeze = () =>
     run(() => onUpdateMember({ ...member, isFrozen: false }), 'Could not unfreeze membership');

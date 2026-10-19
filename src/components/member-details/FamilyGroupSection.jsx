@@ -1,4 +1,4 @@
-import { formatDate, membershipStatus } from '../../utils/membership';
+import { formatDate, freezeSummary, membershipStatus } from '../../utils/membership';
 import MemberClassesEditor from './MemberClassesEditor';
 
 const STATUS_TEXT = {
@@ -102,8 +102,10 @@ const FamilyGroupSection = ({
           <div>
             <p className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Expiry</p>
             <p className="text-sm font-semibold">
-              {formatDate(trainee.expiryDate)}{' '}
-              <span className="text-[10px] text-[var(--text-secondary)] font-normal">({STATUS_TEXT[membershipStatus(trainee)]})</span>
+              {trainee.isFrozen ? 'Paused' : formatDate(trainee.expiryDate)}{' '}
+              <span className="text-[10px] text-[var(--text-secondary)] font-normal">
+                ({trainee.isFrozen ? freezeSummary(trainee) : STATUS_TEXT[membershipStatus(trainee)]})
+              </span>
             </p>
           </div>
           <div>

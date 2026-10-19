@@ -44,12 +44,14 @@ describe('MembershipCard Component', () => {
   it('renders frozen state visual indications', () => {
     const frozenMember = {
       ...activeMember,
-      isFrozen: true
+      isFrozen: true,
+      frozenSince: null,
+      freezeUntil: null
     };
-    
+
     render(<MembershipCard member={frozenMember} onManage={mockOnManage} />);
-    
-    expect(screen.getByText('On Hold (Frozen)')).toBeInTheDocument();
+
+    expect(screen.getByText(/days? paused until unfrozen/)).toBeInTheDocument();
     // Verify specific frozen styling classes
     const manageBtn = screen.getByRole('button', { name: /Manage/i });
     expect(manageBtn).toHaveClass('text-cyan-600');

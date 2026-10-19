@@ -59,7 +59,8 @@ async def get_analytics_summary(
     totals = MembershipTotals(
         total=len(members),
         active=len(active),
-        expired=sum(1 for m in members if m.expiry_date is not None and m.expiry_date < today),
+        # Frozen members are paused, not expired.
+        expired=sum(1 for m in members if not m.is_frozen and m.expiry_date is not None and m.expiry_date < today),
         frozen=sum(1 for m in members if m.is_frozen),
         expiring_7_days=sum(1 for m in active if m.expiry_date <= today + timedelta(days=7)),
         no_package=sum(1 for m in members if m.plan_id is None),
@@ -135,7 +136,7 @@ async def get_analytics_summary(
     )
     lapsed = {
         m.id for m in members
-        if m.expiry_date is not None and window_start <= m.expiry_date < today and m.id not in renewed_members
+        if not m.is_frozen and m.expiry_date is not None and window_start <= m.expiry_date < today and m.id not in renewed_members
     }
     decided = len(renewed_members) + len(lapsed)
 

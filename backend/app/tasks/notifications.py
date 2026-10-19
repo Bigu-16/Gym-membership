@@ -11,6 +11,7 @@ from app.models import Member, MembershipPlan, NotificationJob
 from app.models.enums import NotificationChannel, NotificationStatus, NotificationType
 from app.services.messaging.base import RenderedMessage
 from app.services.messaging.registry import channels_for_member, get_adapter
+from app.services.freezes import release_due_freezes
 from app.services.reminders import queue_expiry_reminders
 from app.services.messaging.templates import (
     build_class_enrollment_message,
@@ -106,10 +107,13 @@ async def _queue_membership_expiry_reminders() -> dict[str, int]:
 
 
 async def run_daily_reminders() -> dict[str, int]:
-    """Queue today's due reminders and send them right away (no Celery worker needed)."""
+    """Resume ended freezes, then queue today's due reminders and send them right away (no Celery worker needed)."""
+    async with SessionLocal() as session:
+        resumed = await release_due_freezes(session)
+        await session.commit()
     queued = await _queue_membership_expiry_reminders()
     sent = await _process_pending_notification_jobs()
-    return {**queued, **sent}
+    return {"freezes_resumed": resumed, **queued, **sent}
 
 
 async def _process_pending_notification_jobs(limit: int = 100) -> dict[str, int]:

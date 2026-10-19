@@ -1,4 +1,4 @@
-import { daysUntil, membershipStatus, periodProgress } from '../utils/membership';
+import { freezeSummary, daysUntil, membershipStatus, periodProgress } from '../utils/membership';
 
 const STYLES = {
   frozen: {
@@ -45,8 +45,8 @@ const planForProgress = (member) => {
   return null;
 };
 
-const statusLabel = (status, days) => {
-  if (status === 'frozen') return 'On Hold (Frozen)';
+const statusLabel = (status, days, member) => {
+  if (status === 'frozen') return member && !member.isGroup ? freezeSummary(member) : 'Frozen';
   if (status === 'no-expiry') return 'No expiry set';
   if (status === 'expired') return 'Expired';
   if (days === 0) return 'Expires today';
@@ -119,7 +119,7 @@ const MembershipCard = ({ member, onManage }) => {
         <div className="flex justify-between text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] mb-2">
           <span>Membership Status</span>
           <span className={styles.text}>
-            {statusLabel(status, daysRemaining)}
+            {statusLabel(status, daysRemaining, member)}
           </span>
         </div>
         <div className="w-full h-1 bg-[var(--glass-border)] rounded-full overflow-hidden">

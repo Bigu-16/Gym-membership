@@ -126,6 +126,8 @@ export const mapMemberToFrontend = (m) => ({
   plan: m.plan_name || m.plan || null,
   expiryDate: m.expiry_date || m.expiryDate || null,
   isFrozen: m.is_frozen ?? m.isFrozen ?? false,
+  frozenSince: m.frozen_since ?? m.frozenSince ?? null,
+  freezeUntil: m.freeze_until ?? m.freezeUntil ?? null,
   image: m.image || avatarFor(m.name),
   messagingOptIn: m.messaging_opt_in ?? m.messagingOptIn ?? true,
   termsAcceptedAt: m.terms_accepted_at ?? m.termsAcceptedAt ?? null,
@@ -161,7 +163,7 @@ export const mapMemberToBackend = (m) => {
     plan_id: m.planId !== undefined ? (m.planId ? Number(m.planId) : null) : undefined,
     expiry_date: toDateOnly(m.expiryDate),
     messaging_opt_in: m.messagingOptIn,
-    is_frozen: m.isFrozen,
+    // Freezing goes through freezeMember (it pauses the remaining days), never a plain edit.
     terms_accepted: m.termsAccepted
   };
   return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined));
@@ -382,19 +384,20 @@ export const apiService = {
     return mapMemberToFrontend(data);
   },
 
-  async freezeMember(memberId, isFrozen) {
+  /** Freeze (optionally until a resume date) or unfreeze; paused days are given back on resume. */
+  async freezeMember(memberId, isFrozen, until = null) {
     const data = await request(`/members/${memberId}/freeze`, {
       method: 'PATCH',
-      body: { is_frozen: isFrozen },
+      body: { is_frozen: isFrozen, ...(isFrozen && until ? { until: toDateOnly(until) } : {}) },
       fallbackError: 'Failed to update freeze status'
     });
     return mapMemberToFrontend(data);
   },
 
-  async freezeFamily(familyKey, isFrozen) {
+  async freezeFamily(familyKey, isFrozen, until = null) {
     const data = await request(`/members/families/${encodeURIComponent(familyKey)}/freeze`, {
       method: 'PATCH',
-      body: { is_frozen: isFrozen },
+      body: { is_frozen: isFrozen, ...(isFrozen && until ? { until: toDateOnly(until) } : {}) },
       fallbackError: 'Failed to update family freeze status'
     });
     // The endpoint returns the family group, not a bare list.

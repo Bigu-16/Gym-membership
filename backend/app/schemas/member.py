@@ -164,6 +164,8 @@ class MemberResponse(BaseModel):
     expiry_date: date | None = None
     messaging_opt_in: bool
     is_frozen: bool
+    frozen_since: date | None = None
+    freeze_until: date | None = None
     terms_accepted_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
@@ -171,10 +173,12 @@ class MemberResponse(BaseModel):
 
 class FreezeRequest(BaseModel):
     is_frozen: bool
+    # Day the member comes back; their remaining days continue from then. None = open-ended.
+    until: date | None = None
 
 
-class FamilyFreezeRequest(BaseModel):
-    is_frozen: bool
+class FamilyFreezeRequest(FreezeRequest):
+    pass
 
 
 class RenewRequest(BaseModel):

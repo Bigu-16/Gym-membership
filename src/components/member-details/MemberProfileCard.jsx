@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { daysUntil, formatDate, membershipStatus } from '../../utils/membership';
+import { daysUntil, formatDate, freezeSummary, membershipStatus } from '../../utils/membership';
+import { toDateKey } from '../../utils/classSessions';
 
 const STATUS_COLOR = {
   frozen: 'text-indigo-400',
@@ -12,7 +13,7 @@ const STATUS_COLOR = {
 const statusText = (member) => {
   const status = membershipStatus(member);
   const days = daysUntil(member.expiryDate);
-  if (status === 'frozen') return 'Frozen (On Hold)';
+  if (status === 'frozen') return 'Frozen';
   if (status === 'no-expiry') return 'No expiry set';
   if (status === 'expired') return 'Expired';
   if (days === 0) return 'Expires today';
@@ -31,14 +32,21 @@ const MemberProfileCard = ({
   startEditing
 }) => {
   const [showFreezePanel, setShowFreezePanel] = useState(false);
-  const [extendMonths, setExtendMonths] = useState(0);
+  const [freezeUntil, setFreezeUntil] = useState('');
   const status = membershipStatus(member);
   const days = daysUntil(member.expiryDate);
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random&color=fff&size=128`;
 
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const daysLeftNow = Math.max(0, days ?? 0);
+
   const confirmFreeze = async () => {
-    const ok = await onFreeze(Number(extendMonths));
-    if (ok) setShowFreezePanel(false);
+    const ok = await onFreeze(freezeUntil || null);
+    if (ok) {
+      setShowFreezePanel(false);
+      setFreezeUntil('');
+    }
   };
 
   return (
@@ -66,8 +74,15 @@ const MemberProfileCard = ({
       </div>
       <div className="w-full flex justify-between items-center">
         <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">{member.isGroup ? 'Earliest expiry' : 'Expiry'}</span>
-        <span className="text-xs font-semibold">{formatDate(member.expiryDate)}</span>
+        <span className="text-xs font-semibold">{member.isFrozen && !member.isGroup ? 'Paused' : formatDate(member.expiryDate)}</span>
       </div>
+      {member.isFrozen && !member.isGroup && (
+        <div className="w-full p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-left">
+          <span className="text-[10px] uppercase tracking-luxury font-bold block">Membership on hold</span>
+          <span className="text-[11px]">{freezeSummary(member)}</span>
+          {member.frozenSince && <span className="block text-[10px] text-[var(--text-secondary)] mt-1">Frozen since {formatDate(member.frozenSince)}</span>}
+        </div>
+      )}
       <div className="w-full flex justify-between items-center">
         <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">Member ID</span>
         <span className="text-xs font-mono text-[var(--text-secondary)]">
@@ -102,35 +117,28 @@ const MemberProfileCard = ({
             : 'bg-[var(--glass-border)] border-[var(--glass-border)] text-[var(--text-primary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)]'
         }`}
       >
-        {member.isFrozen ? 'Unfreeze Membership' : 'Freeze Membership'}
+        {member.isFrozen ? 'Unfreeze now (resume days)' : 'Freeze Membership'}
       </button>
 
       {showFreezePanel && !member.isFrozen && (
         <div className="w-full mt-2 p-4 glass-card border border-indigo-500/30 rounded-xl text-left">
           <h4 className="text-[10px] uppercase tracking-luxury font-bold text-indigo-400 mb-2">Hold Configuration</h4>
-          {member.isGroup ? (
-            <p className="text-[10px] text-[var(--text-secondary)] mb-4">
-              All {member.trainees?.length || 0} trainees in this family will be put on hold.
-            </p>
-          ) : (
-            <>
-              <label htmlFor="freeze-extend" className="block text-[10px] text-[var(--text-secondary)] mb-2">
-                Extend the expiry date to cover the hold?
-              </label>
-              <select
-                id="freeze-extend"
-                value={extendMonths}
-                onChange={(e) => setExtendMonths(e.target.value)}
-                className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-lg px-3 py-2 text-xs mb-4 text-[var(--text-primary)]"
-                disabled={!member.expiryDate}
-              >
-                <option value={0}>No — keep current expiry</option>
-                <option value={1}>Extend by 1 month</option>
-                <option value={2}>Extend by 2 months</option>
-                <option value={3}>Extend by 3 months</option>
-              </select>
-            </>
-          )}
+          <p className="text-[10px] text-[var(--text-secondary)] mb-3">
+            {member.isGroup
+              ? `All ${member.trainees?.length || 0} trainees are put on hold. Each child's remaining days are paused and continue when the freeze ends.`
+              : `The ${daysLeftNow} day${daysLeftNow === 1 ? '' : 's'} left are paused and continue when the freeze ends. No check-ins or reminders while frozen.`}
+          </p>
+          <label htmlFor="freeze-until" className="block text-[10px] text-[var(--text-secondary)] mb-1">
+            Frozen until (optional — leave empty to unfreeze by hand)
+          </label>
+          <input
+            id="freeze-until"
+            type="date"
+            min={toDateKey(tomorrow)}
+            value={freezeUntil}
+            onChange={(e) => setFreezeUntil(e.target.value)}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-lg px-3 py-2 text-xs mb-4 text-[var(--text-primary)]"
+          />
           <div className="flex gap-2">
             <button
               type="button"

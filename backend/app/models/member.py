@@ -27,6 +27,10 @@ class Member(TimestampMixin, Base):
     plan_id: Mapped[int | None] = mapped_column(ForeignKey("membership_plans.id"), nullable=True)
     expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     is_frozen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # While frozen the membership clock is paused: the days left on frozen_since are given back on resume.
+    frozen_since: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Planned resume day (None = frozen until staff unfreeze).
+    freeze_until: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     messaging_opt_in: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     age: Mapped[int] = mapped_column(Integer, nullable=False)
     # When the student/parent agreed to the center's terms printed on the registration form.

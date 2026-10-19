@@ -25,6 +25,21 @@ export const membershipStatus = (member, today = new Date()) => {
   return 'active';
 };
 
+/** Days of membership that are on hold while frozen (given back when the freeze ends). */
+export const pausedDaysLeft = (member) => {
+  if (!member?.isFrozen || !member.expiryDate) return null;
+  if (!member.frozenSince) return Math.max(0, daysUntil(member.expiryDate) ?? 0);
+  return Math.max(0, daysUntil(member.expiryDate, member.frozenSince));
+};
+
+/** "12 days paused · resumes 3 Nov 2026" / "12 days paused until unfrozen" */
+export const freezeSummary = (member) => {
+  const paused = pausedDaysLeft(member);
+  if (paused === null) return member?.isFrozen ? 'Frozen' : '';
+  const days = `${paused} day${paused === 1 ? '' : 's'} paused`;
+  return member.freezeUntil ? `${days} · resumes ${formatDate(member.freezeUntil)}` : `${days} until unfrozen`;
+};
+
 export const needsRenewalAttention = (member, today = new Date()) => {
   const status = membershipStatus(member, today);
   return status === 'expired' || status === 'expiring';
