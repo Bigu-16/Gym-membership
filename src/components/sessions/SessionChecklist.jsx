@@ -18,8 +18,8 @@ const SessionChecklist = ({ session, actions, disabled = false, compact = false 
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
-        <span className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Class checklist</span>
-        <span className="text-[10px] font-semibold text-[var(--text-secondary)]">{done}/{checklist.length} done</span>
+        <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Class checklist</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">{done}/{checklist.length} done</span>
       </div>
 
       {checklist.length === 0 ? (
@@ -49,7 +49,7 @@ const SessionChecklist = ({ session, actions, disabled = false, compact = false 
                     type="button"
                     aria-label={`Confirm removing ${item.text}`}
                     onClick={() => { setConfirmIndex(null); actions.removeItem(session, index); }}
-                    className="p-1 rounded-md text-rose-500 hover:bg-rose-500/10"
+                    className="p-1 rounded-md text-danger hover:bg-rose-500/10"
                   >
                     <Check size={13} />
                   </button>
@@ -69,7 +69,7 @@ const SessionChecklist = ({ session, actions, disabled = false, compact = false 
                   aria-label={`Remove ${item.text}`}
                   disabled={disabled}
                   onClick={() => setConfirmIndex(index)}
-                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-rose-500"
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-danger"
                 >
                   <X size={13} />
                 </button>

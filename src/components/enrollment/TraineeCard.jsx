@@ -2,7 +2,7 @@ import { ADULT_AGE, MIN_MEMBER_AGE } from '../../config/scheduleConfig';
 import { formatMoney } from '../../utils/membership';
 import ClassSlotPicker from './ClassSlotPicker';
 import { groupPlansByProgram, planDurationLabel, planPrice } from './enrollmentHelpers';
-import { inputClass, labelClass } from './fieldStyles';
+import { inputClass, selectClass, labelClass } from './fieldStyles';
 
 const TraineeCard = ({
   trainee,
@@ -24,12 +24,12 @@ const TraineeCard = ({
   return (
     <div className="glass-card p-5 space-y-5 relative" data-testid="trainee-card">
       <div className="flex items-center justify-between">
-        <h4 className="text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{heading}</h4>
+        <h4 className="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{heading}</h4>
         {canRemove && (
           <button
             type="button"
             onClick={onRemove}
-            className="text-[9px] uppercase tracking-luxury font-bold text-rose-500 hover:opacity-70"
+            className="text-xs uppercase tracking-luxury font-bold text-danger hover:opacity-70"
           >
             Remove
           </button>
@@ -64,7 +64,7 @@ const TraineeCard = ({
         </div>
         <div>
           <label htmlFor={id('gender')} className={labelClass}>Gender</label>
-          <select id={id('gender')} value={trainee.gender} onChange={set('gender')} className={inputClass}>
+          <select id={id('gender')} value={trainee.gender} onChange={set('gender')} className={selectClass}>
             <option value="Male">Male</option>
             <option value="Female">Female</option>
           </select>
@@ -88,7 +88,7 @@ const TraineeCard = ({
         <div>
           <label htmlFor={trainee.whatsappSameAsMobile ? undefined : id('whatsapp')} className={labelClass}>WhatsApp number</label>
           {trainee.whatsappSameAsMobile ? (
-            <div className="flex items-center h-[42px] px-1 text-[11px] text-[var(--text-secondary)]">
+            <div className="flex items-center h-[42px] px-1 text-xs text-[var(--text-secondary)]">
               {trainee.phone || isAdult ? 'Same as mobile' : 'None (parent number is used)'}
             </div>
           ) : (
@@ -101,7 +101,7 @@ const TraineeCard = ({
               placeholder="+971 50 123 4567"
             />
           )}
-          <label className="flex items-center gap-2 mt-1.5 ml-1 text-[10px] text-[var(--text-secondary)] cursor-pointer">
+          <label className="flex items-center gap-2 mt-1.5 ml-1 text-xs text-[var(--text-secondary)] cursor-pointer">
             <input
               type="checkbox"
               checked={trainee.whatsappSameAsMobile}
@@ -174,7 +174,7 @@ const TraineeCard = ({
               id={id('plan')}
               value={trainee.planId ?? ''}
               onChange={(event) => onChange({ planId: event.target.value ? Number(event.target.value) : null, amount: null })}
-              className={inputClass}
+              className={selectClass}
             >
               <option value="">Choose a package…</option>
               {groupPlansByProgram(plans).map(([program, items]) => (
@@ -189,7 +189,7 @@ const TraineeCard = ({
               ))}
             </select>
             {plan?.included_items?.length > 0 && (
-              <p className="mt-1.5 ml-1 text-[10px] font-bold uppercase tracking-wider text-amber-500">
+              <p className="mt-1.5 ml-1 text-xs font-bold uppercase tracking-wider text-warning">
                 Includes: {plan.included_items.join(', ')}
               </p>
             )}

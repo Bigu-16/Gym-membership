@@ -12,7 +12,7 @@ const SidebarItem = ({ icon, label, active = false, onClick }) => (
     <div className={`transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>
       {icon}
     </div>
-    <span className="text-[11px] uppercase tracking-luxury font-medium">{label}</span>
+    <span className="text-xs uppercase tracking-luxury font-medium">{label}</span>
   </button>
 );
 
@@ -122,8 +122,8 @@ const Sidebar = ({ activeTab = 'members', onTabChange, scheduleTemplates = [], i
               <img src="/nt-logo.svg" alt="N & T Taekwondo & Karate Center logo" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-widest leading-none text-orange-500">N & T</h2>
-              <span className="text-[9px] text-[var(--text-secondary)] uppercase tracking-luxury">Taekwondo & Karate Center</span>
+              <h2 className="text-sm font-bold uppercase tracking-widest leading-none text-brand">N & T</h2>
+              <span className="text-xs text-[var(--text-secondary)] uppercase tracking-luxury">Taekwondo & Karate Center</span>
             </div>
           </div>
         </div>
@@ -141,11 +141,11 @@ const Sidebar = ({ activeTab = 'members', onTabChange, scheduleTemplates = [], i
 
         <div className="mt-auto px-4 pb-4">
           <div className="glass-card p-4">
-            <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Today</span>
+            <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">Today</span>
             {today ? (
               <>
                 <span className="text-xs font-semibold block">{today.count} classes · {today.label}</span>
-                <span className="text-[10px] text-emerald-500 block mt-1">{today.status}</span>
+                <span className="text-xs text-success block mt-1">{today.status}</span>
               </>
             ) : (
               <span className="text-xs font-semibold block">No classes today</span>
@@ -166,13 +166,13 @@ const Sidebar = ({ activeTab = 'members', onTabChange, scheduleTemplates = [], i
               className={`flex-1 min-w-[52px] flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 rounded-xl transition-all duration-300 ${
                 isActive 
                   ? 'text-[var(--text-primary)] scale-105 font-bold' 
-                  : 'text-[var(--text-secondary)] opacity-50 hover:opacity-100'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
               <div className={`transition-transform duration-300 ${isActive ? 'scale-110 text-[var(--accent-color)]' : ''}`}>
                 {item.icon}
               </div>
-              <span className="text-[8px] sm:text-[9px] uppercase tracking-widest scale-90 whitespace-nowrap font-medium">
+              <span className="text-xs sm:text-xs uppercase tracking-widest scale-90 whitespace-nowrap font-medium">
                 {item.id === 'dashboard' ? 'Overview' : item.label}
               </span>
             </button>

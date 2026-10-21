@@ -33,7 +33,7 @@ const FamilyRegistrationSection = ({
 
       {isChild && (
         <div className="glass-card p-5 space-y-4">
-          <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">Parent / Guardian</h3>
+          <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">Parent / Guardian</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="parent-name" className={labelClass}>Parent/guardian full name</label>
@@ -92,7 +92,7 @@ const FamilyRegistrationSection = ({
       <button
         type="button"
         onClick={onAddTrainee}
-        className="text-[10px] uppercase tracking-luxury font-bold text-[var(--text-primary)] hover:opacity-60 transition-opacity px-2"
+        className="text-xs uppercase tracking-luxury font-bold text-[var(--text-primary)] hover:opacity-60 transition-opacity px-2"
       >
         {isChild ? '+ Add sibling' : '+ Add another adult'}
       </button>

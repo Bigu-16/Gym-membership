@@ -5,6 +5,7 @@ const MemberHeader = ({ onBack }) => {
         <button 
           type="button"
           onClick={onBack}
+          aria-label="Back to members"
           className="p-2 rounded-full glass-card hover:bg-[var(--glass-border)] transition-all"
         >
           <svg className="w-5 h-5 text-[var(--text-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">

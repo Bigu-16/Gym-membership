@@ -31,7 +31,7 @@ const MonthView = ({
         <div className="min-w-[800px]">
           <div className="grid grid-cols-7 border-b border-[var(--glass-border)]">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-              <div key={day} className="p-4 text-center text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold">
+              <div key={day} className="p-4 text-center text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold">
                 {day}
               </div>
             ))}
@@ -56,7 +56,7 @@ const MonthView = ({
                       {format(day, 'd')}
                     </span>
                     {daySessions.length > 0 && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--glass-border)] font-bold">
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-[var(--glass-border)] font-bold">
                         {daySessions.length}
                       </span>
                     )}
@@ -67,7 +67,7 @@ const MonthView = ({
                         key={session.id}
                         onClick={() => setSelectedSession(session)}
                         className={cn(
-                          "text-[9px] p-1 rounded-md truncate cursor-pointer",
+                          "text-xs p-1 rounded-md truncate cursor-pointer",
                           session.status === 'in-progress' 
                             ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" 
                             : "bg-[var(--glass-border)] text-[var(--text-primary)]"
@@ -77,7 +77,7 @@ const MonthView = ({
                       </div>
                     ))}
                     {daySessions.length > 3 && (
-                      <div className="text-[9px] text-[var(--text-secondary)] pl-1">
+                      <div className="text-xs text-[var(--text-secondary)] pl-1">
                         + {daySessions.length - 3} more
                       </div>
                     )}

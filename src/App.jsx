@@ -101,7 +101,7 @@ const App = () => {
       
       <div className="flex-grow max-w-7xl mx-auto w-full">
         {error && (
-          <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs flex items-center justify-between gap-4">
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-warning text-xs flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -111,7 +111,7 @@ const App = () => {
             <button 
               type="button"
               onClick={loadData} 
-              className="px-3 py-1 rounded-lg bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold text-[10px] uppercase tracking-luxury hover:opacity-80"
+              className="px-3 py-1 rounded-lg bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold text-xs uppercase tracking-luxury hover:opacity-80"
             >
               Retry
             </button>
@@ -174,7 +174,7 @@ const App = () => {
                           <button 
                             type="button"
                             onClick={() => setFilterType('all')}
-                            className={`px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury transition-all ${
+                            className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-luxury transition-all ${
                               filterType === 'all' 
                                 ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold' 
                                 : 'glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)]'
@@ -185,7 +185,7 @@ const App = () => {
                           <button 
                             type="button"
                             onClick={() => setFilterType('expiring')}
-                            className={`px-4 py-1.5 rounded-full text-[10px] uppercase tracking-luxury transition-all ${
+                            className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-luxury transition-all ${
                               filterType === 'expiring' 
                                 ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold' 
                                 : 'glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)]'
@@ -273,7 +273,7 @@ const App = () => {
         )}
         </main>
         
-        <footer className="mt-16 pt-8 border-t border-[var(--glass-border)] flex flex-wrap justify-between gap-6 text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">
+        <footer className="mt-16 pt-8 border-t border-[var(--glass-border)] flex flex-wrap justify-between gap-6 text-xs uppercase tracking-luxury text-[var(--text-secondary)]">
           <span>© 2026 N & T Taekwondo & Karate Center</span>
           <span>Mon–Sat · 4–9 PM</span>
         </footer>

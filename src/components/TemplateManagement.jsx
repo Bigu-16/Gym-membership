@@ -33,13 +33,13 @@ const formatHour = (value) => {
 };
 
 const CLASS_COLORS = [
-  { match: (n) => n.includes('taekwondo'), card: 'border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:border-sky-400', dot: 'bg-sky-500' },
-  { match: (n) => n.includes('little kids'), card: 'border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:border-purple-400', dot: 'bg-purple-500' },
-  { match: (n) => n.includes('kickboxing'), card: 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:border-rose-400', dot: 'bg-rose-500' },
-  { match: (n) => n.includes('adult karate'), card: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:border-amber-400', dot: 'bg-amber-500' },
-  { match: (n) => n.includes('karate'), card: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:border-emerald-400', dot: 'bg-emerald-500' }
+  { match: (n) => n.includes('taekwondo'), card: 'border-sky-500/30 bg-sky-500/10 text-info hover:border-sky-400', dot: 'bg-sky-500' },
+  { match: (n) => n.includes('little kids'), card: 'border-purple-500/30 bg-purple-500/10 text-violet hover:border-purple-400', dot: 'bg-purple-500' },
+  { match: (n) => n.includes('kickboxing'), card: 'border-rose-500/30 bg-rose-500/10 text-danger hover:border-rose-400', dot: 'bg-rose-500' },
+  { match: (n) => n.includes('adult karate'), card: 'border-amber-500/30 bg-amber-500/10 text-warning hover:border-amber-400', dot: 'bg-amber-500' },
+  { match: (n) => n.includes('karate'), card: 'border-emerald-500/30 bg-emerald-500/10 text-success hover:border-emerald-400', dot: 'bg-emerald-500' }
 ];
-const DEFAULT_COLOR = { card: 'border-orange-500/25 bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:border-orange-400', dot: 'bg-orange-500' };
+const DEFAULT_COLOR = { card: 'border-orange-500/25 bg-orange-500/10 text-brand hover:border-orange-400', dot: 'bg-orange-500' };
 
 const classColor = (name = '') => CLASS_COLORS.find((c) => c.match(name.toLowerCase())) || DEFAULT_COLOR;
 
@@ -148,7 +148,7 @@ const TemplateManagement = ({
             <div className="w-1.5 h-6 rounded-full bg-orange-500" />
             <h2 className="text-lg font-light uppercase tracking-luxury">Weekly timetable</h2>
           </div>
-          <p className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)] mt-1 ml-4.5">
+          <p className="text-xs uppercase tracking-wider text-[var(--text-secondary)] mt-1 ml-4.5">
             The repeating Monday–Saturday classes from the registration form
           </p>
         </div>
@@ -157,25 +157,25 @@ const TemplateManagement = ({
             disabled={initializing}
             type="button"
             onClick={initializePhotoSchedule}
-            className="px-4 py-2.5 rounded-xl border border-orange-500/30 text-orange-500 text-[10px] uppercase tracking-luxury font-bold disabled:opacity-50 hover:bg-orange-500/10 transition-colors"
+            className="px-4 py-2.5 rounded-xl border border-orange-500/30 text-brand text-xs uppercase tracking-luxury font-bold disabled:opacity-50 hover:bg-orange-500/10 transition-colors"
           >
             {initializing ? 'Loading…' : 'Load official timetable'}
           </button>
           <button
             type="button"
             onClick={() => openScheduleEditor()}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--glass-border)] hover:border-[var(--text-primary)] text-[10px] uppercase tracking-luxury font-bold transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--glass-border)] hover:border-[var(--text-primary)] text-xs uppercase tracking-luxury font-bold transition-colors"
           >
             <Plus size={14} /> New class
           </button>
         </div>
       </div>
 
-      {notice && <div role="status" className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-500">{notice}</div>}
-      {error && <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-500">{error}</div>}
+      {notice && <div role="status" className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-success">{notice}</div>}
+      {error && <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-danger">{error}</div>}
 
       {/* Timetable Legend */}
-      <div className="flex flex-wrap items-center gap-4 px-2 py-1 text-[10px] uppercase tracking-luxury">
+      <div className="flex flex-wrap items-center gap-4 px-2 py-1 text-xs uppercase tracking-luxury">
         <span className="text-[var(--text-secondary)] font-medium">Classes:</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-sky-500" /> Kids Taekwondo</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500" /> Little Kids Karate</span>
@@ -197,14 +197,14 @@ const TemplateManagement = ({
       {/* Monday - Saturday Weekly Shift Grid */}
       <div className="overflow-x-auto rounded-2xl border border-[var(--glass-border)]">
         <div className="min-w-[980px] grid grid-cols-[100px_repeat(6,minmax(140px,1fr))] bg-[var(--glass-bg)]">
-          <div className="p-3 border-b border-r border-[var(--glass-border)] text-[9px] uppercase tracking-luxury text-[var(--text-secondary)]">Time</div>
+          <div className="p-3 border-b border-r border-[var(--glass-border)] text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Time</div>
           {DAYS.map((day) => (
-            <div key={day} className="p-3 border-b border-r last:border-r-0 border-[var(--glass-border)] text-center text-[10px] uppercase tracking-luxury font-bold">
+            <div key={day} className="p-3 border-b border-r last:border-r-0 border-[var(--glass-border)] text-center text-xs uppercase tracking-luxury font-bold">
               {day}
             </div>
           ))}
           {gridTimes.flatMap((time) => [
-            <div key={`${time}-label`} className="p-3 border-b border-r border-[var(--glass-border)] text-[10px] font-bold text-[var(--text-secondary)]">
+            <div key={`${time}-label`} className="p-3 border-b border-r border-[var(--glass-border)] text-xs font-bold text-[var(--text-secondary)]">
               {formatHour(time)}
             </div>,
             ...DAYS.map((day) => {
@@ -220,9 +220,9 @@ const TemplateManagement = ({
                       onClick={() => openScheduleEditor(template)}
                       className={`w-full text-left rounded-xl border p-3 transition-colors ${classColor(template.className).card}`}
                     >
-                      <span className="block text-[10px] font-black uppercase tracking-wide">{template.className}</span>
-                      <span className="block text-[9px] opacity-75 mt-1">{formatTimeRange(template.time)}</span>
-                      <span className="block text-[9px] opacity-75 mt-0.5">
+                      <span className="block text-xs font-black uppercase tracking-wide">{template.className}</span>
+                      <span className="block text-xs mt-1">{formatTimeRange(template.time)}</span>
+                      <span className="block text-xs mt-0.5">
                         {template.enrolled || 0} enrolled{template.capacity ? ` / ${template.capacity}` : ''}
                       </span>
                     </button>
@@ -230,7 +230,7 @@ const TemplateManagement = ({
                   <button
                     type="button"
                     onClick={() => openScheduleEditor(null, day, time)}
-                    className="w-full py-2 rounded-lg border border-dashed border-[var(--glass-border)] text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] opacity-40 group-hover/cell:opacity-100 hover:text-[var(--text-primary)]"
+                    className="w-full py-2 rounded-lg border border-dashed border-[var(--glass-border)] text-xs uppercase tracking-luxury text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   >
                     + Add
                   </button>
@@ -255,8 +255,8 @@ const TemplateManagement = ({
                     <span className={`w-2 h-2 rounded-full ${classColor(template.className).dot}`} />
                     <h4 className="text-xs font-bold">{template.className}</h4>
                   </div>
-                  <p className="text-[10px] text-[var(--text-secondary)] mt-1">{template.days} · {formatTimeRange(template.time)}</p>
-                  <p className="text-[9px] text-[var(--text-secondary)] mt-0.5">
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">{template.days} · {formatTimeRange(template.time)}</p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                     {template.enrolled || 0} enrolled{template.capacity ? ` of ${template.capacity}` : ''}{template.trainer ? ` · ${template.trainer}` : ''}
                   </p>
                 </div>
@@ -273,7 +273,7 @@ const TemplateManagement = ({
                     type="button"
                     title="Delete schedule template"
                     onClick={() => setPendingDelete(template)}
-                    className="p-2 rounded-lg text-rose-500 hover:bg-rose-500/10"
+                    className="p-2 rounded-lg text-danger hover:bg-rose-500/10"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -321,14 +321,14 @@ const TemplateManagement = ({
               <button
                 type="button"
                 onClick={confirmDelete}
-                className="flex-1 py-3 rounded-xl bg-rose-500 text-white text-[10px] uppercase tracking-luxury font-bold"
+                className="flex-1 py-3 rounded-xl bg-danger-solid text-white text-xs uppercase tracking-luxury font-bold"
               >
                 Delete
               </button>
               <button
                 type="button"
                 onClick={() => setPendingDelete(null)}
-                className="flex-1 py-3 rounded-xl border border-[var(--glass-border)] text-[10px] uppercase tracking-luxury font-bold"
+                className="flex-1 py-3 rounded-xl border border-[var(--glass-border)] text-xs uppercase tracking-luxury font-bold"
               >
                 Cancel
               </button>

@@ -72,7 +72,7 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
         <div className="flex items-center justify-between pb-4 border-b border-[var(--glass-border)]">
           <div>
             <h3 className="text-base font-bold text-[var(--text-primary)]">Renew Membership</h3>
-            <p className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">
+            <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)]">
               {member.isGroup ? `${member.name} (${people.length} trainees)` : member.name}
             </p>
           </div>
@@ -104,7 +104,7 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-3">
                   <div>
-                    <label htmlFor={`renew-plan-${person.id}`} className="block text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] mb-1">
+                    <label htmlFor={`renew-plan-${person.id}`} className="block text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">
                       Package
                     </label>
                     <select
@@ -120,7 +120,7 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
                     </select>
                   </div>
                   <div>
-                    <label htmlFor={`renew-amount-${person.id}`} className="block text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] mb-1">
+                    <label htmlFor={`renew-amount-${person.id}`} className="block text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">
                       Amount (AED)
                     </label>
                     <input
@@ -134,7 +134,7 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
                     />
                   </div>
                 </div>
-                <p className="text-[11px] text-emerald-500">
+                <p className="text-xs text-success">
                   New expiry: <strong>{newExpiry ? formatDate(newExpiry, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</strong>
                 </p>
               </div>
@@ -143,7 +143,7 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
         </div>
 
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold">New period starts</p>
+          <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold">New period starts</p>
           <div className="grid grid-cols-2 gap-2">
             {[
               { value: 'expiry', title: 'After current expiry', hint: anyActive ? 'Keeps the remaining days' : 'Expired — starts today' },
@@ -156,12 +156,12 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
                 onClick={() => setStartFrom(option.value)}
                 className={`p-3 rounded-xl border text-left text-xs transition-all ${
                   startFrom === option.value
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-semibold'
+                    ? 'bg-emerald-500/20 border-emerald-500 text-success font-semibold'
                     : 'bg-[var(--bg-primary)] border-[var(--glass-border)] text-[var(--text-secondary)]'
                 }`}
               >
-                <span className="block text-[10px] uppercase tracking-luxury font-bold">{option.title}</span>
-                <span className="text-[11px] opacity-80">{option.hint}</span>
+                <span className="block text-xs uppercase tracking-luxury font-bold">{option.title}</span>
+                <span className="text-xs">{option.hint}</span>
               </button>
             ))}
           </div>
@@ -169,7 +169,7 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
 
         <div className="grid grid-cols-2 gap-3 items-end">
           <div>
-            <label htmlFor="renew-method" className="block text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold mb-1.5">
+            <label htmlFor="renew-method" className="block text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold mb-1.5">
               Payment Method
             </label>
             <select id="renew-method" value={method} onChange={(e) => setMethod(e.target.value)} className={fieldClass}>
@@ -177,12 +177,12 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
             </select>
           </div>
           <div className="text-right">
-            <span className="block text-[9px] uppercase tracking-luxury text-[var(--text-secondary)]">Total</span>
+            <span className="block text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Total</span>
             <span className="block text-xl font-black">{formatMoney(total)}</span>
           </div>
         </div>
 
-        {error && <p role="alert" className="text-xs text-rose-500">{error}</p>}
+        {error && <p role="alert" className="text-xs text-danger">{error}</p>}
 
         <div className="flex gap-3 pt-2">
           <button

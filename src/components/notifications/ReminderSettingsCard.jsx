@@ -3,7 +3,7 @@ import { apiService } from '../../services/api';
 
 const Check = ({ ok, children }) => (
   <li className="flex items-start gap-2 text-xs">
-    <span aria-hidden="true" className={ok ? 'text-emerald-500' : 'text-amber-500'}>{ok ? '✓' : '!'}</span>
+    <span aria-hidden="true" className={ok ? 'text-success' : 'text-warning'}>{ok ? '✓' : '!'}</span>
     <span>{children}</span>
   </li>
 );
@@ -74,7 +74,7 @@ const ReminderSettingsCard = ({ onSent }) => {
       </div>
 
       {loadError ? (
-        <p role="alert" className="text-xs text-rose-500">{loadError}</p>
+        <p role="alert" className="text-xs text-danger">{loadError}</p>
       ) : info && (
         <ul className="space-y-1.5">
           <Check ok={info.email_configured}>
@@ -96,7 +96,7 @@ const ReminderSettingsCard = ({ onSent }) => {
           type="button"
           onClick={sendNow}
           disabled={busy !== null}
-          className="px-4 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold disabled:opacity-50"
+          className="px-4 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs uppercase tracking-luxury font-bold disabled:opacity-50"
         >
           {busy === 'send' ? 'Sending…' : 'Send due reminders now'}
         </button>
@@ -113,7 +113,7 @@ const ReminderSettingsCard = ({ onSent }) => {
           <button
             type="submit"
             disabled={busy !== null}
-            className="px-4 py-2 rounded-xl border border-[var(--glass-border)] text-[10px] uppercase tracking-luxury font-bold disabled:opacity-50"
+            className="px-4 py-2 rounded-xl border border-[var(--glass-border)] text-xs uppercase tracking-luxury font-bold disabled:opacity-50"
           >
             {busy === 'test' ? 'Sending…' : 'Send test email'}
           </button>
@@ -121,7 +121,7 @@ const ReminderSettingsCard = ({ onSent }) => {
       </div>
 
       {message && (
-        <p role={message.ok ? 'status' : 'alert'} className={`text-xs rounded-xl p-3 ${message.ok ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-500'}`}>
+        <p role={message.ok ? 'status' : 'alert'} className={`text-xs rounded-xl p-3 ${message.ok ? 'bg-emerald-500/10 text-success' : 'bg-rose-500/10 text-danger'}`}>
           {message.text}
         </p>
       )}

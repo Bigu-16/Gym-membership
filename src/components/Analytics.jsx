@@ -9,7 +9,7 @@ const revenueChange = (current, previous) => {
   const pct = Math.round(((current - previous) / previous) * 100);
   return {
     text: `${pct > 0 ? '+' : pct < 0 ? '−' : ''}${Math.abs(pct)}% vs last month`,
-    tone: pct > 0 ? 'text-emerald-500' : pct < 0 ? 'text-rose-500' : undefined,
+    tone: pct > 0 ? 'text-success' : pct < 0 ? 'text-danger' : undefined,
   };
 };
 
@@ -45,7 +45,7 @@ const Analytics = () => {
         <p className="text-sm text-[var(--text-primary)]">Could not load analytics.</p>
         <p className="text-xs text-[var(--text-secondary)]">{error}</p>
         <button type="button" onClick={load}
-          className="px-4 py-2 rounded-xl text-[10px] uppercase tracking-luxury font-bold border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--card-hover)]">
+          className="px-4 py-2 rounded-xl text-xs uppercase tracking-luxury font-bold border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--card-hover)]">
           Retry
         </button>
       </div>
@@ -67,7 +67,7 @@ const Analytics = () => {
         <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-color)]"></span> Business intelligence
         </h2>
-        <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)]">
+        <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)]">
           As of {data.generated_on ? formatDay(data.generated_on) : '—'}
         </span>
       </div>
@@ -82,7 +82,7 @@ const Analytics = () => {
           detail={`${formatNumber(data.renewals_last_90_days)} renewed · ${formatNumber(data.expired_unrenewed_last_90_days)} lapsed (90d)`} />
         <KpiTile label="Expiring in 7 days" value={formatNumber(totals.expiring_7_days)}
           detail={`${formatNumber(totals.expired)} already expired`}
-          tone={totals.expiring_7_days > 0 ? 'text-amber-500' : undefined} />
+          tone={totals.expiring_7_days > 0 ? 'text-warning' : undefined} />
       </div>
 
       <Card title="Revenue by month" subtitle={`Recorded payments, last 12 months (${currency})`}>

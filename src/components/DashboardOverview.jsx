@@ -81,7 +81,7 @@ const DashboardOverview = ({
       />
 
       {actions.error && (
-        <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-500 flex justify-between gap-3">
+        <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-danger flex justify-between gap-3">
           <span>{actions.error}</span>
           <button type="button" onClick={actions.clearError} className="font-bold uppercase tracking-luxury">Dismiss</button>
         </div>

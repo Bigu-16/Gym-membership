@@ -3,9 +3,9 @@ import { ClipboardCheck } from 'lucide-react';
 import { membershipStatus } from '../../utils/membership';
 
 const STATUS_CHIP = {
-  expired: { text: 'Expired', className: 'text-rose-500 bg-rose-500/10' },
-  frozen: { text: 'Frozen', className: 'text-sky-500 bg-sky-500/10' },
-  expiring: { text: 'Expiring', className: 'text-amber-500 bg-amber-500/10' }
+  expired: { text: 'Expired', className: 'text-danger bg-rose-500/10' },
+  frozen: { text: 'Frozen', className: 'text-info bg-sky-500/10' },
+  expiring: { text: 'Expiring', className: 'text-warning bg-amber-500/10' }
 };
 
 const timeFormat = { hour: 'numeric', minute: '2-digit' };
@@ -18,14 +18,14 @@ const MemberRow = ({ member, isCheckedIn, onCheckIn, busy }) => {
         <img src={member.image} alt="" className="w-7 h-7 rounded-full object-cover border border-[var(--glass-border)]" />
         <div className="min-w-0">
           <span className="text-xs font-semibold block truncate">{member.name}</span>
-          <span className="text-[9px] text-[var(--text-secondary)] block truncate">
+          <span className="text-xs text-[var(--text-secondary)] block truncate">
             {member.plan}
             {chip && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full font-bold ${chip.className}`}>{chip.text}</span>}
           </span>
         </div>
       </div>
       {isCheckedIn ? (
-        <span className="text-[9px] uppercase tracking-luxury text-emerald-500 font-bold px-2 py-1 rounded-full bg-emerald-500/10 shrink-0">
+        <span className="text-xs uppercase tracking-luxury text-success font-bold px-2 py-1 rounded-full bg-emerald-500/10 shrink-0">
           In center
         </span>
       ) : (
@@ -33,7 +33,7 @@ const MemberRow = ({ member, isCheckedIn, onCheckIn, busy }) => {
           type="button"
           disabled={busy}
           onClick={() => onCheckIn(member)}
-          className="px-3 py-1 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[9px] uppercase tracking-luxury font-bold disabled:opacity-40 shrink-0"
+          className="px-3 py-1 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs uppercase tracking-luxury font-bold disabled:opacity-40 shrink-0"
         >
           Check in
         </button>
@@ -111,16 +111,16 @@ const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], chec
       </h3>
 
       {message && (
-        <p role="status" className={`mb-3 text-xs rounded-xl p-2.5 ${message.tone === 'error' ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
+        <p role="status" className={`mb-3 text-xs rounded-xl p-2.5 ${message.tone === 'error' ? 'bg-rose-500/10 text-danger' : 'bg-emerald-500/10 text-success'}`}>
           {message.text}
         </p>
       )}
 
       {blocked && (
-        <div role="alert" className="mb-3 text-xs rounded-xl p-3 bg-amber-500/10 text-amber-700 dark:text-amber-400 space-y-2">
+        <div role="alert" className="mb-3 text-xs rounded-xl p-3 bg-amber-500/10 text-warning space-y-2">
           <p><strong>{blocked.member.name}</strong>: {blocked.reason}. Renew at the desk, or let them in for today.</p>
           <div className="flex gap-2">
-            <button type="button" onClick={() => handleCheckIn(blocked.member, true)} className="px-3 py-1 rounded-lg bg-amber-500 text-white font-bold">
+            <button type="button" onClick={() => handleCheckIn(blocked.member, true)} className="px-3 py-1 rounded-lg bg-warning-solid text-white font-bold">
               Let in anyway
             </button>
             <button type="button" onClick={() => setBlocked(null)} className="px-3 py-1 rounded-lg border border-amber-500/40">
@@ -150,7 +150,7 @@ const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], chec
               type="button"
               aria-pressed={selectedClass === chip.id}
               onClick={() => setSelectedClass(chip.id)}
-              className={`px-3 py-1.5 rounded-full text-[9px] uppercase tracking-luxury font-bold whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-full text-xs uppercase tracking-luxury font-bold whitespace-nowrap ${
                 selectedClass === chip.id
                   ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]'
                   : 'bg-[var(--card-hover)] text-[var(--text-secondary)] border border-[var(--glass-border)]'
@@ -163,7 +163,7 @@ const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], chec
       )}
 
       {list.length === 0 ? (
-        <p className="text-[11px] text-[var(--text-secondary)] italic text-center py-4 border border-dashed border-[var(--glass-border)] rounded-xl mb-6">
+        <p className="text-xs text-[var(--text-secondary)] italic text-center py-4 border border-dashed border-[var(--glass-border)] rounded-xl mb-6">
           {searchTerm.trim() ? 'No matching members.' : 'Nobody is enrolled in today\'s classes yet. Search above for walk-ins.'}
         </p>
       ) : (
@@ -181,11 +181,11 @@ const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], chec
       )}
 
       <div className="pt-4 border-t border-[var(--glass-border)]">
-        <span className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold block mb-3">
+        <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold block mb-3">
           In the center ({checkedInMembers.length})
         </span>
         {checkedInMembers.length === 0 ? (
-          <p className="text-[11px] text-[var(--text-secondary)] italic text-center py-2">Nobody checked in right now.</p>
+          <p className="text-xs text-[var(--text-secondary)] italic text-center py-2">Nobody checked in right now.</p>
         ) : (
           <ul className="max-h-48 overflow-y-auto space-y-2 pr-1">
             {checkedInMembers.map((member) => (
@@ -198,7 +198,7 @@ const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], chec
                   type="button"
                   disabled={busyId === member.id}
                   onClick={() => handleCheckOut(member)}
-                  className="px-2.5 py-1 rounded-lg text-[9px] uppercase tracking-luxury font-bold text-rose-500 border border-rose-500/30 hover:bg-rose-500/10 disabled:opacity-40 shrink-0"
+                  className="px-2.5 py-1 rounded-lg text-xs uppercase tracking-luxury font-bold text-danger border border-rose-500/30 hover:bg-rose-500/10 disabled:opacity-40 shrink-0"
                 >
                   Check out
                 </button>

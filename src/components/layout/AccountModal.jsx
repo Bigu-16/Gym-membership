@@ -54,25 +54,25 @@ const AccountModal = ({ currentUser, onClose, onSignedOut }) => {
         </div>
 
         <form onSubmit={changePassword} className="space-y-3">
-          <h3 className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Change password</h3>
+          <h3 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Change password</h3>
           <input type="password" autoComplete="current-password" aria-label="Current password" placeholder="Current password" value={form.current} onChange={update('current')} className={fieldClass} required />
           <input type="password" autoComplete="new-password" aria-label="New password" placeholder="New password" value={form.next} onChange={update('next')} className={fieldClass} required />
           <input type="password" autoComplete="new-password" aria-label="Confirm new password" placeholder="Confirm new password" value={form.confirm} onChange={update('confirm')} className={fieldClass} required />
-          <p className="text-[10px] text-[var(--text-secondary)]">At least 10 characters, with upper- and lower-case letters and a number.</p>
-          <button type="submit" disabled={busy} className="w-full py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold disabled:opacity-50">
+          <p className="text-xs text-[var(--text-secondary)]">At least 10 characters, with upper- and lower-case letters and a number.</p>
+          <button type="submit" disabled={busy} className="w-full py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs uppercase tracking-luxury font-bold disabled:opacity-50">
             Change password
           </button>
         </form>
 
         <div className="pt-4 border-t border-[var(--glass-border)] space-y-2">
           <p className="text-xs text-[var(--text-secondary)]">Left this account signed in on another computer? Sign it out everywhere, including here.</p>
-          <button type="button" disabled={busy} onClick={signOutEverywhere} className="w-full py-3 rounded-xl border border-rose-500/30 text-rose-500 text-[10px] uppercase tracking-luxury font-bold disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={signOutEverywhere} className="w-full py-3 rounded-xl border border-rose-500/30 text-danger text-xs uppercase tracking-luxury font-bold disabled:opacity-50">
             Sign out on all devices
           </button>
         </div>
 
         {message && (
-          <p role={message.tone === 'error' ? 'alert' : 'status'} className={`text-xs rounded-xl p-3 ${message.tone === 'error' ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
+          <p role={message.tone === 'error' ? 'alert' : 'status'} className={`text-xs rounded-xl p-3 ${message.tone === 'error' ? 'bg-rose-500/10 text-danger' : 'bg-emerald-500/10 text-success'}`}>
             {message.text}
           </p>
         )}

@@ -110,7 +110,7 @@ const WeekView = ({
                   isToday(day) && "bg-[var(--text-primary)] bg-opacity-[0.03]"
                 )}
               >
-                <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">
+                <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">
                   {format(day, 'EEE')}
                 </span>
                 <span className={cn(
@@ -128,7 +128,7 @@ const WeekView = ({
               {/* Time labels */}
               <div className="relative">
                 {hours.map(hour => (
-                  <div key={hour} className="h-[60px] text-[10px] text-[var(--text-secondary)] pr-4 text-right">
+                  <div key={hour} className="h-[60px] text-xs text-[var(--text-secondary)] pr-4 text-right">
                     {/* Offset only the text so labels don't drift down the grid. */}
                     <span className="block -translate-y-1.5">{formatHourLabel(hour)}</span>
                   </div>
@@ -162,11 +162,11 @@ const WeekView = ({
                           session.status === 'in-progress'
                             ? "bg-[var(--text-primary)] text-[var(--bg-primary)] border-transparent shadow-xl ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[var(--bg-primary)] z-10"
                             : session.status === 'cancelled'
-                              ? "bg-[var(--bg-secondary)] border-rose-500/30 opacity-60 line-through"
+                              ? "bg-[var(--bg-secondary)] border-rose-500/60 border-dashed line-through"
                               : session.status === 'completed'
-                                ? "bg-[var(--bg-secondary)] border-sky-500/30 opacity-80"
+                                ? "bg-[var(--bg-secondary)] border-sky-500/60"
                                 : session.status === 'not-recorded'
-                                  ? "bg-[var(--bg-secondary)] border-amber-500/30 border-dashed opacity-70"
+                                  ? "bg-[var(--bg-secondary)] border-amber-500/60 border-dashed"
                                   : "bg-[var(--bg-secondary)] border-[var(--glass-border)] hover:border-[var(--text-secondary)] shadow-md"
                         )}
                         style={{ 
@@ -177,11 +177,11 @@ const WeekView = ({
                         }}
                       >
                         <div className="font-bold mb-0.5 truncate" title={session.title}>{session.title}</div>
-                        <div className="opacity-70 text-[9px] truncate">
+                        <div className="text-xs truncate">
                           {format(session.start, 'h:mm')}–{format(session.end, 'h:mm a')}
                           {` • ${session.enrolled || 0}${session.capacity ? `/${session.capacity}` : ''}`}
                         </div>
-                        {session.status === 'in-progress' && <span className="text-[8px] font-bold">LIVE</span>}
+                        {session.status === 'in-progress' && <span className="text-xs font-bold">LIVE</span>}
                       </div>
                     );
                   })}

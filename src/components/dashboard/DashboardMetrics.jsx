@@ -10,7 +10,7 @@ const Tile = ({ label, value, unit, detail, detailClass = 'text-[var(--text-seco
     >
       <div className="flex justify-between items-start mb-4">
         <div>
-          <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">{label}</span>
+          <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">{label}</span>
           <span className="text-3xl font-light tracking-wide">
             {value} <span className="text-xs text-[var(--text-secondary)]">{unit}</span>
           </span>
@@ -19,7 +19,7 @@ const Tile = ({ label, value, unit, detail, detailClass = 'text-[var(--text-seco
           {icon}
         </div>
       </div>
-      <span className={`text-[10px] uppercase tracking-luxury font-bold ${detailClass}`}>{detail}</span>
+      <span className={`text-xs uppercase tracking-luxury font-bold ${detailClass}`}>{detail}</span>
     </Wrapper>
   );
 };
@@ -42,7 +42,7 @@ const DashboardMetrics = ({ dashboardStats, members = [], inClubCount = 0, today
         value={totalRegistered}
         unit="registered"
         detail={`${active} active${expiring ? ` • ${expiring} expiring this week` : ''}`}
-        detailClass={expiring ? 'text-amber-500' : 'text-[var(--text-secondary)]'}
+        detailClass={expiring ? 'text-warning' : 'text-[var(--text-secondary)]'}
         icon={<Users size={20} />}
         onClick={() => onTabChange('members')}
       />
@@ -58,7 +58,7 @@ const DashboardMetrics = ({ dashboardStats, members = [], inClubCount = 0, today
         value={todayClasses.length}
         unit={todayClasses.length === 1 ? 'class' : 'classes'}
         detail={todayClasses.length ? `${running} running • ${completed} done • ${remaining} to go` : 'No classes today'}
-        detailClass={running ? 'text-emerald-500' : 'text-[var(--text-secondary)]'}
+        detailClass={running ? 'text-success' : 'text-[var(--text-secondary)]'}
         icon={<CalendarClock size={20} />}
         onClick={() => onTabChange('schedule')}
       />

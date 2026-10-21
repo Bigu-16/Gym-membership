@@ -26,12 +26,12 @@ const PackageTemplateSelector = ({ plans = [], selectedPlanId, onSelect, onLoadO
   return (
     <section className="space-y-6">
       <div className="flex items-center gap-4 px-2">
-        <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)] font-black text-[9px]">
+        <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center text-[var(--bg-primary)] font-black text-xs">
           AED
         </div>
         <div>
           <h2 className="text-xs uppercase tracking-luxury font-bold">Package Templates</h2>
-          <p className="text-[10px] text-[var(--text-secondary)] mt-1">
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
             Official N &amp; T packages. Selecting one applies it to every trainee below.
           </p>
         </div>
@@ -40,7 +40,7 @@ const PackageTemplateSelector = ({ plans = [], selectedPlanId, onSelect, onLoadO
       {plans.length === 0 ? (
         <div className="glass-card p-6 text-center space-y-3">
           <p className="text-sm font-semibold">No packages are set up yet.</p>
-          <p className="text-[11px] text-[var(--text-secondary)]">
+          <p className="text-xs text-[var(--text-secondary)]">
             Load the official N &amp; T price list (Taekwondo, Karate, Kickboxing, Kung Fu and Fitness) to start registering members.
           </p>
           {onLoadOfficialPackages && (
@@ -48,12 +48,12 @@ const PackageTemplateSelector = ({ plans = [], selectedPlanId, onSelect, onLoadO
               type="button"
               onClick={loadOfficial}
               disabled={loading}
-              className="px-5 py-2.5 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold disabled:opacity-50"
+              className="px-5 py-2.5 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs uppercase tracking-luxury font-bold disabled:opacity-50"
             >
               {loading ? 'Loading…' : 'Load official packages'}
             </button>
           )}
-          {error && <p role="alert" className="text-xs text-rose-500">{error}</p>}
+          {error && <p role="alert" className="text-xs text-danger">{error}</p>}
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
@@ -79,13 +79,13 @@ const PackageTemplateSelector = ({ plans = [], selectedPlanId, onSelect, onLoadO
                           : 'border-[var(--glass-border)] bg-[var(--bg-primary)] hover:border-orange-500/60'
                       }`}
                     >
-                      <span className="block text-[9px] uppercase tracking-luxury text-[var(--text-secondary)]">{duration}</span>
+                      <span className="block text-xs uppercase tracking-luxury text-[var(--text-secondary)]">{duration}</span>
                       <span className="block text-lg font-black mt-1">{formatMoney(price, plan.currency || 'AED')}</span>
                       {plan.classes_per_week ? (
-                        <span className="block text-[10px] text-[var(--text-secondary)] mt-1">{plan.classes_per_week} classes / week</span>
+                        <span className="block text-xs text-[var(--text-secondary)] mt-1">{plan.classes_per_week} classes / week</span>
                       ) : null}
                       {(plan.included_items || []).map((item) => (
-                        <span key={item} className="inline-flex mt-2 mr-1 rounded-full bg-amber-500/15 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-amber-500">
+                        <span key={item} className="inline-flex mt-2 mr-1 rounded-full bg-amber-500/15 px-2 py-1 text-xs font-bold uppercase tracking-wider text-warning">
                           {item}
                         </span>
                       ))}

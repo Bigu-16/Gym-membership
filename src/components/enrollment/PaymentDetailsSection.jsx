@@ -1,6 +1,6 @@
 import { formatMoney } from '../../utils/membership';
 import { PAYMENT_METHODS, effectiveAmount, planSummary } from './enrollmentHelpers';
-import { inputClass, labelClass, sectionTitleClass } from './fieldStyles';
+import { inputClass, selectClass, labelClass, sectionTitleClass } from './fieldStyles';
 
 const PaymentDetailsSection = ({
   trainees,
@@ -36,12 +36,12 @@ const PaymentDetailsSection = ({
             <div key={trainee.key} className="grid grid-cols-1 sm:grid-cols-[1fr_180px] gap-3 items-center">
               <div>
                 <p className="text-sm font-semibold">{trainee.name.trim() || `Trainee ${index + 1}`}</p>
-                <p className="text-[10px] text-[var(--text-secondary)]">
+                <p className="text-xs text-[var(--text-secondary)]">
                   {plan ? planSummary(plan) : 'No package chosen'}
                 </p>
               </div>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[var(--text-secondary)]">AED</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--text-secondary)]">AED</span>
                 <input
                   type="number"
                   min={0}
@@ -65,7 +65,7 @@ const PaymentDetailsSection = ({
               id="payment-method"
               value={paymentMethod}
               onChange={(event) => onPaymentMethodChange(event.target.value)}
-              className={inputClass}
+              className={selectClass}
             >
               {PAYMENT_METHODS.map((method) => (
                 <option key={method.value} value={method.value}>{method.label}</option>
@@ -73,7 +73,7 @@ const PaymentDetailsSection = ({
             </select>
           </div>
           <div className="sm:text-right">
-            <span className="block text-[9px] uppercase tracking-luxury text-[var(--text-secondary)]">Total received</span>
+            <span className="block text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Total received</span>
             <span className="block text-2xl font-black mt-1" data-testid="payment-total">{formatMoney(total)}</span>
           </div>
         </div>
@@ -102,7 +102,7 @@ const PaymentDetailsSection = ({
       </section>
 
       {errors.length > 0 && (
-        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-500 space-y-1">
+        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-danger space-y-1">
           <p className="font-bold">Registration was not saved:</p>
           <ul className="list-disc ml-5 space-y-0.5">
             {errors.map((error) => <li key={error}>{error}</li>)}

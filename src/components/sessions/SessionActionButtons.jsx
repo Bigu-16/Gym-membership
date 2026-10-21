@@ -1,7 +1,7 @@
 import { sessionActions } from '../../utils/classSessions';
 
 const SessionActionButtons = ({ session, actions, disabled = false, size = 'sm' }) => {
-  const padding = size === 'lg' ? 'px-5 py-3 text-[10px]' : 'px-3 py-1.5 text-[9px]';
+  const padding = size === 'lg' ? 'px-5 py-3 text-xs' : 'px-3 py-1.5 text-xs';
   return (
     <div className="flex flex-wrap gap-2 justify-end">
       {sessionActions(session).map((action) => (

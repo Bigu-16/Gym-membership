@@ -106,7 +106,7 @@ const MemberDetails = ({
         <div
           role={error ? 'alert' : 'status'}
           className={`mb-6 rounded-xl border p-3 text-xs ${
-            error ? 'border-rose-500/40 bg-rose-500/10 text-rose-500' : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500'
+            error ? 'border-rose-500/40 bg-rose-500/10 text-danger' : 'border-emerald-500/40 bg-emerald-500/10 text-success'
           }`}
         >
           {error || notice}

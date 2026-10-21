@@ -5,7 +5,7 @@ const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 export const Card = ({ title, subtitle, children, className = '' }) => (
   <section className={`glass-card p-6 border border-[var(--glass-border)] ${className}`}>
     <h3 className="text-sm uppercase tracking-luxury text-[var(--text-secondary)] font-semibold leading-none mb-1">{title}</h3>
-    {subtitle && <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-widest mb-5">{subtitle}</p>}
+    {subtitle && <p className="text-xs text-[var(--text-secondary)] uppercase tracking-widest mb-5">{subtitle}</p>}
     {!subtitle && <div className="mb-5" />}
     {children}
   </section>
@@ -17,10 +17,10 @@ export const EmptyState = ({ children }) => (
 
 export const KpiTile = ({ label, value, detail, tone }) => (
   <div className="glass-card p-6">
-    <span className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">{label}</span>
+    <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">{label}</span>
     <span className="text-3xl font-light text-[var(--text-primary)]" data-testid={`kpi-${label}`}>{value}</span>
     {detail && (
-      <div className={`mt-3 text-[10px] font-medium uppercase tracking-wide ${tone || 'text-[var(--text-secondary)]'}`}>{detail}</div>
+      <div className={`mt-3 text-xs font-medium uppercase tracking-wide ${tone || 'text-[var(--text-secondary)]'}`}>{detail}</div>
     )}
   </div>
 );
@@ -44,7 +44,7 @@ export const ColumnChart = ({ data, height = 160, labelEvery = 1, ariaLabel }) =
           );
         })}
       </svg>
-      <div className="flex mt-2 text-[9px] uppercase tracking-wide text-[var(--text-secondary)]">
+      <div className="flex mt-2 text-xs uppercase tracking-wide text-[var(--text-secondary)]">
         {data.map((d, i) => (
           <span key={d.key} className="flex-1 text-center truncate">
             {i % labelEvery === 0 || i === data.length - 1 ? d.label : ''}
@@ -95,20 +95,20 @@ export const Heatmap = ({ cells = [] }) => {
           <tr>
             <th scope="col"><span className="sr-only">Day</span></th>
             {hourRange.map((h) => (
-              <th key={h} scope="col" className="text-[9px] font-medium text-[var(--text-secondary)] whitespace-nowrap">{formatHour(h)}</th>
+              <th key={h} scope="col" className="text-xs font-medium text-[var(--text-secondary)] whitespace-nowrap">{formatHour(h)}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {WEEKDAYS.slice(0, days).map((day, d) => (
             <tr key={day}>
-              <th scope="row" className="text-[10px] font-medium text-[var(--text-secondary)] text-left pr-2">{day.slice(0, 3)}</th>
+              <th scope="row" className="text-xs font-medium text-[var(--text-secondary)] text-left pr-2">{day.slice(0, 3)}</th>
               {hourRange.map((h) => {
                 const count = lookup.get(`${d}-${h}`) || 0;
                 const label = `${day} ${formatHour(h)}: ${count} check-in${count === 1 ? '' : 's'}`;
                 return (
                   <td key={h} title={label} aria-label={label}
-                    className="h-7 min-w-[28px] rounded-md border border-[var(--glass-border)] text-center text-[9px] tabular-nums text-[var(--text-primary)]"
+                    className="h-7 min-w-[28px] rounded-md border border-[var(--glass-border)] text-center text-xs tabular-nums text-[var(--text-primary)]"
                     style={{ background: count ? `color-mix(in srgb, var(--accent-color) ${Math.round(15 + (count / max) * 75)}%, transparent)` : 'var(--card-hover)' }}>
                     {count || ''}
                   </td>

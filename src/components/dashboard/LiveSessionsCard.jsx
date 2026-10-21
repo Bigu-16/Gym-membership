@@ -29,23 +29,23 @@ const LiveSessionsCard = ({ sessions = [], selectedDate, onSelectDate, onTabChan
             <span className={`w-2 h-2 rounded-full ${isSelectedToday ? 'bg-emerald-500 animate-pulse' : 'bg-[var(--accent-color)]'}`} />
             {isSelectedToday ? "Today's classes" : 'Classes'}
           </h2>
-          <p className="text-[11px] font-medium mt-0.5">{formattedSelectedDate}</p>
+          <p className="text-xs font-medium mt-0.5">{formattedSelectedDate}</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] uppercase tracking-luxury px-2.5 py-1 rounded-full bg-[var(--glass-border)] text-[var(--text-secondary)] font-semibold">
+          <span className="text-xs uppercase tracking-luxury px-2.5 py-1 rounded-full bg-[var(--glass-border)] text-[var(--text-secondary)] font-semibold">
             {sessions.length} {sessions.length === 1 ? 'class' : 'classes'}
           </span>
           <button
             type="button"
             onClick={() => onTabChange('schedule')}
-            className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1"
+            className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1"
           >
             Full schedule <ChevronRight size={12} />
           </button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar" role="group" aria-label="Choose a day" tabIndex={0}>
         {dayTabs.map((tab) => (
           <button
             key={tab.text}
@@ -58,7 +58,7 @@ const LiveSessionsCard = ({ sessions = [], selectedDate, onSelectDate, onTabChan
                 : 'bg-[var(--glass-bg)] border-[var(--glass-border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
-            <span className="text-[9px] uppercase tracking-luxury font-bold opacity-80">{tab.label}</span>
+            <span className="text-xs uppercase tracking-luxury font-bold">{tab.label}</span>
             <span className="text-xs font-semibold">{tab.text}</span>
           </button>
         ))}
@@ -101,7 +101,7 @@ const LiveSessionsCard = ({ sessions = [], selectedDate, onSelectDate, onTabChan
                         {session.start.toLocaleTimeString([], timeFormat)} – {session.end.toLocaleTimeString([], timeFormat)}
                       </span>
                       {session.trainer && <span>• {session.trainer}</span>}
-                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--glass-border)] text-[var(--text-primary)] font-bold">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--glass-border)] text-[var(--text-primary)] font-bold">
                         {session.enrolled || 0}{session.capacity ? `/${session.capacity}` : ''} enrolled
                       </span>
                     </p>

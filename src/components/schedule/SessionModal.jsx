@@ -45,7 +45,7 @@ const SessionModal = ({ session, onClose, actions, members = [], now = new Date(
           {running && session.status !== 'cancelled' && (
             <div className="glass-card p-5 border-emerald-500/30">
               <div className="flex items-center justify-between mb-3">
-                <span className="flex items-center gap-2 text-xs uppercase tracking-luxury font-bold text-emerald-500">
+                <span className="flex items-center gap-2 text-xs uppercase tracking-luxury font-bold text-success">
                   <Timer size={16} /> Time remaining
                 </span>
                 <span className="text-2xl font-mono font-bold">{minutesLeft} min</span>
@@ -65,12 +65,12 @@ const SessionModal = ({ session, onClose, actions, members = [], now = new Date(
               <h3 className="flex items-center gap-2 text-xs uppercase tracking-luxury font-bold">
                 <Users size={16} className="text-[var(--text-secondary)]" /> Enrolled trainees
               </h3>
-              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[var(--glass-border)]">
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[var(--glass-border)]">
                 {trainees.length}{session.capacity ? ` / ${session.capacity}` : ''}
               </span>
             </div>
             {trainees.length === 0 ? (
-              <p className="text-[11px] text-[var(--text-secondary)] italic">Nobody is enrolled in this class slot yet.</p>
+              <p className="text-xs text-[var(--text-secondary)] italic">Nobody is enrolled in this class slot yet.</p>
             ) : (
               <ul className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
                 {trainees.map((trainee) => {
@@ -81,14 +81,14 @@ const SessionModal = ({ session, onClose, actions, members = [], now = new Date(
                         <img src={trainee.image} alt="" className="w-8 h-8 rounded-full object-cover border border-[var(--glass-border)]" />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold truncate">{trainee.name}{trainee.age ? `, ${trainee.age}` : ''}</p>
-                          <p className="text-[9px] text-[var(--text-secondary)] truncate">
+                          <p className="text-xs text-[var(--text-secondary)] truncate">
                             {trainee.parentName ? `Parent: ${trainee.parentName}` : trainee.phone}
                             {trainee.medicalIssues ? ' • Medical note' : ''}
                           </p>
                         </div>
                       </div>
                       {(status === 'expired' || status === 'frozen') && (
-                        <span className="text-[9px] uppercase tracking-luxury px-2 py-0.5 rounded-md font-bold text-rose-500 bg-rose-500/10">
+                        <span className="text-xs uppercase tracking-luxury px-2 py-0.5 rounded-md font-bold text-danger bg-rose-500/10">
                           {status}
                         </span>
                       )}
@@ -101,7 +101,7 @@ const SessionModal = ({ session, onClose, actions, members = [], now = new Date(
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-4">
-          <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl glass-card text-[10px] uppercase tracking-luxury font-bold">
+          <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl glass-card text-xs uppercase tracking-luxury font-bold">
             Close
           </button>
           <SessionActionButtons session={session} actions={actions} disabled={busy} size="lg" />

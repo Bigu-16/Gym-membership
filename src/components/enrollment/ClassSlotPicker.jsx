@@ -22,14 +22,14 @@ const ClassSlotPicker = ({ templates = [], plan, age, selectedIds = [], onChange
   return (
     <div role="group" aria-label={label} className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1">
+        <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] ml-1">
           {label} {selectedIds.length > 0 && <span className="text-[var(--text-primary)] font-bold">({selectedIds.length} selected)</span>}
         </p>
         {canFilter && (
           <button
             type="button"
             onClick={() => setShowAll((value) => !value)}
-            className="text-[9px] uppercase tracking-luxury font-bold text-[var(--text-primary)] hover:opacity-60"
+            className="text-xs uppercase tracking-luxury font-bold text-[var(--text-primary)] hover:opacity-60"
           >
             {showAll ? `Only ${plan.program} classes` : 'Show all classes'}
           </button>
@@ -37,18 +37,18 @@ const ClassSlotPicker = ({ templates = [], plan, age, selectedIds = [], onChange
       </div>
 
       {templates.length === 0 ? (
-        <p className="text-[11px] text-[var(--text-secondary)] rounded-xl border border-dashed border-[var(--glass-border)] p-3">
+        <p className="text-xs text-[var(--text-secondary)] rounded-xl border border-dashed border-[var(--glass-border)] p-3">
           No classes in the timetable yet. Add them under Templates, or assign classes later from the member profile.
         </p>
       ) : visible.length === 0 ? (
-        <p className="text-[11px] text-[var(--text-secondary)] rounded-xl border border-dashed border-[var(--glass-border)] p-3">
+        <p className="text-xs text-[var(--text-secondary)] rounded-xl border border-dashed border-[var(--glass-border)] p-3">
           No {plan?.program} classes suit this age. Use “Show all classes” to pick another slot.
         </p>
       ) : (
         <div className="space-y-3">
           {groupTemplatesByClass(visible).map(([className, slots]) => (
             <div key={className} className="space-y-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-primary)] opacity-80">{className}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">{className}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {slots.map((slot) => {
                   const isSelected = selected.has(slot.id);
@@ -73,9 +73,9 @@ const ClassSlotPicker = ({ templates = [], plan, age, selectedIds = [], onChange
                       />
                       <span className="flex-grow">
                         <span className="block font-semibold">{slot.days}</span>
-                        <span className="block text-[11px] text-[var(--text-secondary)]">{time}</span>
+                        <span className="block text-xs text-[var(--text-secondary)]">{time}</span>
                       </span>
-                      <span className={`text-[10px] font-bold whitespace-nowrap ${full ? 'text-rose-500' : 'text-[var(--text-secondary)]'}`}>
+                      <span className={`text-xs font-bold whitespace-nowrap ${full ? 'text-danger' : 'text-[var(--text-secondary)]'}`}>
                         {slot.capacity ? `${slot.enrolled ?? 0}/${slot.capacity}` : `${slot.enrolled ?? 0} enrolled`}
                         {full && ' · Full'}
                       </span>

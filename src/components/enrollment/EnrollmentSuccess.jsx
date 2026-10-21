@@ -4,7 +4,7 @@ const EnrollmentSuccess = ({ members = [], parentName, warnings = [], onDone }) 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] glass-card p-8 sm:p-12 text-center animate-in fade-in zoom-in duration-500">
       <div className="w-20 h-20 mb-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-        <svg className="w-10 h-10 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-10 h-10 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       </div>
@@ -21,7 +21,7 @@ const EnrollmentSuccess = ({ members = [], parentName, warnings = [], onDone }) 
       </p>
 
       {warnings.length > 0 && (
-        <div role="status" className="mt-6 max-w-lg w-full text-left rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-600 dark:text-amber-400">
+        <div role="status" className="mt-6 max-w-lg w-full text-left rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-warning">
           <p className="font-bold mb-1">Saved with warnings:</p>
           <ul className="list-disc ml-5 space-y-0.5">
             {warnings.map((warning) => <li key={warning}>{warning}</li>)}
@@ -33,7 +33,7 @@ const EnrollmentSuccess = ({ members = [], parentName, warnings = [], onDone }) 
         <button
           type="button"
           onClick={onDone}
-          className="mt-8 px-8 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold"
+          className="mt-8 px-8 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs uppercase tracking-luxury font-bold"
         >
           Register another
         </button>

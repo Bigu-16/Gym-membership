@@ -54,7 +54,7 @@ describe('MembershipCard Component', () => {
     expect(screen.getByText(/days? paused until unfrozen/)).toBeInTheDocument();
     // Verify specific frozen styling classes
     const manageBtn = screen.getByRole('button', { name: /Manage/i });
-    expect(manageBtn).toHaveClass('text-cyan-600');
+    expect(manageBtn).toHaveClass('text-info');
   });
 
   it('renders expired status when expiryDate is in the past', () => {

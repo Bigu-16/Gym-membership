@@ -118,20 +118,20 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [], membershipPlans = []
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-5 glass-card rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20 flex items-center justify-center font-bold text-lg">
+          <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-brand border border-orange-500/20 flex items-center justify-center font-bold text-lg">
             🥋
           </div>
           <div>
             <h3 className="text-xs font-bold uppercase tracking-luxury text-[var(--text-primary)]">
               N & T Taekwondo & Karate Center
             </h3>
-            <p className="text-[9px] uppercase tracking-wider text-[var(--text-secondary)]">New member registration</p>
+            <p className="text-xs uppercase tracking-wider text-[var(--text-secondary)]">New member registration</p>
           </div>
         </div>
         <button
           type="button"
           onClick={resetForm}
-          className="px-3.5 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--card-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-[10px] uppercase tracking-luxury font-bold transition-all border border-[var(--glass-border)] active:scale-95"
+          className="px-3.5 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--card-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs uppercase tracking-luxury font-bold transition-all border border-[var(--glass-border)] active:scale-95"
         >
           Reset Form
         </button>

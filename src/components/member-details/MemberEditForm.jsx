@@ -2,7 +2,7 @@ import { planOptionLabel } from './memberDetailsHelpers';
 
 const inputClass =
   'w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)]';
-const labelClass = 'block text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] ml-1 mb-2';
+const labelClass = 'block text-xs uppercase tracking-luxury text-[var(--text-secondary)] ml-1 mb-2';
 
 const MemberEditForm = ({ editForm, setEditForm, planOptions = [], isChild, onCancel, onSave, saving, errors = [] }) => {
   const set = (field) => (event) => setEditForm({ ...editForm, [field]: event.target.value });
@@ -10,8 +10,8 @@ const MemberEditForm = ({ editForm, setEditForm, planOptions = [], isChild, onCa
   return (
     <div className="glass-card p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       <div className="flex justify-between items-center pb-2 border-b border-[var(--glass-border)]">
-        <h4 className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Edit Member Profile</h4>
-        <button type="button" onClick={onCancel} className="text-[10px] uppercase tracking-luxury text-rose-500 hover:text-rose-400 font-bold">
+        <h4 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Edit Member Profile</h4>
+        <button type="button" onClick={onCancel} className="text-xs uppercase tracking-luxury text-danger hover:text-danger font-bold">
           Cancel
         </button>
       </div>
@@ -65,7 +65,7 @@ const MemberEditForm = ({ editForm, setEditForm, planOptions = [], isChild, onCa
               <option key={plan.id} value={plan.id}>{planOptionLabel(plan)}</option>
             ))}
           </select>
-          <p className="text-[10px] text-[var(--text-secondary)] mt-1 ml-1">
+          <p className="text-xs text-[var(--text-secondary)] mt-1 ml-1">
             Changing the package here does not record a payment — use Renew Membership for a paid renewal.
           </p>
         </div>
@@ -94,14 +94,14 @@ const MemberEditForm = ({ editForm, setEditForm, planOptions = [], isChild, onCa
             onChange={(e) => setEditForm({ ...editForm, messagingOptIn: e.target.checked })}
             className="w-4 h-4 rounded border-[var(--glass-border)] accent-[var(--text-primary)] cursor-pointer"
           />
-          <label htmlFor="messagingOptIn" className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] cursor-pointer select-none">
+          <label htmlFor="messagingOptIn" className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] cursor-pointer select-none">
             Opt-in to SMS/WhatsApp messaging
           </label>
         </div>
       </div>
 
       {errors.length > 0 && (
-        <div role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-500 space-y-0.5">
+        <div role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-danger space-y-0.5">
           {errors.map((error) => <p key={error}>{error}</p>)}
         </div>
       )}
@@ -110,7 +110,7 @@ const MemberEditForm = ({ editForm, setEditForm, planOptions = [], isChild, onCa
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 py-3 rounded-xl bg-transparent border border-[var(--glass-border)] text-[10px] uppercase tracking-luxury font-bold hover:bg-[var(--glass-border)] transition-all"
+          className="flex-1 py-3 rounded-xl bg-transparent border border-[var(--glass-border)] text-xs uppercase tracking-luxury font-bold hover:bg-[var(--glass-border)] transition-all"
         >
           Cancel
         </button>
@@ -118,7 +118,7 @@ const MemberEditForm = ({ editForm, setEditForm, planOptions = [], isChild, onCa
           type="button"
           onClick={onSave}
           disabled={saving}
-          className="flex-1 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] uppercase tracking-luxury font-bold hover:opacity-90 transition-all shadow-lg disabled:opacity-50"
+          className="flex-1 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs uppercase tracking-luxury font-bold hover:opacity-90 transition-all shadow-lg disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save Changes'}
         </button>

@@ -59,15 +59,15 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
             <img src="/nt-logo.svg" alt="N & T Taekwondo & Karate Center logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-3xl font-light uppercase tracking-luxury text-white mb-2">
-            N & T <span className="font-bold text-orange-500">Center</span>
+            N & T <span className="font-bold text-orange-300">Center</span>
           </h1>
-          <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] opacity-80">
+          <p className="text-xs uppercase tracking-luxury text-slate-300">
             Taekwondo & Karate Management Portal
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2 animate-shake">
+          <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2 animate-shake">
             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
@@ -76,11 +76,11 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
         )}
 
         {notice && !error && (
-          <p role="status" className="mb-4 text-xs text-center rounded-2xl p-3 bg-amber-500/10 text-amber-400 border border-amber-500/20">{notice}</p>
+          <p role="status" className="mb-4 text-xs text-center rounded-2xl p-3 bg-amber-500/10 text-amber-200 border border-amber-500/20">{notice}</p>
         )}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block ml-1">
+            <label className="text-xs uppercase tracking-luxury text-slate-300 block ml-1">
               Email Address
             </label>
             <input
@@ -88,13 +88,13 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-black/30 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 transition-all placeholder:text-white/20"
+              className="w-full bg-black/30 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 transition-all placeholder:text-slate-400"
               placeholder="admin@example.com"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-luxury text-[var(--text-secondary)] block ml-1">
+            <label className="text-xs uppercase tracking-luxury text-slate-300 block ml-1">
               Password
             </label>
             <input
@@ -102,7 +102,7 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-black/30 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 transition-all placeholder:text-white/20"
+              className="w-full bg-black/30 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 transition-all placeholder:text-slate-400"
               placeholder="••••••••"
             />
           </div>
@@ -125,38 +125,38 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
             <button
               onClick={useDefaultCredentials}
               type="button"
-              className="text-[9px] uppercase tracking-luxury text-emerald-400 hover:text-emerald-300 transition-colors border border-emerald-500/20 bg-emerald-500/5 px-4 py-2 rounded-full hover:scale-105"
+              className="text-xs uppercase tracking-luxury text-emerald-300 hover:text-emerald-200 transition-colors border border-emerald-500/20 bg-emerald-500/5 px-4 py-2 rounded-full hover:scale-105"
             >
               Use Demo Admin Credentials
             </button>
           )}
 
-          <div className="text-[10px] text-white/40 w-full flex flex-col items-center gap-1.5 mt-2">
+          <div className="text-xs text-slate-300 w-full flex flex-col items-center gap-1.5 mt-2">
             {isEditingUrl ? (
               <form onSubmit={handleSaveUrl} className="flex gap-2 items-center justify-center w-full max-w-[280px]">
                 <input
                   type="text"
                   value={tempUrl}
                   onChange={(e) => setTempUrl(e.target.value)}
-                  className="bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-[9px] text-white focus:outline-none focus:border-emerald-500/50 w-full font-mono text-center"
+                  className="bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50 w-full font-mono text-center"
                   placeholder="API Base URL"
                   required
                 />
                 <div className="flex gap-1.5">
-                  <button type="submit" className="text-emerald-400 hover:underline font-bold uppercase tracking-wider text-[8px]">Save</button>
-                  <button type="button" onClick={() => setIsEditingUrl(false)} className="text-white/60 hover:underline font-bold uppercase tracking-wider text-[8px]">Cancel</button>
+                  <button type="submit" className="text-emerald-300 hover:underline font-bold uppercase tracking-wider text-xs">Save</button>
+                  <button type="button" onClick={() => setIsEditingUrl(false)} className="text-slate-200 hover:underline font-bold uppercase tracking-wider text-xs">Cancel</button>
                 </div>
               </form>
             ) : (
               <div className="flex items-center justify-center gap-2">
-                <span>API: <span className="font-mono text-white/60">{apiUrl}</span></span>
+                <span>API: <span className="font-mono text-slate-200">{apiUrl}</span></span>
                 <button
                   type="button"
                   onClick={() => {
                     setTempUrl(apiUrl);
                     setIsEditingUrl(true);
                   }}
-                  className="text-emerald-400 hover:text-emerald-300 transition-colors underline text-[8px] uppercase tracking-wider font-bold"
+                  className="text-emerald-300 hover:text-emerald-200 transition-colors underline text-xs uppercase tracking-wider font-bold"
                 >
                   Configure
                 </button>

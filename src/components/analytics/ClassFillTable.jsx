@@ -7,7 +7,7 @@ const ClassFillTable = ({ rows = [] }) => {
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
-          <tr className="text-[9px] uppercase tracking-luxury text-[var(--text-secondary)] text-left border-b border-[var(--glass-border)]">
+          <tr className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] text-left border-b border-[var(--glass-border)]">
             <th scope="col" className="py-2 pr-3 font-semibold">Class</th>
             <th scope="col" className="py-2 pr-3 font-semibold">Days</th>
             <th scope="col" className="py-2 pr-3 font-semibold">Time</th>
@@ -27,7 +27,7 @@ const ClassFillTable = ({ rows = [] }) => {
                 <td className="py-3 pr-3 text-[var(--text-secondary)] whitespace-nowrap">{formatTimeRange(row.time)}</td>
                 <td className="py-3">
                   <div className="flex items-center gap-2">
-                    <span className={`tabular-nums whitespace-nowrap ${nearlyFull ? 'text-amber-500 font-semibold' : 'text-[var(--text-primary)]'}`}>
+                    <span className={`tabular-nums whitespace-nowrap ${nearlyFull ? 'text-warning font-semibold' : 'text-[var(--text-primary)]'}`}>
                       {row.enrolled}/{capacity || '—'}
                     </span>
                     <div className="flex-1 h-1.5 rounded-full bg-[var(--card-hover)] border border-[var(--glass-border)] overflow-hidden"
@@ -35,7 +35,7 @@ const ClassFillTable = ({ rows = [] }) => {
                       <div className={`h-full rounded-full ${nearlyFull ? 'bg-amber-500' : 'bg-[var(--accent-color)]'}`}
                         style={{ width: `${Math.min(ratio, 1) * 100}%` }} />
                     </div>
-                    {nearlyFull && <span className="text-[9px] uppercase tracking-luxury text-amber-500 font-bold whitespace-nowrap">Nearly full</span>}
+                    {nearlyFull && <span className="text-xs uppercase tracking-luxury text-warning font-bold whitespace-nowrap">Nearly full</span>}
                   </div>
                 </td>
               </tr>
