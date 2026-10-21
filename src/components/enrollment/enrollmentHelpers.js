@@ -40,6 +40,13 @@ export const planSummary = (plan) => {
   return parts.filter(Boolean).join(' · ');
 };
 
+/** Text for a package <option> (the program is the <optgroup> label). */
+export const planOptionLabel = (plan) => {
+  if (!plan) return '';
+  const perWeek = plan.classes_per_week ? `${plan.classes_per_week} classes/week` : 'Unlimited classes';
+  return [planDurationLabel(plan), perWeek, `${planPrice(plan).toLocaleString('en-US')} ${plan.currency || 'AED'}`].join(' · ');
+};
+
 export const groupPlansByProgram = (plans = []) => {
   const groups = new Map();
   plans.forEach((plan) => {

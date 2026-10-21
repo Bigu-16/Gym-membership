@@ -67,11 +67,11 @@ describe('Schedule', () => {
     expect(saveSession).toHaveBeenCalledTimes(1);
   });
 
-  it('opens the timetable editor on the same page when no classes exist yet', () => {
+  it('opens the timetable editor on the same page when no classes exist yet', async () => {
     const onLoadOfficial = vi.fn().mockResolvedValue({ created: 11, total: 11 });
     render(<Schedule sessions={[]} scheduleTemplates={[]} members={[]} saveSession={vi.fn()} timetableActions={{ onLoadOfficial }} />);
     fireEvent.click(screen.getByRole('button', { name: /Load official timetable/i }));
-    expect(onLoadOfficial).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onLoadOfficial).toHaveBeenCalledTimes(1));
   });
 
   it('switches between the calendar and the timetable editor', () => {
@@ -80,5 +80,21 @@ describe('Schedule', () => {
     expect(screen.getByText('Weekly timetable')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Week' }));
     expect(screen.queryByText('Weekly timetable')).not.toBeInTheDocument();
+  });
+
+  it('edits the class checklist from the class details', async () => {
+    const saveSession = vi.fn().mockImplementation(async (session, changes) => ({ ...session, ...changes, id: 501, isProjected: false }));
+    render(<Schedule sessions={[]} scheduleTemplates={templates} members={members} saveSession={saveSession} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Day' }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Kids Taekwondo/ })[0]);
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(/No checklist items/)).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText('New checklist item'), { target: { value: 'Bring pads' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add' }));
+    await waitFor(() => expect(saveSession).toHaveBeenCalledWith(
+      expect.objectContaining({ templateId: 1 }),
+      { checklist: [{ id: 1, text: 'Bring pads', checked: false }] }
+    ));
   });
 });

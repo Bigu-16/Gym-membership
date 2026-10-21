@@ -31,7 +31,7 @@ const MonthView = ({
         <div className="min-w-[800px]">
           <div className="grid grid-cols-7 border-b border-[var(--glass-border)]">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-              <div key={day} className="p-4 text-center text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold">
+              <div key={day} className="p-4 text-center text-xs text-[var(--text-secondary)] font-bold">
                 {day}
               </div>
             ))}

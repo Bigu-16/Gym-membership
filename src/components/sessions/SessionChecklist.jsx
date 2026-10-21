@@ -18,7 +18,7 @@ const SessionChecklist = ({ session, actions, disabled = false, compact = false 
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
-        <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Class checklist</span>
+        <span className="text-xs text-[var(--text-secondary)] font-bold">Class checklist</span>
         <span className="text-xs font-semibold text-[var(--text-secondary)]">{done}/{checklist.length} done</span>
       </div>
 
@@ -30,8 +30,8 @@ const SessionChecklist = ({ session, actions, disabled = false, compact = false 
             <li
               key={`${item.id}-${index}`}
               className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs ${
-                item.checked ? 'border-emerald-500/20 bg-[var(--card-hover)]' : 'border-[var(--glass-border)]'
-              }`}
+ item.checked ? 'border-emerald-500/20 bg-[var(--card-hover)]' : 'border-[var(--glass-border)]'
+ }`}
             >
               <label className="flex items-center gap-2.5 cursor-pointer flex-grow select-none">
                 <input

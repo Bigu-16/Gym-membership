@@ -1,129 +1,104 @@
-import { planOptionLabel } from './memberDetailsHelpers';
+import { fieldClass, planOptionLabel } from './memberDetailsHelpers';
 
-const inputClass =
-  'w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20 transition-all text-[var(--text-primary)]';
-const labelClass = 'block text-xs uppercase tracking-luxury text-[var(--text-secondary)] ml-1 mb-2';
+const Field = ({ id, label, hint, className = '', children }) => (
+  <div className={className}>
+    <label htmlFor={id} className="label mb-1">{label}</label>
+    {children}
+    {hint && <p className="mt-1 text-xs text-[var(--text-secondary)]">{hint}</p>}
+  </div>
+);
 
 const MemberEditForm = ({ editForm, setEditForm, planOptions = [], isChild, onCancel, onSave, saving, errors = [] }) => {
   const set = (field) => (event) => setEditForm({ ...editForm, [field]: event.target.value });
 
   return (
-    <div className="glass-card p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="flex justify-between items-center pb-2 border-b border-[var(--glass-border)]">
-        <h4 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Edit Member Profile</h4>
-        <button type="button" onClick={onCancel} className="text-xs uppercase tracking-luxury text-danger hover:text-danger font-bold">
-          Cancel
-        </button>
-      </div>
+    <section aria-labelledby="edit-title" className="glass-card p-5">
+      <h3 id="edit-title" className="section-title">Edit profile</h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label htmlFor="edit-name" className={labelClass}>Full Name</label>
-          <input id="edit-name" type="text" value={editForm.name} onChange={set('name')} className={inputClass} placeholder="Full name" />
-        </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Field id="edit-name" label="Full name">
+          <input id="edit-name" type="text" value={editForm.name} onChange={set('name')} className={fieldClass} placeholder="Full name" />
+        </Field>
 
-        <div>
-          <label htmlFor="edit-phone" className={labelClass}>Mobile {isChild ? '(optional)' : ''}</label>
-          <input id="edit-phone" type="tel" value={editForm.phone} onChange={set('phone')} className={inputClass} placeholder="Phone number" />
-        </div>
+        <Field id="edit-phone" label={isChild ? 'Mobile (optional)' : 'Mobile'}>
+          <input id="edit-phone" type="tel" value={editForm.phone} onChange={set('phone')} className={fieldClass} placeholder="Phone number" />
+        </Field>
 
-        <div>
-          <label htmlFor="edit-whatsapp" className={labelClass}>WhatsApp Number</label>
-          <input id="edit-whatsapp" type="tel" value={editForm.whatsappNumber} onChange={set('whatsappNumber')} className={inputClass} placeholder="Same as mobile if blank" />
-        </div>
+        <Field id="edit-whatsapp" label="WhatsApp number">
+          <input id="edit-whatsapp" type="tel" value={editForm.whatsappNumber} onChange={set('whatsappNumber')} className={fieldClass} placeholder="Same as mobile if blank" />
+        </Field>
 
-        <div>
-          <label htmlFor="edit-emirates" className={labelClass}>Emirates ID (optional)</label>
-          <input id="edit-emirates" type="text" value={editForm.emiratesId} onChange={set('emiratesId')} className={`${inputClass} font-mono`} placeholder="784-YYYY-NNNNNNN-N" />
-        </div>
+        <Field id="edit-emirates" label="Emirates ID (optional)">
+          <input id="edit-emirates" type="text" value={editForm.emiratesId} onChange={set('emiratesId')} className={`${fieldClass} font-mono`} placeholder="784-YYYY-NNNNNNN-N" />
+        </Field>
 
-        <div>
-          <label htmlFor="edit-email" className={labelClass}>Email (optional)</label>
-          <input id="edit-email" type="email" value={editForm.email} onChange={set('email')} className={inputClass} placeholder="name@example.com" />
-        </div>
+        <Field id="edit-email" label="Email (optional)">
+          <input id="edit-email" type="email" value={editForm.email} onChange={set('email')} className={fieldClass} placeholder="name@example.com" />
+        </Field>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="edit-gender" className={labelClass}>Gender</label>
-            <select id="edit-gender" value={editForm.gender} onChange={set('gender')} className={inputClass}>
+          <Field id="edit-gender" label="Gender">
+            <select id="edit-gender" value={editForm.gender} onChange={set('gender')} className={`${fieldClass} select-chevron pr-10`}>
               {!editForm.gender && <option value="">—</option>}
               <option value="Male">Male</option>
               <option value="Female">Female</option>
             </select>
-          </div>
-          <div>
-            <label htmlFor="edit-age" className={labelClass}>Age</label>
-            <input id="edit-age" type="number" min={2} max={100} value={editForm.age} onChange={set('age')} className={inputClass} />
-          </div>
+          </Field>
+          <Field id="edit-age" label="Age">
+            <input id="edit-age" type="number" min={2} max={100} value={editForm.age} onChange={set('age')} className={fieldClass} />
+          </Field>
         </div>
 
-        <div>
-          <label htmlFor="edit-plan" className={labelClass}>Package</label>
-          <select id="edit-plan" value={editForm.planId} onChange={set('planId')} className={inputClass}>
+        <Field id="edit-plan" label="Package" hint="Changing the package here does not record a payment. Use Renew for a paid renewal.">
+          <select id="edit-plan" value={editForm.planId} onChange={set('planId')} className={`${fieldClass} select-chevron pr-10`}>
             <option value="">No package</option>
             {planOptions.map((plan) => (
               <option key={plan.id} value={plan.id}>{planOptionLabel(plan)}</option>
             ))}
           </select>
-          <p className="text-xs text-[var(--text-secondary)] mt-1 ml-1">
-            Changing the package here does not record a payment — use Renew Membership for a paid renewal.
-          </p>
-        </div>
+        </Field>
 
-        <div>
-          <label htmlFor="edit-expiry" className={labelClass}>Expiry Date</label>
-          <input id="edit-expiry" type="date" value={editForm.expiryDate} onChange={set('expiryDate')} className={`${inputClass} cursor-pointer`} />
-        </div>
+        <Field id="edit-expiry" label="Expiry date">
+          <input id="edit-expiry" type="date" value={editForm.expiryDate} onChange={set('expiryDate')} className={fieldClass} />
+        </Field>
 
-        <div className="md:col-span-2">
-          <label htmlFor="edit-medical" className={labelClass}>Medical Conditions</label>
+        <Field id="edit-medical" label="Medical notes" className="md:col-span-2">
           <textarea
             id="edit-medical"
             value={editForm.medicalIssues}
             onChange={set('medicalIssues')}
-            className={`${inputClass} h-24 resize-none`}
+            className={`${fieldClass} h-24 resize-none`}
             placeholder="Leave blank if none"
           />
-        </div>
+        </Field>
 
-        <div className="md:col-span-2 flex items-center gap-3 py-2 px-1">
+        <div className="flex items-center gap-3 md:col-span-2">
           <input
             type="checkbox"
             id="messagingOptIn"
             checked={editForm.messagingOptIn}
             onChange={(e) => setEditForm({ ...editForm, messagingOptIn: e.target.checked })}
-            className="w-4 h-4 rounded border-[var(--glass-border)] accent-[var(--text-primary)] cursor-pointer"
+            className="h-4 w-4 cursor-pointer accent-[var(--text-primary)]"
           />
-          <label htmlFor="messagingOptIn" className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] cursor-pointer select-none">
-            Opt-in to SMS/WhatsApp messaging
+          <label htmlFor="messagingOptIn" className="cursor-pointer text-sm text-[var(--text-primary)]">
+            Send SMS / WhatsApp messages
           </label>
         </div>
       </div>
 
       {errors.length > 0 && (
-        <div role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-danger space-y-0.5">
+        <div role="alert" className="mt-4 space-y-0.5 rounded-xl bg-rose-500/10 p-3 text-sm text-danger">
           {errors.map((error) => <p key={error}>{error}</p>)}
         </div>
       )}
 
-      <div className="flex gap-4 pt-4 border-t border-[var(--glass-border)]">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex-1 py-3 rounded-xl bg-transparent border border-[var(--glass-border)] text-xs uppercase tracking-luxury font-bold hover:bg-[var(--glass-border)] transition-all"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={saving}
-          className="flex-1 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs uppercase tracking-luxury font-bold hover:opacity-90 transition-all shadow-lg disabled:opacity-50"
-        >
-          {saving ? 'Saving…' : 'Save Changes'}
+      <div className="mt-5 flex justify-end gap-2 border-t border-[var(--glass-border)] pt-4">
+        <button type="button" onClick={onCancel} className="btn-secondary">Cancel</button>
+        <button type="button" onClick={onSave} disabled={saving} className="btn-primary">
+          {saving ? 'Saving…' : 'Save changes'}
         </button>
       </div>
-    </div>
+    </section>
   );
 };
 

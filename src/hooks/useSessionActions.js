@@ -1,29 +1,42 @@
 import { useCallback, useState } from 'react';
+import { useFeedback } from '../components/common/Feedback';
 
 /**
  * Status and checklist actions for a class session, shared by Dashboard and Schedule.
  * Everything is saved to the backend (no browser-only state); a timetable class that
  * has not been recorded yet becomes a recorded session on its first change.
+ * Success messages come from saveSession; failures are reported here.
  */
 export const useSessionActions = (saveSession) => {
-  const [error, setError] = useState('');
-  const [pendingId, setPendingId] = useState(null);
+  const { notify, confirm } = useFeedback();
+  const [pending, setPending] = useState(null); // { id, status } of the change being saved
 
   const run = useCallback(async (session, changes) => {
     if (!saveSession) return null;
-    setPendingId(session.id);
-    setError('');
+    setPending({ id: session.id, status: changes.status || null });
     try {
       return await saveSession(session, changes);
     } catch (err) {
-      setError(`Could not update ${session.title}: ${err.message}`);
+      notify.error(`Could not update ${session.title}: ${err.message}`);
       return null;
     } finally {
-      setPendingId(null);
+      setPending(null);
     }
-  }, [saveSession]);
+  }, [saveSession, notify]);
 
-  const setStatus = useCallback((session, status) => run(session, { status }), [run]);
+  const setStatus = useCallback(async (session, status) => {
+    if (status === 'cancelled') {
+      const ok = await confirm({
+        title: `Cancel ${session.title}?`,
+        message: `The ${session.start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} class on ${session.start.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'short' })} will be marked as cancelled. You can reopen it later.`,
+        confirmLabel: 'Cancel class',
+        cancelLabel: 'Keep class',
+        tone: 'danger'
+      });
+      if (!ok) return null;
+    }
+    return run(session, { status });
+  }, [run, confirm]);
 
   const toggleItem = useCallback((session, index) => run(session, {
     checklist: (session.checklist || []).map((item, i) => (i === index ? { ...item, checked: !item.checked } : item))
@@ -41,5 +54,5 @@ export const useSessionActions = (saveSession) => {
     checklist: (session.checklist || []).filter((_, i) => i !== index)
   }), [run]);
 
-  return { error, clearError: () => setError(''), pendingId, setStatus, toggleItem, addItem, removeItem };
+  return { pendingId: pending?.id ?? null, pendingStatus: pending?.status ?? null, setStatus, toggleItem, addItem, removeItem };
 };

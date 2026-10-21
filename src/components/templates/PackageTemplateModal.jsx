@@ -59,12 +59,12 @@ const PackageTemplateModal = ({ plan, isOpen, onClose, onSave }) => {
   const fieldClass = 'w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-end p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-end p-4 bg-black/60">
       <div className="w-full max-w-lg h-full glass-card p-7 border border-[var(--glass-border)] bg-[var(--bg-secondary)] overflow-y-auto">
         <div className="flex items-start justify-between gap-4 mb-8">
           <div>
-            <span className="text-xs uppercase tracking-luxury text-brand font-bold">Package Configuration</span>
-            <h2 className="text-2xl font-light uppercase tracking-luxury mt-2">{plan ? 'Edit Package' : 'New Package'}</h2>
+            <span className="text-xs text-brand font-bold">Package Configuration</span>
+            <h2 className="text-2xl font-semibold mt-2">{plan ? 'Edit Package' : 'New Package'}</h2>
           </div>
           <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-[var(--glass-border)]" aria-label="Close package editor">
             <X size={18} />
@@ -73,12 +73,12 @@ const PackageTemplateModal = ({ plan, isOpen, onClose, onSave }) => {
 
         <form onSubmit={submit} className="space-y-5">
           <label className="block space-y-2">
-            <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Template name</span>
+            <span className="text-xs text-[var(--text-secondary)]">Template name</span>
             <input required value={form.name} onChange={(e) => update('name', e.target.value)} className={fieldClass} placeholder="Taekwondo One Month - 3 Classes" />
           </label>
 
           <label className="block space-y-2">
-            <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Program</span>
+            <span className="text-xs text-[var(--text-secondary)]">Program</span>
             <input required value={form.program} onChange={(e) => update('program', e.target.value)} className={fieldClass} list="package-programs" />
             <datalist id="package-programs">
               {['Taekwondo', 'Kickboxing', 'Karate', 'Kung Fu', 'Fitness'].map((program) => <option key={program} value={program} />)}
@@ -87,37 +87,37 @@ const PackageTemplateModal = ({ plan, isOpen, onClose, onSave }) => {
 
           <div className="grid grid-cols-2 gap-4">
             <label className="space-y-2">
-              <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Duration label</span>
+              <span className="text-xs text-[var(--text-secondary)]">Duration label</span>
               <input required value={form.duration_label} onChange={(e) => update('duration_label', e.target.value)} className={fieldClass} />
             </label>
             <label className="space-y-2">
-              <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Months</span>
+              <span className="text-xs text-[var(--text-secondary)]">Months</span>
               <input required min="1" max="120" type="number" value={form.duration_months} onChange={(e) => update('duration_months', e.target.value)} className={fieldClass} />
             </label>
             <label className="space-y-2">
-              <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Classes / week</span>
+              <span className="text-xs text-[var(--text-secondary)]">Classes / week</span>
               <input required min="1" max="14" type="number" value={form.classes_per_week} onChange={(e) => update('classes_per_week', e.target.value)} className={fieldClass} />
             </label>
             <label className="space-y-2">
-              <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Price (AED)</span>
+              <span className="text-xs text-[var(--text-secondary)]">Price (AED)</span>
               <input required min="0" step="0.01" type="number" value={form.price} onChange={(e) => update('price', e.target.value)} className={fieldClass} />
             </label>
           </div>
 
           <label className="block space-y-2">
-            <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Included items</span>
+            <span className="text-xs text-[var(--text-secondary)]">Included items</span>
             <input value={includedItems} onChange={(e) => setIncludedItems(e.target.value)} className={fieldClass} placeholder="Free uniform, Free gloves" />
             <span className="block text-xs text-[var(--text-secondary)]">Separate multiple items with commas.</span>
           </label>
 
           <label className="block space-y-2">
-            <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Description</span>
+            <span className="text-xs text-[var(--text-secondary)]">Description</span>
             <textarea value={form.description || ''} onChange={(e) => update('description', e.target.value)} className={`${fieldClass} min-h-24 resize-y`} />
           </label>
 
           <label className="flex items-center justify-between gap-4 rounded-xl border border-[var(--glass-border)] p-4">
             <span>
-              <span className="block text-xs font-bold uppercase tracking-luxury">Active</span>
+              <span className="block text-xs font-bold">Active</span>
               <span className="block text-xs text-[var(--text-secondary)] mt-1">Available during enrollment</span>
             </span>
             <input type="checkbox" checked={form.is_active} onChange={(e) => update('is_active', e.target.checked)} className="w-5 h-5 accent-orange-500" />
@@ -126,10 +126,10 @@ const PackageTemplateModal = ({ plan, isOpen, onClose, onSave }) => {
           {error && <p role="alert" className="text-xs text-danger">{error}</p>}
 
           <div className="flex gap-3 pt-4">
-            <button disabled={saving} type="submit" className="flex-1 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs uppercase tracking-luxury font-bold disabled:opacity-50">
+            <button disabled={saving} type="submit" className="flex-1 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-bold disabled:opacity-50">
               {saving ? 'Saving…' : 'Save Package'}
             </button>
-            <button type="button" onClick={onClose} className="px-6 py-3 rounded-xl border border-[var(--glass-border)] text-xs uppercase tracking-luxury font-bold">Cancel</button>
+            <button type="button" onClick={onClose} className="px-6 py-3 rounded-xl border border-[var(--glass-border)] text-xs font-bold">Cancel</button>
           </div>
         </form>
       </div>

@@ -12,8 +12,24 @@ import PackagesPage from './components/PackagesPage';
 import ActivityLog from './components/ActivityLog';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import AccountModal from './components/layout/AccountModal';
+import { Spinner } from './components/common/Feedback';
 import AppHeader from './components/layout/AppHeader';
 import { useGymData } from './hooks/useGymData';
+
+// First load: say what is happening, and explain slow starts (the server may be waking up).
+const InitialLoading = () => {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-16 text-center text-[var(--text-secondary)]">
+      <Spinner label="Loading members, classes and packages…" className="text-[var(--text-primary)]" />
+      {slow && <p className="text-sm max-w-sm">The server is waking up. The first load of the day can take up to a minute.</p>}
+    </div>
+  );
+};
 
 const App = () => {
   const [theme, setTheme] = useState(() => {
@@ -91,11 +107,10 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row gap-6 lg:gap-12 p-4 sm:p-8 lg:p-12 pb-24 lg:pb-12 text-[var(--text-primary)]">
+    <div className="min-h-screen flex flex-col lg:flex-row gap-6 lg:gap-10 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 text-[var(--text-primary)]">
       <Sidebar
         activeTab={activeTab}
         isAdmin={currentUser?.role === 'admin'}
-        scheduleTemplates={scheduleTemplates}
         onTabChange={(tab) => { setActiveTab(tab); setSelectedMember(null); }}
       />
       
@@ -111,7 +126,7 @@ const App = () => {
             <button 
               type="button"
               onClick={loadData} 
-              className="px-3 py-1 rounded-lg bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold text-xs uppercase tracking-luxury hover:opacity-80"
+              className="px-3 py-1 rounded-lg bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold text-xs hover:opacity-80"
             >
               Retry
             </button>
@@ -125,17 +140,12 @@ const App = () => {
           handleLogout={() => handleLogout()}
           onOpenAccount={() => setAccountOpen(true)}
           currentUser={currentUser}
-          totalMembersCount={members.length}
-          activeNowCount={inClubList.length}
+          refreshing={loading && hasLoaded}
         />
 
-        <main className="transition-all duration-500">
+        <main>
           {/* Full-page spinner only for the first load; later refreshes keep the current screen mounted. */}
-          {loading && !hasLoaded && (
-            <div className="flex justify-center items-center py-12">
-              <span className="w-8 h-8 border-4 border-[var(--text-primary)] border-t-transparent rounded-full animate-spin"></span>
-            </div>
-          )}
+          {loading && !hasLoaded && <InitialLoading />}
 
           {hasLoaded && (
             <ErrorBoundary resetKey={activeTab} page={activeTab}>
@@ -154,46 +164,27 @@ const App = () => {
                   />
                 ) : (
                   <>
-                    <div className="flex items-center gap-4 mb-8">
-                      <h2 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold whitespace-nowrap">Live Member Stream</h2>
-                      <div className="h-[1px] flex-grow bg-[var(--glass-border)] hidden md:block"></div>
-                      <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center">
-                        <div className="relative w-full sm:w-64">
-                          <input 
-                            type="text" 
-                            placeholder="Search name, phone or Emirates ID..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-full px-4 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]/20 pl-8"
-                          />
-                          <svg className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                          </svg>
-                        </div>
-                        <div className="flex gap-2 shrink-0">
-                          <button 
+                    <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                      <input
+                        type="search"
+                        aria-label="Search members"
+                        placeholder="Search name, phone or Emirates ID"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="flex-grow bg-[var(--bg-secondary)] border border-[var(--glass-border)] rounded-xl px-4 py-2 text-sm"
+                      />
+                      <div className="flex rounded-xl border border-[var(--glass-border)] p-1 shrink-0" role="group" aria-label="Show">
+                        {[['all', 'All'], ['expiring', 'Expiring soon']].map(([value, text]) => (
+                          <button
+                            key={value}
                             type="button"
-                            onClick={() => setFilterType('all')}
-                            className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-luxury transition-all ${
-                              filterType === 'all' 
-                                ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold' 
-                                : 'glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)]'
-                            }`}
+                            aria-pressed={filterType === value}
+                            onClick={() => setFilterType(value)}
+                            className={`px-3 py-1.5 rounded-lg text-sm ${filterType === value ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] font-semibold' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
                           >
-                            All
+                            {text}
                           </button>
-                          <button 
-                            type="button"
-                            onClick={() => setFilterType('expiring')}
-                            className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-luxury transition-all ${
-                              filterType === 'expiring' 
-                                ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold' 
-                                : 'glass-card border-[var(--glass-border)] text-[var(--text-secondary)] hover:border-[var(--text-primary)]'
-                            }`}
-                          >
-                            Expiring
-                          </button>
-                        </div>
+                        ))}
                       </div>
                     </div>
                     <MemberGrid members={processedMembers} onManage={setSelectedMember} />
@@ -250,14 +241,14 @@ const App = () => {
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center min-h-[50vh] glass-card p-12 text-center">
-                  <div className="w-16 h-16 mb-6 rounded-full bg-[var(--glass-border)] flex items-center justify-center animate-pulse-soft">
+                  <div className="w-16 h-16 mb-6 rounded-full bg-[var(--glass-border)] flex items-center justify-center">
                     <svg className="w-8 h-8 text-[var(--text-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                   </div>
-                  <h2 className="text-xl font-light uppercase tracking-luxury mb-2">Page not found</h2>
+                  <h2 className="text-xl font-semibold mb-2">Page not found</h2>
                   <p className="text-[var(--text-secondary)] text-sm max-w-md">
-                    The <span className="text-[var(--text-primary)] font-semibold uppercase">{activeTab}</span> page could not be found.
+                    The <span className="text-[var(--text-primary)] font-semibold">{activeTab}</span> page could not be found.
                   </p>
                 </div>
               )}
@@ -272,11 +263,6 @@ const App = () => {
           />
         )}
         </main>
-        
-        <footer className="mt-16 pt-8 border-t border-[var(--glass-border)] flex flex-wrap justify-between gap-6 text-xs uppercase tracking-luxury text-[var(--text-secondary)]">
-          <span>© 2026 N & T Taekwondo & Karate Center</span>
-          <span>Mon–Sat · 4–9 PM</span>
-        </footer>
       </div>
     </div>
   );

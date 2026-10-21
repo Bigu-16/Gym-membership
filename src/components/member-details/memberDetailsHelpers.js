@@ -1,4 +1,4 @@
-import { addMonths, daysUntil } from '../../utils/membership';
+import { addMonths, daysUntil, membershipStatus } from '../../utils/membership';
 import { activePlans } from '../enrollment/enrollmentHelpers';
 
 /** Active packages, plus the member's current package if it has since been retired. */
@@ -79,3 +79,30 @@ export const applyMemberForm = (member, form) => ({
   medicalIssues: form.medicalIssues,
   messagingOptIn: form.messagingOptIn
 });
+
+/** Short status for badges: Active / Expiring in N days / Expires today / Expired / Frozen / No expiry set. */
+export const memberStatusLabel = (member, today = new Date()) => {
+  const status = membershipStatus(member, today);
+  if (status === 'frozen') return 'Frozen';
+  if (status === 'no-expiry') return 'No expiry set';
+  if (status === 'expired') return 'Expired';
+  if (status === 'expiring') {
+    const days = daysUntil(member.expiryDate, today);
+    if (days === 0) return 'Expires today';
+    return `Expiring in ${days} day${days === 1 ? '' : 's'}`;
+  }
+  return 'Active';
+};
+
+/** "10 days left" / "expires today" / "expired 5 days ago" — shown next to an expiry date. */
+export const relativeExpiry = (expiryDate, today = new Date()) => {
+  const days = daysUntil(expiryDate, today);
+  if (days === null) return '';
+  if (days === 0) return 'expires today';
+  if (days < 0) return `expired ${Math.abs(days)} day${days === -1 ? '' : 's'} ago`;
+  return `${days} day${days === 1 ? '' : 's'} left`;
+};
+
+/** Shared input style for member forms. */
+export const fieldClass =
+  'w-full rounded-xl border border-[var(--glass-border)] bg-[var(--bg-primary)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]';

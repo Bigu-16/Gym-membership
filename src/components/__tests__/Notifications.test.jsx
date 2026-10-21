@@ -6,7 +6,6 @@ import { apiService } from '../../services/api';
 vi.mock('../../services/api', () => {
   return {
     apiService: {
-      triggerSeedDemoData: vi.fn(),
       getReminderSettings: vi.fn().mockResolvedValue({
         reminder_days: [5, 3], email_configured: true, from_email: 'desk@example.com', scheduler_enabled: false, members_without_email: 2
       }),
@@ -55,16 +54,14 @@ describe('Notifications Component', () => {
     vi.clearAllMocks();
   });
 
-  it('renders all metrics cards and rows correctly', () => {
+  it('renders the summary line and rows correctly', () => {
     render(<Notifications jobs={mockJobs} members={mockMembers} onTriggerTask={mockOnTriggerTask} />);
 
-    // Total logs
-    expect(screen.getByText('2')).toBeInTheDocument();
-    // Processed count (is 0)
-    expect(screen.getByText('0')).toBeInTheDocument();
-    // Pending and Failed counts are both 1
-    const ones = screen.getAllByText('1');
-    expect(ones.length).toBeGreaterThanOrEqual(2);
+    // One summary line instead of four counter boxes
+    expect(screen.getByText(/2 total/)).toBeInTheDocument();
+    expect(screen.getByText('0 sent')).toBeInTheDocument();
+    expect(screen.getByText('1 waiting')).toBeInTheDocument();
+    expect(screen.getByText('1 failed')).toBeInTheDocument();
 
     // Recipient names
     expect(screen.getByText('John Doe')).toBeInTheDocument();
@@ -95,7 +92,7 @@ describe('Notifications Component', () => {
   it('filters list of jobs based on search term', () => {
     render(<Notifications jobs={mockJobs} members={mockMembers} onTriggerTask={mockOnTriggerTask} />);
 
-    const searchInput = screen.getByPlaceholderText(/Search member, phone or error.../i);
+    const searchInput = screen.getByLabelText("Search messages");
     
     // Search for "Jane"
     fireEvent.change(searchInput, { target: { value: 'Jane' } });

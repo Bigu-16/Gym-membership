@@ -27,8 +27,11 @@ describe('class time parsing', () => {
     expect(formatTimeRange('12:00')).toBe('12:00 PM – 1:00 PM');
   });
 
-  it('sizes the calendar to the timetable', () => {
-    expect(timetableHours(templates)).toEqual([15, 16, 17, 18, 19, 20]);
+  it('shows the full working day in the calendar', () => {
+    // Always the full working day (8 AM to 10 PM), so morning times can be seen and planned.
+    expect(timetableHours(templates)).toEqual([8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]);
+    // ...widened for anything outside it.
+    expect(timetableHours([{ time: '06:00 - 07:00' }])[0]).toBe(6);
   });
 });
 

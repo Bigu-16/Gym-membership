@@ -5,6 +5,7 @@ import {
   eachDayOfInterval, 
   isToday 
 } from 'date-fns';
+import { useEffect, useRef } from 'react';
 import { formatHourLabel } from '../../utils/classSessions';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -96,6 +97,18 @@ const WeekView = ({
     end: addDays(startDate, 6)
   });
 
+  // The whole day is shown; open the grid scrolled to the week's first class.
+  const scrollRef = useRef(null);
+  const weekSessions = days.flatMap((day) => getSessionsForDay(day));
+  const firstHour = weekSessions.length ? Math.min(...weekSessions.map((s) => s.start.getHours())) : null;
+  const weekKey = startDate.getTime();
+  const firstGridHour = hours[0];
+  useEffect(() => {
+    if (scrollRef.current && firstHour !== null) {
+      scrollRef.current.scrollTop = Math.max(0, (firstHour - firstGridHour - 0.5) * 60);
+    }
+  }, [firstHour, firstGridHour, weekKey]);
+
   return (
     <div className="glass-card overflow-hidden border-[var(--glass-border)]">
       <div className="overflow-x-auto pb-2">
@@ -110,7 +123,7 @@ const WeekView = ({
                   isToday(day) && "bg-[var(--text-primary)] bg-opacity-[0.03]"
                 )}
               >
-                <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">
+                <span className="text-xs text-[var(--text-secondary)] block mb-1">
                   {format(day, 'EEE')}
                 </span>
                 <span className={cn(
@@ -123,7 +136,7 @@ const WeekView = ({
             ))}
           </div>
 
-          <div className="relative h-[600px] overflow-y-auto custom-scrollbar bg-[var(--glass-bg)]">
+          <div ref={scrollRef} tabIndex={0} aria-label="Week calendar, scroll for other hours" className="relative h-[600px] overflow-y-auto custom-scrollbar bg-[var(--glass-bg)]">
             <div className="grid grid-cols-[80px_repeat(7,1fr)]" style={{ height: `${hours.length * 60}px` }}>
               {/* Time labels */}
               <div className="relative">
@@ -158,16 +171,16 @@ const WeekView = ({
                         key={session.id}
                         onClick={() => setSelectedSession(session)}
                         className={cn(
-                          "absolute rounded-xl p-2 text-xs cursor-pointer transition-all hover:scale-[1.02] hover:z-20 group overflow-hidden border",
+                          "absolute rounded-xl p-2 text-xs cursor-pointer transition-all hover:z-20 group overflow-hidden border",
                           session.status === 'in-progress'
-                            ? "bg-[var(--text-primary)] text-[var(--bg-primary)] border-transparent shadow-xl ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[var(--bg-primary)] z-10"
+                            ? "bg-[var(--text-primary)] text-[var(--bg-primary)] border-transparent ring-2 ring-[var(--accent-color)] z-10"
                             : session.status === 'cancelled'
                               ? "bg-[var(--bg-secondary)] border-rose-500/60 border-dashed line-through"
                               : session.status === 'completed'
                                 ? "bg-[var(--bg-secondary)] border-sky-500/60"
                                 : session.status === 'not-recorded'
                                   ? "bg-[var(--bg-secondary)] border-amber-500/60 border-dashed"
-                                  : "bg-[var(--bg-secondary)] border-[var(--glass-border)] hover:border-[var(--text-secondary)] shadow-md"
+                                  : "bg-[var(--bg-secondary)] border-[var(--glass-border)] hover:border-[var(--text-secondary)]"
                         )}
                         style={{ 
                           top: `${top}px`, 

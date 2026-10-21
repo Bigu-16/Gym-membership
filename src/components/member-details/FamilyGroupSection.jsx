@@ -1,140 +1,94 @@
-import { formatDate, freezeSummary, membershipStatus } from '../../utils/membership';
+import { formatDate, freezeSummary } from '../../utils/membership';
+import ConfirmDelete from './ConfirmDelete';
 import MemberClassesEditor from './MemberClassesEditor';
+import MemberStatusBadge from './MemberStatusBadge';
+import { relativeExpiry } from './memberDetailsHelpers';
 
-const STATUS_TEXT = {
-  frozen: 'Frozen',
-  expired: 'Expired',
-  expiring: 'Expiring soon',
-  active: 'Active',
-  'no-expiry': 'No expiry'
-};
+const Fact = ({ label, children, className = '' }) => (
+  <div className={className}>
+    <dt className="label">{label}</dt>
+    <dd className="text-sm text-[var(--text-primary)]">{children}</dd>
+  </div>
+);
 
 const FamilyGroupSection = ({
   group,
+  busy,
   showDeleteConfirmId,
   setShowDeleteConfirmId,
   handleDeleteConfirm,
   startEditing,
   scheduleTemplates,
   onSetMemberClasses
-}) => (
-  <>
-    <div className="glass-card p-6">
-      <h4 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold mb-4">Parent / Guardian</h4>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div>
-          <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Name</p>
-          <p className="text-sm font-semibold">{group.parentName || 'N/A'}</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Mobile</p>
-          <p className="text-sm font-semibold">{group.parentPhone || 'N/A'}</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Email</p>
-          <p className="text-sm font-semibold">{group.parentEmail || 'N/A'}</p>
-        </div>
-      </div>
+}) => {
+  const trainees = group.trainees || [];
+
+  return (
+    <div className="space-y-6">
+      <section aria-labelledby="parent-title" className="glass-card p-5">
+        <h3 id="parent-title" className="section-title">Parent / guardian</h3>
+        <dl className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Fact label="Name">{group.parentName || '—'}</Fact>
+          <Fact label="Mobile">{group.parentPhone || '—'}</Fact>
+          <Fact label="Email">{group.parentEmail || '—'}</Fact>
+        </dl>
+      </section>
+
+      <section aria-labelledby="trainees-title" className="glass-card">
+        <h3 id="trainees-title" className="section-title px-5 pt-5">Trainees ({trainees.length})</h3>
+        <ul className="mt-2 divide-y divide-[var(--glass-border)]">
+          {trainees.map((trainee) => (
+            <li key={trainee.id} className="space-y-4 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-base font-semibold text-[var(--text-primary)]">{trainee.name}</h4>
+                  <MemberStatusBadge member={trainee} />
+                </div>
+                {showDeleteConfirmId !== trainee.id && (
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => startEditing(trainee)} aria-label={`Edit ${trainee.name}`} className="btn-secondary btn-sm">
+                      Edit
+                    </button>
+                    <button type="button" onClick={() => setShowDeleteConfirmId(trainee.id)} aria-label={`Delete ${trainee.name}`} className="btn-danger btn-sm">
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {showDeleteConfirmId === trainee.id && (
+                <ConfirmDelete
+                  name={trainee.name}
+                  message="They are removed from this family. This cannot be undone."
+                  busy={busy}
+                  onCancel={() => setShowDeleteConfirmId(null)}
+                  onConfirm={() => handleDeleteConfirm(trainee.id)}
+                />
+              )}
+
+              <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <Fact label="Package">{trainee.plan || 'No package'}</Fact>
+                <Fact label={trainee.isFrozen ? 'On hold' : 'Expiry'}>
+                  {trainee.isFrozen ? freezeSummary(trainee) : formatDate(trainee.expiryDate)}
+                  {!trainee.isFrozen && trainee.expiryDate && (
+                    <span className="block text-xs text-[var(--text-secondary)]">{relativeExpiry(trainee.expiryDate)}</span>
+                  )}
+                </Fact>
+                <Fact label="Age · gender">{trainee.age ?? '—'} · {trainee.gender || '—'}</Fact>
+                <Fact label="Mobile">{trainee.phone || '—'}</Fact>
+                <Fact label="Emirates ID"><span className="font-mono">{trainee.emiratesId || '—'}</span></Fact>
+                <Fact label="Medical notes">
+                  <span className={trainee.medicalIssues ? 'font-semibold text-danger' : ''}>{trainee.medicalIssues || 'None reported'}</span>
+                </Fact>
+              </dl>
+
+              <MemberClassesEditor member={trainee} scheduleTemplates={scheduleTemplates} onSetMemberClasses={onSetMemberClasses} compact />
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
-
-    <h3 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold pt-4">
-      Enrolled Trainees ({group.trainees?.length || 0})
-    </h3>
-    {(group.trainees || []).map((trainee, index) => (
-      <div key={trainee.id} className="glass-card p-6 space-y-4">
-        <div className="flex flex-wrap justify-between items-center gap-2">
-          <h4 className="text-xs uppercase tracking-luxury text-[var(--text-primary)] font-bold flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center text-xs">{index + 1}</span>
-            {trainee.name}
-          </h4>
-          {showDeleteConfirmId !== trainee.id && (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => startEditing(trainee)}
-                aria-label={`Edit ${trainee.name}`}
-                className="px-3 py-1 rounded-lg border border-[var(--glass-border)] text-xs uppercase tracking-luxury font-bold hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)] transition-all"
-              >
-                Edit Profile
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirmId(trainee.id)}
-                aria-label={`Delete ${trainee.name}`}
-                className="px-3 py-1 rounded-lg border border-rose-500/30 text-xs uppercase tracking-luxury font-bold text-danger hover:bg-danger-solid hover:text-white transition-all"
-              >
-                Delete
-              </button>
-            </div>
-          )}
-        </div>
-
-        {showDeleteConfirmId === trainee.id && (
-          <div className="p-4 glass-card border border-rose-500/30 rounded-xl text-left">
-            <h4 className="text-xs uppercase tracking-luxury font-bold text-danger mb-2">Confirm Deletion</h4>
-            <p className="text-xs text-[var(--text-secondary)] mb-4">
-              Delete {trainee.name} from this family? This cannot be undone.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirmId(null)}
-                className="px-4 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--glass-border)] text-xs uppercase tracking-luxury"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeleteConfirm(trainee.id)}
-                className="px-4 py-2 rounded-lg bg-danger-solid text-white text-xs uppercase tracking-luxury font-bold"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Package</p>
-            <p className="text-sm font-semibold">{trainee.plan || 'No package'}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Expiry</p>
-            <p className="text-sm font-semibold">
-              {trainee.isFrozen ? 'Paused' : formatDate(trainee.expiryDate)}{' '}
-              <span className="text-xs text-[var(--text-secondary)] font-normal">
-                ({trainee.isFrozen ? freezeSummary(trainee) : STATUS_TEXT[membershipStatus(trainee)]})
-              </span>
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Age / Gender</p>
-            <p className="text-sm font-semibold">{trainee.age ?? '—'} · {trainee.gender || '—'}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Mobile</p>
-            <p className="text-sm font-semibold">{trainee.phone || '—'}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Emirates ID</p>
-            <p className="text-sm font-semibold font-mono">{trainee.emiratesId || '—'}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">Medical</p>
-            <p className={`text-sm font-semibold ${trainee.medicalIssues ? 'text-danger' : ''}`}>{trainee.medicalIssues || 'None reported'}</p>
-          </div>
-        </div>
-
-        <MemberClassesEditor
-          member={trainee}
-          scheduleTemplates={scheduleTemplates}
-          onSetMemberClasses={onSetMemberClasses}
-          compact
-        />
-      </div>
-    ))}
-  </>
-);
+  );
+};
 
 export default FamilyGroupSection;

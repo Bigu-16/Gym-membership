@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiService, avatarFor } from '../services/api';
-import { daysUntil, EXPIRING_SOON_DAYS } from '../utils/membership';
+import { daysUntil, EXPIRING_SOON_DAYS, formatDate } from '../utils/membership';
+import { useFeedback } from '../components/common/Feedback';
+import { statusLabel } from '../utils/classSessions';
 
 const SESSION_HISTORY_DAYS = 120;
 // Desk computers are shared: sign out after this long without any activity.
@@ -34,6 +36,7 @@ const familyGroupFrom = (familyId, trainees, family) => {
 };
 
 export const useGymData = () => {
+  const { notify } = useFeedback();
   const [isAuthenticated, setIsAuthenticated] = useState(
     typeof window !== 'undefined' && !!sessionStorage.getItem('gym_api_token')
   );
@@ -268,6 +271,13 @@ export const useGymData = () => {
   };
 
   const handleUpdateMember = async (updatedMember) => {
+    const before = updatedMember.isGroup
+      ? memberGroups.find((g) => g.id === updatedMember.id)
+      : members.find((m) => m.id === updatedMember.id);
+    const until = updatedMember.freezeUntil ? ` until ${formatDate(updatedMember.freezeUntil)}` : '';
+    let message = `Changes to ${updatedMember.name} saved.`;
+    if (before && !before.isFrozen && updatedMember.isFrozen) message = `${updatedMember.name} is frozen${until}. Their remaining days are paused.`;
+    if (before && before.isFrozen && !updatedMember.isFrozen) message = `${updatedMember.name} is active again. Their paused days continue from today.`;
     if (updatedMember.isGroup) {
       await apiService.freezeFamily(String(updatedMember.familyId), updatedMember.isFrozen, updatedMember.freezeUntil);
     } else {
@@ -282,6 +292,7 @@ export const useGymData = () => {
       }
     }
     await loadData();
+    notify.success(message);
   };
 
   /** renewal = { planId, startFrom: 'expiry'|'today', payment: {amount, method} } per trainee. */
@@ -292,12 +303,15 @@ export const useGymData = () => {
       await apiService.renewMember(person.id, perPerson);
     }
     await loadData();
+    notify.success(`${target.name} renewed.`);
   };
 
   const handleDeleteMember = async (memberId) => {
+    const name = members.find((m) => m.id === memberId)?.name || 'Member';
     await apiService.deleteMember(memberId);
     setSelectedMemberKey(null);
     await loadData();
+    notify.success(`${name} deleted.`);
   };
 
   const handleSetMemberClasses = async (member, templateIds) => {
@@ -311,36 +325,43 @@ export const useGymData = () => {
       if (!existing.has(templateId)) await apiService.enrollMemberInClass(member.id, templateId);
     }
     await loadData();
+    notify.success(`${member.name}'s classes updated.`);
   };
 
   // ----- Timetable & packages -------------------------------------------------
   const handleAddTemplate = async (newTemplate) => {
     const created = await apiService.createTemplate(newTemplate);
     setScheduleTemplates((current) => [...current, created]);
+    notify.success(`${created.className} added to the timetable.`);
     return created;
   };
 
   const handleDeleteTemplate = async (id) => {
+    const name = scheduleTemplates.find((t) => t.id === id)?.className || 'Class';
     await apiService.deleteTemplate(id);
     setScheduleTemplates((current) => current.filter((template) => template.id !== id));
+    notify.success(`${name} removed from the timetable.`);
     setEnrollments((current) => current.filter((e) => e.template_id !== id));
   };
 
   const handleUpdateTemplate = async (updatedTemplate) => {
     const updated = await apiService.updateTemplate(updatedTemplate.id, updatedTemplate);
     setScheduleTemplates((current) => current.map((template) => (template.id === updated.id ? updated : template)));
+    notify.success(`${updated.className} updated.`);
     return updated;
   };
 
   const handleLoadOfficialTimetable = async () => {
     const result = await apiService.loadOfficialTimetable();
     await loadData();
+    notify.success(result.created ? `${result.created} class slot(s) added from the official timetable.` : 'The official timetable is already loaded.');
     return result;
   };
 
   const handleAddPlan = async (plan) => {
     const created = await apiService.createPlan(plan);
     setMembershipPlans((current) => [...current, created]);
+    notify.success(`Package "${created.name}" created.`);
     return created;
   };
 
@@ -351,17 +372,23 @@ export const useGymData = () => {
     delete payload.updated_at;
     const updated = await apiService.updatePlan(plan.id, payload);
     setMembershipPlans((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    notify.success(`Package "${updated.name}" saved${updated.is_active ? '' : ' (inactive)'}.`);
     return updated;
   };
 
   const handleDeletePlan = async (id) => {
+    const name = membershipPlans.find((p) => p.id === id)?.name || 'Package';
     await apiService.deletePlan(id);
     setMembershipPlans((current) => current.filter((plan) => plan.id !== id));
+    notify.success(`Package "${name}" deleted.`);
   };
 
   const handleLoadOfficialPackages = async () => {
     const result = await apiService.loadOfficialPackages();
     setMembershipPlans(await apiService.getPlans());
+    notify.success(result.created || result.updated
+      ? `Official price list applied: ${result.created} added, ${result.updated} corrected.`
+      : 'All official packages are already up to date.');
     return result;
   };
 
@@ -373,17 +400,25 @@ export const useGymData = () => {
       const withoutOld = current.filter((s) => s.id !== saved.id);
       return [saved, ...withoutOld];
     });
+    if (changes.status) {
+      const when = saved.start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      notify.success(`${saved.title} at ${when}: ${statusLabel(saved.status).toLowerCase()}.`);
+    }
     return saved;
-  }, [scheduleTemplates]);
+  }, [scheduleTemplates, notify]);
+
+  const memberName = (memberId) => members.find((m) => m.id === memberId)?.name || 'Member';
 
   const checkIn = async (memberId, options) => {
     await apiService.checkInMember(memberId, options);
     setInClubList((prev) => (prev.includes(memberId) ? prev : [...prev, memberId]));
+    notify.success(`${memberName(memberId)} checked in.`);
   };
 
   const checkOut = async (memberId) => {
     await apiService.checkOutMember(memberId);
     setInClubList((prev) => prev.filter((id) => id !== memberId));
+    notify.success(`${memberName(memberId)} checked out.`);
   };
 
   const refreshNotificationJobs = async () => {

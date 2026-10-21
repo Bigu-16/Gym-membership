@@ -27,8 +27,8 @@ const ScheduleHeader = ({
             type="button"
             onClick={() => setView('day')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs uppercase tracking-luxury transition-all flex items-center gap-2",
-              view === 'day' ? "bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-lg" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              "px-4 py-2 rounded-xl text-xs transition-all flex items-center gap-2",
+              view === 'day' ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             )}
           >
             <CalendarIcon size={14} /> Day
@@ -37,8 +37,8 @@ const ScheduleHeader = ({
             type="button"
             onClick={() => setView('week')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs uppercase tracking-luxury transition-all flex items-center gap-2",
-              view === 'week' ? "bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-lg" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              "px-4 py-2 rounded-xl text-xs transition-all flex items-center gap-2",
+              view === 'week' ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             )}
           >
             <CalendarRange size={14} /> Week
@@ -47,8 +47,8 @@ const ScheduleHeader = ({
             type="button"
             onClick={() => setView('month')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs uppercase tracking-luxury transition-all flex items-center gap-2",
-              view === 'month' ? "bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-lg" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              "px-4 py-2 rounded-xl text-xs transition-all flex items-center gap-2",
+              view === 'month' ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             )}
           >
             <CalendarDays size={14} /> Month
@@ -57,8 +57,8 @@ const ScheduleHeader = ({
             type="button"
             onClick={() => setView('timetable')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs uppercase tracking-luxury transition-all flex items-center gap-2",
-              view === 'timetable' ? "bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-lg" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              "px-4 py-2 rounded-xl text-xs transition-all flex items-center gap-2",
+              view === 'timetable' ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             )}
           >
             <Pencil size={14} /> Edit timetable
@@ -78,7 +78,7 @@ const ScheduleHeader = ({
             <button 
               type="button"
               onClick={() => setCurrentDate(new Date())}
-              className="px-4 py-2 rounded-xl glass-card text-xs uppercase tracking-luxury border-[var(--glass-border)] hover:bg-[var(--card-hover)] min-w-[80px]"
+              className="px-4 py-2 rounded-xl glass-card text-xs border-[var(--glass-border)] hover:bg-[var(--card-hover)] min-w-[80px]"
             >
               {view === 'week' ? 'This Week' : view === 'month' ? 'This Month' : 'Today'}
             </button>
@@ -95,7 +95,7 @@ const ScheduleHeader = ({
       </div>
 
       {view !== 'timetable' && (
-        <h2 className="text-2xl font-light tracking-luxury uppercase">
+        <h2 className="text-2xl font-semibold">
           {format(currentDate, view === 'month' ? 'MMMM yyyy' : 'MMMM d, yyyy')}
         </h2>
       )}

@@ -171,10 +171,14 @@ export const traineesForSession = (session, members = []) => {
   return members.filter((m) => (m.enrolledTemplateIds || []).includes(session.templateId));
 };
 
-/** Hour rows for calendar grids (each row is one hour), covering the timetable; default 3–9 PM. */
+// The calendar always shows a full working day so any time can be seen and planned.
+export const DAY_START_HOUR = 8; // 8 AM
+export const DAY_END_HOUR = 21; // last row starts 9 PM (ends 10 PM)
+
+/** Hour rows for calendar grids (one row per hour): 8 AM–10 PM, widened for anything outside it. */
 export const timetableHours = (templates = [], sessions = []) => {
-  let first = 15;
-  let last = 20;
+  let first = DAY_START_HOUR;
+  let last = DAY_END_HOUR;
   templates.forEach((t) => {
     const { start, end } = parseTimeRange(t.time);
     first = Math.min(first, start.hours);

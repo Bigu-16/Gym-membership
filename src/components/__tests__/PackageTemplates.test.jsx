@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import EnrollmentForm from '../EnrollmentForm';
 import * as scheduleConfig from '../../config/scheduleConfig';
 
@@ -37,27 +37,38 @@ describe('enrollment packages come from the backend', () => {
     expect(scheduleConfig.PERSONAL_TRAINING_PROGRAMS).toBeUndefined();
   });
 
-  it('renders every active backend package as a selectable card', () => {
+  const packageOptions = () =>
+    within(screen.getByLabelText('Package')).getAllByRole('option').filter((option) => option.value !== '');
+
+  it('lists every active backend package in the trainee package dropdown, grouped by program', () => {
     render(<EnrollmentForm onEnroll={vi.fn()} scheduleTemplates={[]} membershipPlans={officialPlans} />);
 
-    expect(screen.getByRole('heading', { name: 'Package Templates' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /^Select / })).toHaveLength(25);
-    expect(screen.getByRole('button', { name: 'Select Taekwondo, 1 month, 2 classes per week, 300 AED' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Select Fitness, 6 months, unlimited classes, 1450 AED' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Select Kung Fu, 1 year, unlimited classes, 2550 AED' })).toBeInTheDocument();
+    // No separate grid of package cards any more.
+    expect(screen.queryByRole('button', { name: /^Select / })).not.toBeInTheDocument();
+    expect(packageOptions()).toHaveLength(25);
+    const select = screen.getByLabelText('Package');
+    expect(within(select).getAllByRole('group').map((group) => group.getAttribute('label'))).toEqual(PROGRAMS);
+    const taekwondo = within(select).getByRole('group', { name: 'Taekwondo' });
+    expect(within(taekwondo).getByRole('option', { name: '1 month · 2 classes/week · 300 AED' })).toBeInTheDocument();
+    const fitness = within(select).getByRole('group', { name: 'Fitness' });
+    expect(within(fitness).getByRole('option', { name: '6 months · Unlimited classes · 1,450 AED' })).toBeInTheDocument();
+    const kungFu = within(select).getByRole('group', { name: 'Kung Fu' });
+    expect(within(kungFu).getByRole('option', { name: '1 year · Unlimited classes · 2,550 AED' })).toBeInTheDocument();
   });
 
   it('hides inactive packages', () => {
     const plans = officialPlans.map((plan) => (plan.program === 'Kung Fu' ? { ...plan, is_active: false } : plan));
     render(<EnrollmentForm onEnroll={vi.fn()} scheduleTemplates={[]} membershipPlans={plans} />);
-    expect(screen.getAllByRole('button', { name: /^Select / })).toHaveLength(20);
-    expect(screen.queryByRole('button', { name: /^Select Kung Fu/ })).not.toBeInTheDocument();
+    expect(packageOptions()).toHaveLength(20);
+    expect(within(screen.getByLabelText('Package')).queryByRole('group', { name: 'Kung Fu' })).not.toBeInTheDocument();
   });
 
   it('uses the selected package price and shows its free items', () => {
     render(<EnrollmentForm onEnroll={vi.fn()} scheduleTemplates={[]} membershipPlans={officialPlans} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Select Kickboxing, 3 months, 3 classes per week, 900 AED' }));
+    const kickboxing3Months = officialPlans.find((p) => p.program === 'Kickboxing' && p.duration_months === 3);
+    fireEvent.change(screen.getByLabelText('Package'), { target: { value: String(kickboxing3Months.id) } });
     expect(screen.getByLabelText('Amount paid for trainee 1')).toHaveValue(900);
+    expect(screen.getByTestId('payment-total')).toHaveTextContent('900 AED');
     expect(screen.getAllByText(/Free gloves/).length).toBeGreaterThan(0);
   });
 
@@ -66,7 +77,7 @@ describe('enrollment packages come from the backend', () => {
     render(<EnrollmentForm onEnroll={vi.fn()} scheduleTemplates={[]} membershipPlans={[]} onLoadOfficialPackages={onLoadOfficialPackages} />);
 
     expect(screen.getByText('No packages are set up yet.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Select / })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Package')).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Load official packages' }));
     expect(onLoadOfficialPackages).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole('button', { name: 'Load official packages' })).toBeEnabled();

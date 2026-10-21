@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import ProgramTypeSelector from './enrollment/ProgramTypeSelector';
-import PackageTemplateSelector from './enrollment/PackageTemplateSelector';
-import FamilyRegistrationSection from './enrollment/FamilyRegistrationSection';
+import { useFeedback } from './common/Feedback';
+import FormSection from './enrollment/FormSection';
+import FamilyRegistrationSection, { ParentSection } from './enrollment/FamilyRegistrationSection';
 import PaymentDetailsSection from './enrollment/PaymentDetailsSection';
 import EnrollmentSuccess from './enrollment/EnrollmentSuccess';
 import { activePlans, buildRegistration, validateRegistration } from './enrollment/enrollmentHelpers';
@@ -40,8 +40,7 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [], membershipPlans = []
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(null);
 
-  // The package highlighted in the cards: shared by every trainee, if they agree.
-  const sharedPlanId = trainees.every((t) => t.planId === trainees[0].planId) ? trainees[0].planId : null;
+  const { confirm } = useFeedback();
 
   const resetForm = () => {
     setRegistrant('child');
@@ -56,12 +55,9 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [], membershipPlans = []
     setTrainees((current) => current.map((t) => (t.key === key ? { ...t, ...changes } : t)));
   };
 
-  const applyPlanToAll = (plan) => {
-    setTrainees((current) => current.map((t) => ({ ...t, planId: plan.id, amount: null })));
-  };
-
+  // A new sibling starts on the same package as the trainee above.
   const addTrainee = () => {
-    setTrainees((current) => [...current, createTrainee(sharedPlanId)]);
+    setTrainees((current) => [...current, createTrainee(current[current.length - 1]?.planId ?? null)]);
   };
 
   const removeTrainee = (key) => {
@@ -114,68 +110,77 @@ const EnrollmentForm = ({ onEnroll, scheduleTemplates = [], membershipPlans = []
     );
   }
 
+  const isChild = registrant === 'child';
+  const step = (name) => ({ registrant: 1, parent: 2, trainees: isChild ? 3 : 2, payment: isChild ? 4 : 3 })[name];
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-5 glass-card rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-brand border border-orange-500/20 flex items-center justify-center font-bold text-lg">
-            🥋
-          </div>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-luxury text-[var(--text-primary)]">
-              N & T Taekwondo & Karate Center
-            </h3>
-            <p className="text-xs uppercase tracking-wider text-[var(--text-secondary)]">New member registration</p>
-          </div>
+    <form noValidate onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-4">
+      <FormSection number={step('registrant')} title="Who is registering?" id="enroll-registrant">
+        <div className="inline-flex flex-wrap gap-1 rounded-xl border border-[var(--glass-border)] p-1" role="group" aria-label="Who is registering">
+          {[
+            ['child', 'Child (parent/guardian registers)'],
+            ['adult', 'Adult (registers themself)']
+          ].map(([value, text]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={registrant === value}
+              onClick={() => setRegistrant(value)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+                registrant === value
+                  ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--card-hover)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              {text}
+            </button>
+          ))}
         </div>
-        <button
-          type="button"
-          onClick={resetForm}
-          className="px-3.5 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--card-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs uppercase tracking-luxury font-bold transition-all border border-[var(--glass-border)] active:scale-95"
-        >
-          Reset Form
-        </button>
-      </div>
+      </FormSection>
 
-      <form noValidate onSubmit={handleSubmit} className="space-y-12 max-w-full animate-in fade-in slide-in-from-bottom-8 duration-700">
-        <ProgramTypeSelector
-          registrant={registrant}
-          onRegistrantChange={setRegistrant}
-        />
-
-        <PackageTemplateSelector
-          plans={plans}
-          selectedPlanId={sharedPlanId}
-          onSelect={applyPlanToAll}
-          onLoadOfficialPackages={onLoadOfficialPackages}
-        />
-
-        <FamilyRegistrationSection
-          registrant={registrant}
+      {isChild && (
+        <ParentSection
+          number={step('parent')}
           parent={parent}
           onParentChange={(changes) => setParent((current) => ({ ...current, ...changes }))}
-          trainees={trainees}
-          onTraineeChange={updateTrainee}
-          onAddTrainee={addTrainee}
-          onRemoveTrainee={removeTrainee}
-          plans={plans}
-          plansById={plansById}
-          scheduleTemplates={scheduleTemplates}
         />
+      )}
 
-        <PaymentDetailsSection
-          trainees={trainees}
-          plansById={plansById}
-          paymentMethod={paymentMethod}
-          onPaymentMethodChange={setPaymentMethod}
-          termsAccepted={termsAccepted}
-          onTermsAcceptedChange={setTermsAccepted}
-          onAmountChange={(key, amount) => updateTrainee(key, { amount })}
-          errors={errors}
-          submitting={submitting}
-        />
-      </form>
-    </div>
+      <FamilyRegistrationSection
+        number={step('trainees')}
+        registrant={registrant}
+        trainees={trainees}
+        onTraineeChange={updateTrainee}
+        onAddTrainee={addTrainee}
+        onRemoveTrainee={removeTrainee}
+        plans={plans}
+        plansById={plansById}
+        scheduleTemplates={scheduleTemplates}
+        onLoadOfficialPackages={onLoadOfficialPackages}
+      />
+
+      <PaymentDetailsSection
+        number={step('payment')}
+        trainees={trainees}
+        plansById={plansById}
+        paymentMethod={paymentMethod}
+        onPaymentMethodChange={setPaymentMethod}
+        termsAccepted={termsAccepted}
+        onTermsAcceptedChange={setTermsAccepted}
+        onAmountChange={(key, amount) => updateTrainee(key, { amount })}
+        onClear={async () => {
+          const hasInput = parent.name || parent.phone || trainees.some((t) => t.name || t.age || t.phone);
+          if (!hasInput || await confirm({
+            title: 'Clear the form?',
+            message: 'Everything typed into this registration will be removed.',
+            confirmLabel: 'Clear form',
+            tone: 'danger'
+          })) resetForm();
+        }}
+        errors={errors}
+        submitting={submitting}
+      />
+    </form>
   );
 };
 

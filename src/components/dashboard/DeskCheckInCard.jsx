@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { ClipboardCheck } from 'lucide-react';
 import { membershipStatus } from '../../utils/membership';
+import { Spinner, useFeedback } from '../common/Feedback';
 
 const STATUS_CHIP = {
   expired: { text: 'Expired', className: 'text-danger bg-rose-500/10' },
@@ -10,43 +10,37 @@ const STATUS_CHIP = {
 
 const timeFormat = { hour: 'numeric', minute: '2-digit' };
 
-const MemberRow = ({ member, isCheckedIn, onCheckIn, busy }) => {
+const formatWhen = (timestamp) => {
+  const when = new Date(timestamp);
+  const time = when.toLocaleTimeString([], timeFormat);
+  return when.toDateString() === new Date().toDateString()
+    ? time
+    : `${when.toLocaleDateString([], { day: 'numeric', month: 'short' })}, ${time}`;
+};
+
+const MemberRow = ({ member, action }) => {
   const chip = STATUS_CHIP[membershipStatus(member)];
   return (
-    <li className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-[var(--glass-border)]">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <img src={member.image} alt="" className="w-7 h-7 rounded-full object-cover border border-[var(--glass-border)]" />
+    <li className="flex items-center justify-between gap-3 py-2">
+      <div className="flex items-center gap-3 min-w-0">
+        <img src={member.image} alt="" className="w-8 h-8 rounded-full object-cover" />
         <div className="min-w-0">
-          <span className="text-xs font-semibold block truncate">{member.name}</span>
-          <span className="text-xs text-[var(--text-secondary)] block truncate">
+          <p className="text-sm font-medium truncate">{member.name}</p>
+          <p className="text-xs text-[var(--text-secondary)] truncate">
             {member.plan}
-            {chip && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full font-bold ${chip.className}`}>{chip.text}</span>}
-          </span>
+            {chip && <span className={`ml-1.5 px-1.5 rounded font-semibold ${chip.className}`}>{chip.text}</span>}
+          </p>
         </div>
       </div>
-      {isCheckedIn ? (
-        <span className="text-xs uppercase tracking-luxury text-success font-bold px-2 py-1 rounded-full bg-emerald-500/10 shrink-0">
-          In center
-        </span>
-      ) : (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => onCheckIn(member)}
-          className="px-3 py-1 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs uppercase tracking-luxury font-bold disabled:opacity-40 shrink-0"
-        >
-          Check in
-        </button>
-      )}
+      {action}
     </li>
   );
 };
 
-const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], checkIn, checkOut }) => {
+/** Check members in and out at the desk; today's enrolled members are listed first. */
+const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], checkIn, checkOut, recentActivities = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedClass, setSelectedClass] = useState('all');
   const [busyId, setBusyId] = useState(null);
-  const [message, setMessage] = useState(null);
   const [blocked, setBlocked] = useState(null);
 
   const searchResults = useMemo(() => {
@@ -61,29 +55,22 @@ const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], chec
   }, [members, searchTerm]);
 
   const rosterMembers = useMemo(() => {
-    const groups = selectedClass === 'all' ? todayRoster : todayRoster.filter((g) => g.session.id === selectedClass);
     const seen = new Set();
-    return groups.flatMap((g) => g.trainees).filter((m) => (seen.has(m.id) ? false : seen.add(m.id)));
-  }, [todayRoster, selectedClass]);
+    return todayRoster.flatMap((g) => g.trainees).filter((m) => (seen.has(m.id) ? false : seen.add(m.id)));
+  }, [todayRoster]);
 
-  const flash = (text, tone = 'success') => {
-    setMessage({ text, tone });
-    setTimeout(() => setMessage(null), 4000);
-  };
+  // "Checked in/out" confirmations come from the data layer; failures are reported here.
+  const { notify } = useFeedback();
 
   const handleCheckIn = async (member, override = false) => {
     setBusyId(member.id);
     setBlocked(null);
     try {
       await checkIn(member.id, override ? { override: true } : undefined);
-      flash(`${member.name} checked in.`);
       setSearchTerm('');
     } catch (err) {
-      if (/expired|frozen/i.test(err.message)) {
-        setBlocked({ member, reason: err.message });
-      } else {
-        flash(`Check-in failed: ${err.message}`, 'error');
-      }
+      if (/expired|frozen/i.test(err.message)) setBlocked({ member, reason: err.message });
+      else notify.error(`Could not check in ${member.name}: ${err.message}`);
     } finally {
       setBusyId(null);
     }
@@ -93,120 +80,101 @@ const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], chec
     setBusyId(member.id);
     try {
       await checkOut(member.id);
-      flash(`${member.name} checked out.`);
     } catch (err) {
-      flash(`Check-out failed: ${err.message}`, 'error');
+      notify.error(`Could not check out ${member.name}: ${err.message}`);
     } finally {
       setBusyId(null);
     }
   };
 
   const checkedInMembers = inClubList.map((id) => members.find((m) => m.id === id)).filter(Boolean);
-  const list = searchTerm.trim() ? searchResults : rosterMembers;
+  const searching = Boolean(searchTerm.trim());
+  const list = searching ? searchResults : rosterMembers.filter((m) => !inClubList.includes(m.id));
 
   return (
-    <section className="glass-card p-6 border border-[var(--glass-border)]" aria-label="Desk check-in">
-      <h3 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold mb-4 flex items-center gap-2">
-        <ClipboardCheck size={16} /> Desk check-in
-      </h3>
-
-      {message && (
-        <p role="status" className={`mb-3 text-xs rounded-xl p-2.5 ${message.tone === 'error' ? 'bg-rose-500/10 text-danger' : 'bg-emerald-500/10 text-success'}`}>
-          {message.text}
-        </p>
-      )}
-
-      {blocked && (
-        <div role="alert" className="mb-3 text-xs rounded-xl p-3 bg-amber-500/10 text-warning space-y-2">
-          <p><strong>{blocked.member.name}</strong>: {blocked.reason}. Renew at the desk, or let them in for today.</p>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => handleCheckIn(blocked.member, true)} className="px-3 py-1 rounded-lg bg-warning-solid text-white font-bold">
-              Let in anyway
-            </button>
-            <button type="button" onClick={() => setBlocked(null)} className="px-3 py-1 rounded-lg border border-amber-500/40">
-              Cancel
-            </button>
+    <section className="glass-card" aria-label="Desk check-in">
+      <div className="px-5 py-4 border-b border-[var(--glass-border)] space-y-3">
+        <h2 className="section-title">Desk check-in</h2>
+        <input
+          type="search"
+          placeholder="Search name, phone or parent"
+          aria-label="Search members to check in"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-3 py-2 text-sm"
+        />
+        {blocked && (
+          <div role="alert" className="text-sm rounded-lg p-3 bg-amber-500/10 text-warning space-y-2">
+            <p><strong>{blocked.member.name}</strong>: {blocked.reason}. Renew at the desk, or let them in for today.</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => handleCheckIn(blocked.member, true)} className="btn-primary btn-sm">Let in anyway</button>
+              <button type="button" onClick={() => setBlocked(null)} className="btn-secondary btn-sm">Cancel</button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      <input
-        type="search"
-        placeholder="Search name, phone or parent…"
-        aria-label="Search members to check in"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full mb-4 bg-[var(--card-hover)] border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-[var(--text-primary)] placeholder:text-[var(--text-secondary)]"
-      />
-
-      {!searchTerm.trim() && todayRoster.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-3 mb-1">
-          {[{ id: 'all', label: 'All classes' }, ...todayRoster.map((g) => ({
-            id: g.session.id,
-            label: `${g.session.title} ${g.session.start.toLocaleTimeString([], timeFormat)}`
-          }))].map((chip) => (
-            <button
-              key={chip.id}
-              type="button"
-              aria-pressed={selectedClass === chip.id}
-              onClick={() => setSelectedClass(chip.id)}
-              className={`px-3 py-1.5 rounded-full text-xs uppercase tracking-luxury font-bold whitespace-nowrap ${
-                selectedClass === chip.id
-                  ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]'
-                  : 'bg-[var(--card-hover)] text-[var(--text-secondary)] border border-[var(--glass-border)]'
-              }`}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {list.length === 0 ? (
-        <p className="text-xs text-[var(--text-secondary)] italic text-center py-4 border border-dashed border-[var(--glass-border)] rounded-xl mb-6">
-          {searchTerm.trim() ? 'No matching members.' : 'Nobody is enrolled in today\'s classes yet. Search above for walk-ins.'}
-        </p>
-      ) : (
-        <ul className="space-y-2 max-h-64 overflow-y-auto pr-1 mb-6">
-          {list.map((member) => (
-            <MemberRow
-              key={member.id}
-              member={member}
-              isCheckedIn={inClubList.includes(member.id)}
-              onCheckIn={handleCheckIn}
-              busy={busyId === member.id}
-            />
-          ))}
-        </ul>
-      )}
-
-      <div className="pt-4 border-t border-[var(--glass-border)]">
-        <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold block mb-3">
-          In the center ({checkedInMembers.length})
-        </span>
-        {checkedInMembers.length === 0 ? (
-          <p className="text-xs text-[var(--text-secondary)] italic text-center py-2">Nobody checked in right now.</p>
+      <div className="px-5 py-3">
+        <p className="label">{searching ? 'Search results' : 'Expected today'}</p>
+        {list.length === 0 ? (
+          <p className="text-sm text-[var(--text-secondary)] py-2">
+            {searching ? 'No matching members.' : 'Nobody else is expected today. Search above for walk-ins.'}
+          </p>
         ) : (
-          <ul className="max-h-48 overflow-y-auto space-y-2 pr-1">
-            {checkedInMembers.map((member) => (
-              <li key={member.id} className="flex items-center justify-between gap-2 p-2 rounded-xl hover:bg-[var(--card-hover)]">
-                <div className="flex items-center gap-3 min-w-0">
-                  <img src={member.image} alt="" className="w-7 h-7 rounded-full object-cover border border-[var(--glass-border)]" />
-                  <span className="text-xs font-medium truncate">{member.name}</span>
-                </div>
-                <button
-                  type="button"
-                  disabled={busyId === member.id}
-                  onClick={() => handleCheckOut(member)}
-                  className="px-2.5 py-1 rounded-lg text-xs uppercase tracking-luxury font-bold text-danger border border-rose-500/30 hover:bg-rose-500/10 disabled:opacity-40 shrink-0"
-                >
-                  Check out
-                </button>
-              </li>
+          <ul className="divide-y divide-[var(--glass-border)] max-h-72 overflow-y-auto">
+            {list.map((member) => (
+              <MemberRow
+                key={member.id}
+                member={member}
+                action={inClubList.includes(member.id)
+                  ? <span className="text-xs font-semibold text-success shrink-0">In center</span>
+                  : (
+                    <button type="button" disabled={busyId === member.id} onClick={() => handleCheckIn(member)} className="btn-primary btn-sm shrink-0">
+                      {busyId === member.id ? <Spinner label="Checking in…" /> : 'Check in'}
+                    </button>
+                  )}
+              />
             ))}
           </ul>
         )}
       </div>
+
+      <div className="px-5 py-3 border-t border-[var(--glass-border)]">
+        <p className="label">In the center now ({checkedInMembers.length})</p>
+        {checkedInMembers.length === 0 ? (
+          <p className="text-sm text-[var(--text-secondary)] py-2">Nobody checked in right now.</p>
+        ) : (
+          <ul className="divide-y divide-[var(--glass-border)] max-h-60 overflow-y-auto">
+            {checkedInMembers.map((member) => (
+              <MemberRow
+                key={member.id}
+                member={member}
+                action={(
+                  <button type="button" disabled={busyId === member.id} onClick={() => handleCheckOut(member)} className="btn-secondary btn-sm shrink-0">
+                    {busyId === member.id ? <Spinner label="Checking out…" /> : 'Check out'}
+                  </button>
+                )}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {recentActivities.length > 0 && (
+        <div className="px-5 py-3 border-t border-[var(--glass-border)]">
+          <p className="label">Recent check-ins</p>
+          <ul className="text-sm divide-y divide-[var(--glass-border)]">
+            {recentActivities.slice(0, 5).map((act) => (
+              <li key={`${act.check_in_id}-${act.timestamp}`} className="flex justify-between gap-3 py-1.5">
+                <span className="truncate">
+                  {act.member_name} <span className="text-[var(--text-secondary)]">{act.action === 'check_in' ? 'checked in' : 'checked out'}</span>
+                </span>
+                <span className="text-xs text-[var(--text-secondary)] shrink-0">{formatWhen(act.timestamp)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 };

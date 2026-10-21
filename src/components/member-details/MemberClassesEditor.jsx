@@ -30,15 +30,15 @@ const MemberClassesEditor = ({ member, scheduleTemplates = [], onSetMemberClasse
   };
 
   return (
-    <div className={compact ? 'space-y-3' : 'glass-card p-6 space-y-4'}>
+    <div className={compact ? 'space-y-3' : 'glass-card space-y-3 p-5'}>
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold">Classes</h4>
+        <h4 className="label">Classes</h4>
         {onSetMemberClasses && !editing && (
           <button
             type="button"
             onClick={startEditing}
             aria-label={`Edit classes for ${member.name}`}
-            className="px-3 py-1 rounded-lg border border-[var(--glass-border)] text-xs uppercase tracking-luxury font-bold hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)] transition-all"
+            className="btn-secondary btn-sm"
           >
             Edit classes
           </button>
@@ -56,33 +56,23 @@ const MemberClassesEditor = ({ member, scheduleTemplates = [], onSetMemberClasse
             label="Weekly class slots"
           />
           {error && <p role="alert" className="text-xs text-danger">{error}</p>}
-          <div className="flex gap-2 justify-end">
-            <button
-              type="button"
-              onClick={() => setEditing(false)}
-              disabled={saving}
-              className="px-4 py-2 rounded-lg border border-[var(--glass-border)] text-xs uppercase tracking-luxury"
-            >
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setEditing(false)} disabled={saving} className="btn-secondary btn-sm">
               Cancel
             </button>
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving}
-              className="px-4 py-2 rounded-lg bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs uppercase tracking-luxury font-bold disabled:opacity-50"
-            >
+            <button type="button" onClick={save} disabled={saving} className="btn-primary btn-sm">
               {saving ? 'Saving…' : 'Save classes'}
             </button>
           </div>
         </div>
       ) : classes.length === 0 ? (
-        <p className="text-xs text-[var(--text-secondary)]">Not enrolled in any class slot.</p>
+        <p className="text-sm text-[var(--text-secondary)]">Not enrolled in any class slot.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-[var(--glass-border)]">
           {classes.map((c) => (
-            <li key={c.id} className="p-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--glass-border)]">
-              <p className="text-xs font-semibold text-[var(--text-primary)]">{c.className}</p>
-              <p className="text-xs text-[var(--text-secondary)]">{c.days} · {formatTimeRange(c.time)}</p>
+            <li key={c.id} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+              <span className="text-sm font-semibold text-[var(--text-primary)]">{c.className}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{c.days} · {formatTimeRange(c.time)}</span>
             </li>
           ))}
         </ul>

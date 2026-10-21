@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiService } from '../../services/api';
+import { Spinner, useFeedback } from '../common/Feedback';
 
 const Check = ({ ok, children }) => (
   <li className="flex items-start gap-2 text-xs">
@@ -26,7 +27,15 @@ const ReminderSettingsCard = ({ onSent }) => {
     };
   }, []);
 
+  const { confirm } = useFeedback();
+
   const sendNow = async () => {
+    const ok = await confirm({
+      title: 'Send renewal reminders now?',
+      message: 'Members whose membership ends soon (and who have not had this reminder yet) will get an email straight away. This also runs automatically every morning.',
+      confirmLabel: 'Send reminders'
+    });
+    if (!ok) return;
     setBusy('send');
     setMessage(null);
     try {
@@ -64,7 +73,7 @@ const ReminderSettingsCard = ({ onSent }) => {
   return (
     <section className="glass-card p-6 border border-[var(--glass-border)] space-y-5" aria-labelledby="reminders-heading">
       <div>
-        <h2 id="reminders-heading" className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-semibold">
+        <h2 id="reminders-heading" className="text-xs text-[var(--text-secondary)] font-semibold">
           Automatic renewal reminders
         </h2>
         <p className="text-sm mt-2">
@@ -96,9 +105,9 @@ const ReminderSettingsCard = ({ onSent }) => {
           type="button"
           onClick={sendNow}
           disabled={busy !== null}
-          className="px-4 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs uppercase tracking-luxury font-bold disabled:opacity-50"
+          className="px-4 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-bold disabled:opacity-50"
         >
-          {busy === 'send' ? 'Sending…' : 'Send due reminders now'}
+          {busy === 'send' ? <Spinner label="Sending…" /> : 'Send due reminders now'}
         </button>
         <form onSubmit={sendTest} className="flex gap-2 flex-grow">
           <input
@@ -113,9 +122,9 @@ const ReminderSettingsCard = ({ onSent }) => {
           <button
             type="submit"
             disabled={busy !== null}
-            className="px-4 py-2 rounded-xl border border-[var(--glass-border)] text-xs uppercase tracking-luxury font-bold disabled:opacity-50"
+            className="px-4 py-2 rounded-xl border border-[var(--glass-border)] text-xs font-bold disabled:opacity-50"
           >
-            {busy === 'test' ? 'Sending…' : 'Send test email'}
+            {busy === 'test' ? <Spinner label="Sending…" /> : 'Send test email'}
           </button>
         </form>
       </div>

@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { daysUntil, formatDate, formatMoney } from '../../utils/membership';
 import { PAYMENT_METHODS, planPrice } from '../enrollment/enrollmentHelpers';
-import { planOptionLabel, planOptionsFor, previewRenewalExpiry } from './memberDetailsHelpers';
-
-const fieldClass =
-  'w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-emerald-500';
+import { fieldClass, planOptionLabel, planOptionsFor, previewRenewalExpiry } from './memberDetailsHelpers';
 
 /**
  * Renew one member, or every trainee of a family (each keeps their own package by
@@ -67,51 +64,44 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="Renew Membership">
-      <div className="w-full max-w-xl glass-card border border-emerald-500/30 rounded-3xl p-6 sm:p-8 space-y-6 text-left max-h-[90vh] overflow-y-auto custom-scrollbar">
-        <div className="flex items-center justify-between pb-4 border-b border-[var(--glass-border)]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4" role="dialog" aria-modal="true" aria-labelledby="renew-title">
+      <div className="glass-card max-h-[90vh] w-full max-w-xl overflow-y-auto p-6 text-left">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-base font-bold text-[var(--text-primary)]">Renew Membership</h3>
-            <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)]">
-              {member.isGroup ? `${member.name} (${people.length} trainees)` : member.name}
+            <h3 id="renew-title" className="text-lg font-semibold text-[var(--text-primary)]">Renew membership</h3>
+            <p className="text-sm text-[var(--text-secondary)]">
+              {member.isGroup ? `${member.name} · ${people.length} trainees` : member.name}
             </p>
           </div>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={() => !submitting && onClose()}
-            className="p-2 rounded-xl glass-card hover:bg-[var(--glass-border)] text-[var(--text-secondary)]"
-          >
+          <button type="button" aria-label="Close" onClick={() => !submitting && onClose()} className="btn-secondary btn-sm">
             ✕
           </button>
         </div>
 
-        <div className="space-y-4">
+        <ul className="mt-4 divide-y divide-[var(--glass-border)] border-y border-[var(--glass-border)]">
           {people.map((person) => {
             const row = rows[person.id];
             const plan = plansById.get(Number(row.planId));
             const remaining = daysUntil(person.expiryDate);
             const newExpiry = previewRenewalExpiry(person, plan, startFrom);
             return (
-              <div key={person.id} className="rounded-2xl border border-[var(--glass-border)] p-4 space-y-3">
-                <div className="flex flex-wrap justify-between gap-2 text-xs">
-                  <span className="font-bold">{person.name}</span>
-                  <span className="text-[var(--text-secondary)]">
+              <li key={person.id} className="space-y-3 py-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-sm font-semibold text-[var(--text-primary)]">{person.name}</span>
+                  <span className="text-xs text-[var(--text-secondary)]">
                     {person.expiryDate
                       ? `Expires ${formatDate(person.expiryDate)} (${remaining < 0 ? `expired ${Math.abs(remaining)} days ago` : `${remaining} days left`})`
                       : 'No expiry recorded'}
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_140px]">
                   <div>
-                    <label htmlFor={`renew-plan-${person.id}`} className="block text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">
-                      Package
-                    </label>
+                    <label htmlFor={`renew-plan-${person.id}`} className="label mb-1">Package</label>
                     <select
                       id={`renew-plan-${person.id}`}
                       value={row.planId}
                       onChange={(e) => changePlan(person.id, e.target.value)}
-                      className={fieldClass}
+                      className={`${fieldClass} select-chevron pr-10`}
                     >
                       <option value="">Choose a package…</option>
                       {planOptionsFor(membershipPlans, person.planId).map((option) => (
@@ -120,9 +110,7 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
                     </select>
                   </div>
                   <div>
-                    <label htmlFor={`renew-amount-${person.id}`} className="block text-xs uppercase tracking-luxury text-[var(--text-secondary)] mb-1">
-                      Amount (AED)
-                    </label>
+                    <label htmlFor={`renew-amount-${person.id}`} className="label mb-1">Amount (AED)</label>
                     <input
                       id={`renew-amount-${person.id}`}
                       type="number"
@@ -134,19 +122,22 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
                     />
                   </div>
                 </div>
-                <p className="text-xs text-success">
-                  New expiry: <strong>{newExpiry ? formatDate(newExpiry, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</strong>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  New expiry:{' '}
+                  <strong className="font-semibold text-success">
+                    {newExpiry ? formatDate(newExpiry, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                  </strong>
                 </p>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
 
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold">New period starts</p>
+        <fieldset className="mt-4">
+          <legend className="label mb-2">New period starts</legend>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { value: 'expiry', title: 'After current expiry', hint: anyActive ? 'Keeps the remaining days' : 'Expired — starts today' },
+              { value: 'expiry', title: 'After current expiry', hint: anyActive ? 'Keeps the remaining days' : 'Expired, so it starts today' },
               { value: 'today', title: 'Today', hint: 'Remaining days are dropped' }
             ].map((option) => (
               <button
@@ -154,52 +145,38 @@ const MemberRenewModal = ({ member, membershipPlans = [], onClose, onConfirm }) 
                 type="button"
                 aria-pressed={startFrom === option.value}
                 onClick={() => setStartFrom(option.value)}
-                className={`p-3 rounded-xl border text-left text-xs transition-all ${
+                className={`rounded-xl border p-3 text-left transition-colors ${
                   startFrom === option.value
-                    ? 'bg-emerald-500/20 border-emerald-500 text-success font-semibold'
-                    : 'bg-[var(--bg-primary)] border-[var(--glass-border)] text-[var(--text-secondary)]'
+                    ? 'border-[var(--text-primary)] bg-[var(--card-hover)]'
+                    : 'border-[var(--glass-border)] hover:bg-[var(--card-hover)]'
                 }`}
               >
-                <span className="block text-xs uppercase tracking-luxury font-bold">{option.title}</span>
-                <span className="text-xs">{option.hint}</span>
+                <span className="block text-sm font-semibold text-[var(--text-primary)]">{option.title}</span>
+                <span className="block text-xs text-[var(--text-secondary)]">{option.hint}</span>
               </button>
             ))}
           </div>
-        </div>
+        </fieldset>
 
-        <div className="grid grid-cols-2 gap-3 items-end">
+        <div className="mt-4 grid grid-cols-2 items-end gap-3">
           <div>
-            <label htmlFor="renew-method" className="block text-xs uppercase tracking-luxury text-[var(--text-secondary)] font-bold mb-1.5">
-              Payment Method
-            </label>
-            <select id="renew-method" value={method} onChange={(e) => setMethod(e.target.value)} className={fieldClass}>
+            <label htmlFor="renew-method" className="label mb-1">Payment method</label>
+            <select id="renew-method" value={method} onChange={(e) => setMethod(e.target.value)} className={`${fieldClass} select-chevron pr-10`}>
               {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </div>
           <div className="text-right">
-            <span className="block text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Total</span>
-            <span className="block text-xl font-black">{formatMoney(total)}</span>
+            <span className="label">Total</span>
+            <span className="block text-xl font-semibold text-[var(--text-primary)]">{formatMoney(total)}</span>
           </div>
         </div>
 
-        {error && <p role="alert" className="text-xs text-danger">{error}</p>}
+        {error && <p role="alert" className="mt-4 text-sm text-danger">{error}</p>}
 
-        <div className="flex gap-3 pt-2">
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={onClose}
-            className="flex-1 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--glass-border)] text-xs uppercase tracking-luxury font-bold disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={confirm}
-            className="flex-1 py-3 rounded-xl text-xs uppercase tracking-luxury font-bold bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white disabled:opacity-50"
-          >
-            {submitting ? 'Renewing…' : 'Confirm & Renew'}
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" disabled={submitting} onClick={onClose} className="btn-secondary">Cancel</button>
+          <button type="button" disabled={submitting} onClick={confirm} className="btn-primary">
+            {submitting ? 'Renewing…' : 'Confirm & renew'}
           </button>
         </div>
       </div>

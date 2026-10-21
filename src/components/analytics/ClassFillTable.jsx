@@ -7,7 +7,7 @@ const ClassFillTable = ({ rows = [] }) => {
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
-          <tr className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] text-left border-b border-[var(--glass-border)]">
+          <tr className="text-xs text-[var(--text-secondary)] text-left border-b border-[var(--glass-border)]">
             <th scope="col" className="py-2 pr-3 font-semibold">Class</th>
             <th scope="col" className="py-2 pr-3 font-semibold">Days</th>
             <th scope="col" className="py-2 pr-3 font-semibold">Time</th>
@@ -35,7 +35,7 @@ const ClassFillTable = ({ rows = [] }) => {
                       <div className={`h-full rounded-full ${nearlyFull ? 'bg-amber-500' : 'bg-[var(--accent-color)]'}`}
                         style={{ width: `${Math.min(ratio, 1) * 100}%` }} />
                     </div>
-                    {nearlyFull && <span className="text-xs uppercase tracking-luxury text-warning font-bold whitespace-nowrap">Nearly full</span>}
+                    {nearlyFull && <span className="text-xs text-warning font-bold whitespace-nowrap">Nearly full</span>}
                   </div>
                 </td>
               </tr>

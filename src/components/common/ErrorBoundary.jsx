@@ -43,14 +43,14 @@ class ErrorBoundary extends Component {
           <button
             type="button"
             onClick={() => this.setState({ error: null })}
-            className="px-4 py-2 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-bold uppercase tracking-luxury"
+            className="px-4 py-2 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-bold"
           >
             Try again
           </button>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="px-4 py-2 rounded-xl border border-[var(--glass-border)] text-xs font-bold uppercase tracking-luxury"
+            className="px-4 py-2 rounded-xl border border-[var(--glass-border)] text-xs font-bold"
           >
             Reload app
           </button>

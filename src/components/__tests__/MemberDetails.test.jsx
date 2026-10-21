@@ -67,8 +67,10 @@ const setup = (overrides = {}, props = {}) => {
 describe('MemberDetails', () => {
   it('renders the member from props without refetching stale data', () => {
     setup();
-    expect(screen.getAllByText('Robert Stark').length).toBeGreaterThan(0);
-    expect(screen.getByText('10 Days Left')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Robert Stark' })).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText('Karate 1 Month - 3 Classes')).toBeInTheDocument();
+    expect(screen.getByText(/10 days left/)).toBeInTheDocument();
     expect(screen.getByText('+971502220000')).toBeInTheDocument();
     expect(screen.getByText('784-1990-1234567-1')).toBeInTheDocument();
     expect(screen.getByText(/8:00 PM – 9:00 PM/)).toBeInTheDocument();
@@ -78,26 +80,29 @@ describe('MemberDetails', () => {
 
   it('calls onBack', () => {
     const { onBack } = setup();
-    fireEvent.click(screen.getAllByRole('button')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Back to members' }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it('freezes until a date, pausing the days left (expiry is not edited by hand)', async () => {
     const { onUpdateMember } = setup();
-    fireEvent.click(screen.getByRole('button', { name: /Freeze Membership/i }));
-    expect(screen.getByText('Hold Configuration')).toBeInTheDocument();
-    expect(screen.getByText(/days? left are paused and continue when the freeze ends/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/Frozen until/), { target: { value: daysFromToday(30) } });
-    fireEvent.click(screen.getByRole('button', { name: /Confirm Hold/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Freeze' }));
+    expect(screen.getByRole('heading', { name: 'Freeze membership' })).toBeInTheDocument();
+    expect(screen.getByText(/10 days left are paused and continue when the freeze ends/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Freeze until/), { target: { value: daysFromToday(30) } });
+    fireEvent.click(screen.getByRole('button', { name: 'Freeze membership' }));
     await waitFor(() => expect(onUpdateMember).toHaveBeenCalledWith(expect.objectContaining({
       id: 101, isFrozen: true, freezeUntil: daysFromToday(30), expiryDate: baseMember.expiryDate
     })));
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Freeze membership' })).not.toBeInTheDocument());
   });
 
   it('shows the paused days of a frozen member and resumes them on unfreeze', async () => {
     const { onUpdateMember } = setup({ isFrozen: true, frozenSince: daysFromToday(-2), expiryDate: daysFromToday(10), freezeUntil: daysFromToday(20) });
+    expect(screen.getByText('Frozen')).toBeInTheDocument();
     expect(screen.getByText(/12 days paused · resumes/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Unfreeze now/i }));
+    expect(screen.getByText('Frozen since')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Unfreeze' }));
     await waitFor(() => expect(onUpdateMember).toHaveBeenCalledWith(expect.objectContaining({ id: 101, isFrozen: false })));
   });
 
@@ -112,21 +117,25 @@ describe('MemberDetails', () => {
       ]
     };
     render(<MemberDetails member={group} membershipPlans={plans} scheduleTemplates={templates} onBack={vi.fn()} onUpdateMember={onUpdateMember} onDeleteMember={vi.fn()} onRenewMember={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: /Freeze Membership/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Confirm Hold/i }));
+    expect(screen.getByText('Family · 2 trainees')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Arya Stark' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Bran Stark' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Freeze' }));
+    expect(screen.getByText(/All 2 trainees are put on hold/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Freeze membership' }));
     await waitFor(() => expect(onUpdateMember).toHaveBeenCalledWith(expect.objectContaining({ isGroup: true, familyId: 4, isFrozen: true })));
   });
 
   it('edit form lists the real packages and keeps untouched age/plan', async () => {
     const { onUpdateMember } = setup();
-    fireEvent.click(screen.getByRole('button', { name: /Edit Profile/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
 
     const planSelect = screen.getByLabelText('Package');
     const options = within(planSelect).getAllByRole('option').map((o) => o.textContent);
     expect(options).toEqual(['No package', 'Karate 1 Month - 3 Classes — 350 AED', 'Karate 3 Months — 900 AED']);
     expect(planSelect).toHaveValue('7');
     expect(screen.queryByText(/Elite Performance|Wellness Pro|Starter Access/)).not.toBeInTheDocument();
-    expect(screen.getByLabelText('WhatsApp Number')).toHaveValue('+971502220000');
+    expect(screen.getByLabelText('WhatsApp number')).toHaveValue('+971502220000');
     expect(screen.getByLabelText('Emirates ID (optional)')).toHaveValue('784-1990-1234567-1');
 
     fireEvent.change(screen.getByPlaceholderText('Full name'), { target: { value: 'Robb Stark' } });
@@ -135,13 +144,12 @@ describe('MemberDetails', () => {
     await waitFor(() => expect(onUpdateMember).toHaveBeenCalledTimes(1));
     const saved = onUpdateMember.mock.calls[0][0];
     expect(saved).toEqual(expect.objectContaining({ id: 101, name: 'Robb Stark', age: 34, planId: 7, expiryDate: baseMember.expiryDate, whatsappNumber: '+971502220000' }));
-    expect(await screen.findByText('Profile saved.')).toBeInTheDocument();
   });
 
   it('shows save errors inline instead of alert()', async () => {
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
     setup({}, { onUpdateMember: vi.fn().mockRejectedValue(new Error('phone already registered')) });
-    fireEvent.click(screen.getByRole('button', { name: /Edit Profile/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
     expect(await screen.findByText('phone already registered')).toBeInTheDocument();
     expect(screen.getByLabelText('Package')).toBeInTheDocument(); // still editing
@@ -151,15 +159,17 @@ describe('MemberDetails', () => {
 
   it('deletes after confirmation', async () => {
     const { onDeleteMember } = setup();
-    fireEvent.click(screen.getByRole('button', { name: /Delete Member/i }));
-    expect(screen.getByText('Confirm Deletion')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    const confirm = screen.getByRole('alertdialog', { name: 'Delete Robert Stark' });
+    expect(within(confirm).getByText('Delete Robert Stark?')).toBeInTheDocument();
+    expect(onDeleteMember).not.toHaveBeenCalled();
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Yes, delete' }));
     await waitFor(() => expect(onDeleteMember).toHaveBeenCalledWith(101));
   });
 
   it('renews with the current package, from expiry, paying the package price by default', async () => {
     const { onRenewMember } = setup();
-    fireEvent.click(screen.getByRole('button', { name: /Renew Membership/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Renew' }));
 
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByLabelText('Package')).toHaveValue('7');
@@ -177,12 +187,12 @@ describe('MemberDetails', () => {
 
   it('renewal can switch package, start today and change payment', async () => {
     const { onRenewMember } = setup();
-    fireEvent.click(screen.getByRole('button', { name: /Renew Membership/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Renew' }));
     const dialog = screen.getByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText('Package'), { target: { value: '8' } });
     expect(within(dialog).getByLabelText('Amount (AED)')).toHaveValue(900);
     fireEvent.change(within(dialog).getByLabelText('Amount (AED)'), { target: { value: '800' } });
-    fireEvent.change(within(dialog).getByLabelText('Payment Method'), { target: { value: 'bank_transfer' } });
+    fireEvent.change(within(dialog).getByLabelText('Payment method'), { target: { value: 'bank_transfer' } });
     fireEvent.click(within(dialog).getByRole('button', { name: /^Today/ }));
     fireEvent.click(within(dialog).getByRole('button', { name: /Confirm & Renew/i }));
     await waitFor(() =>
@@ -192,7 +202,7 @@ describe('MemberDetails', () => {
 
   it('keeps the renewal dialog open with the error when renewal fails', async () => {
     setup({}, { onRenewMember: vi.fn().mockRejectedValue(new Error('Choose a package to renew')) });
-    fireEvent.click(screen.getByRole('button', { name: /Renew Membership/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Renew' }));
     fireEvent.click(screen.getByRole('button', { name: /Confirm & Renew/i }));
     expect(await screen.findByText('Choose a package to renew')).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -205,7 +215,7 @@ describe('MemberDetails', () => {
     const group = { isGroup: true, id: 'family-4', familyId: 4, parentName: 'Ned Stark', parentPhone: '+971500000000', name: "Ned's Family", plan: 'Family', expiryDate: daysFromToday(3), isFrozen: false, trainees: [arya, bran] };
     render(<MemberDetails member={group} membershipPlans={plans} scheduleTemplates={templates} onBack={vi.fn()} onUpdateMember={vi.fn()} onDeleteMember={vi.fn()} onRenewMember={onRenewMember} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Renew Membership/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Renew' }));
     fireEvent.click(screen.getByRole('button', { name: /Confirm & Renew/i }));
     await waitFor(() => expect(onRenewMember).toHaveBeenCalledTimes(1));
     const [target, renewal] = onRenewMember.mock.calls[0];
@@ -222,5 +232,27 @@ describe('MemberDetails', () => {
     fireEvent.click(screen.getByLabelText(/Kids Karate, Tue, Thu, Sat/));
     fireEvent.click(screen.getByRole('button', { name: 'Save classes' }));
     await waitFor(() => expect(onSetMemberClasses).toHaveBeenCalledWith(expect.objectContaining({ id: 101 }), [22, 21]));
+  });
+
+  it('cancelling the delete confirmation keeps the member', () => {
+    const { onDeleteMember } = setup();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(onDeleteMember).not.toHaveBeenCalled();
+  });
+
+  it('deletes one family trainee after confirmation', async () => {
+    const onDeleteMember = vi.fn().mockResolvedValue(undefined);
+    const group = {
+      isGroup: true, id: 'family-4', familyId: 4, parentName: 'Ned Stark', parentPhone: '+971500000000', name: "Ned's Family",
+      plan: 'Family', expiryDate: daysFromToday(3), isFrozen: false,
+      trainees: [{ ...baseMember, id: 1, name: 'Arya Stark', familyId: 4 }, { ...baseMember, id: 2, name: 'Bran Stark', familyId: 4 }]
+    };
+    render(<MemberDetails member={group} membershipPlans={plans} scheduleTemplates={templates} onBack={vi.fn()} onUpdateMember={vi.fn()} onDeleteMember={onDeleteMember} onRenewMember={vi.fn()} />);
+    expect(screen.getByText('Ned Stark')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Bran Stark' }));
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Yes, delete' }));
+    await waitFor(() => expect(onDeleteMember).toHaveBeenCalledWith(2));
   });
 });

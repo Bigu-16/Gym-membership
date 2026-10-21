@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiService } from '../services/api';
+import { Spinner } from './common/Feedback';
 
 const FILTERS = [
   { value: '', label: 'Everything' },
@@ -43,21 +44,21 @@ const ActivityLog = () => {
     <div className="space-y-6">
       <div className="glass-card p-5 flex flex-col sm:flex-row gap-3 justify-between sm:items-center">
         <div>
-          <h2 className="text-lg font-light uppercase tracking-luxury">Activity log</h2>
+          <h2 className="text-lg font-semibold">Activity log</h2>
           <p className="text-xs text-[var(--text-secondary)]">Who registered, renewed, edited or deleted what — newest first.</p>
         </div>
         <div className="flex gap-2">
           <label className="sr-only" htmlFor="activity-filter">Show</label>
-          <select id="activity-filter" value={entityType} onChange={(e) => setEntityType(e.target.value)} className="bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-3 py-2 text-xs">
+          <select id="activity-filter" value={entityType} onChange={(e) => setEntityType(e.target.value)} className="select-chevron bg-[var(--bg-secondary)] border border-[var(--glass-border)] rounded-xl pl-3 pr-10 py-2 text-sm text-[var(--text-primary)]">
             {FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
           </select>
-          <button type="button" onClick={load} className="px-3 py-2 rounded-xl border border-[var(--glass-border)] text-xs uppercase tracking-luxury font-bold">Refresh</button>
+          <button type="button" onClick={load} className="btn-secondary">Refresh</button>
         </div>
       </div>
 
       {error && <p role="alert" className="rounded-xl bg-rose-500/10 p-3 text-xs text-danger">{error}</p>}
       {loading ? (
-        <p className="text-xs text-[var(--text-secondary)]">Loading…</p>
+        <Spinner label="Loading the activity log…" className="text-sm text-[var(--text-secondary)]" />
       ) : rows.length === 0 ? (
         <p className="glass-card p-8 text-center text-sm text-[var(--text-secondary)]">Nothing recorded yet.</p>
       ) : (

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { formatTimeRange } from '../utils/classSessions';
+import { DAY_END_HOUR, DAY_START_HOUR, formatTimeRange } from '../utils/classSessions';
+import { Spinner, useFeedback } from './common/Feedback';
 import TemplateModal from './schedule/TemplateModal';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -28,8 +29,9 @@ const addHour = (value) => {
 };
 
 const formatHour = (value) => {
-  const hour = Number(value.split(':')[0]);
-  return `${hour % 12 || 12}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
+  const [hour, minute = '00'] = value.split(':');
+  const h = Number(hour);
+  return `${h % 12 || 12}:${minute} ${h >= 12 ? 'PM' : 'AM'}`;
 };
 
 const CLASS_COLORS = [
@@ -59,7 +61,6 @@ const TemplateManagement = ({
   const [capacity, setCapacity] = useState(''); // '' = no limit
   const [trainer, setTrainer] = useState('');
   const [pendingDelete, setPendingDelete] = useState(null);
-  const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [initializing, setInitializing] = useState(false);
 
@@ -75,8 +76,9 @@ const TemplateManagement = ({
     ...activeTemplates.map((template) => template.className).filter(Boolean)
   ])), [activeTemplates]);
 
+  // Every hour of the working day (8 AM–9 PM starts), plus any class at an odd time.
   const gridTimes = useMemo(() => Array.from(new Set([
-    '16:00', '17:00', '18:00', '19:00', '20:00',
+    ...Array.from({ length: DAY_END_HOUR - DAY_START_HOUR + 1 }, (_, i) => `${String(DAY_START_HOUR + i).padStart(2, '0')}:00`),
     ...activeTemplates.map((template) => timeTo24(template.time))
   ])).sort(), [activeTemplates]);
 
@@ -98,13 +100,13 @@ const TemplateManagement = ({
     setEditingSchedule(null);
   };
 
-  const run = async (action, successMessage) => {
+  const { confirm } = useFeedback();
+
+  // Success messages come from the data layer; errors stay on this page.
+  const run = async (action) => {
     setError('');
-    setNotice('');
     try {
-      const result = await action();
-      setNotice(successMessage);
-      return result;
+      return await action();
     } catch (actionError) {
       setError(actionError.message || 'Action failed');
       throw actionError;
@@ -112,14 +114,16 @@ const TemplateManagement = ({
   };
 
   const initializePhotoSchedule = async () => {
+    const ok = await confirm({
+      title: 'Load the official timetable?',
+      message: 'Any class from the registration form that is missing here is added. Existing classes are not changed or removed.',
+      confirmLabel: 'Load timetable'
+    });
+    if (!ok) return;
     setInitializing(true);
     setError('');
-    setNotice('');
     try {
-      const result = await onLoadOfficialTimetable();
-      setNotice(result.created
-        ? `${result.created} missing class ${result.created === 1 ? 'slot' : 'slots'} added from the official timetable.`
-        : 'The official timetable is already fully loaded.');
+      await onLoadOfficialTimetable();
     } catch (actionError) {
       setError(actionError.message || 'Unable to load shift schedule');
     } finally {
@@ -131,7 +135,7 @@ const TemplateManagement = ({
     if (!pendingDelete) return;
     try {
       if (onDeleteScheduleTemplate) {
-        await run(() => onDeleteScheduleTemplate(pendingDelete.id), 'Schedule template deleted.');
+        await run(() => onDeleteScheduleTemplate(pendingDelete.id));
       }
       setPendingDelete(null);
     } catch {
@@ -146,9 +150,9 @@ const TemplateManagement = ({
         <div>
           <div className="flex items-center gap-3">
             <div className="w-1.5 h-6 rounded-full bg-orange-500" />
-            <h2 className="text-lg font-light uppercase tracking-luxury">Weekly timetable</h2>
+            <h2 className="text-lg font-semibold">Weekly timetable</h2>
           </div>
-          <p className="text-xs uppercase tracking-wider text-[var(--text-secondary)] mt-1 ml-4.5">
+          <p className="text-xs text-[var(--text-secondary)] mt-1 ml-4.5">
             The repeating Monday–Saturday classes from the registration form
           </p>
         </div>
@@ -157,25 +161,25 @@ const TemplateManagement = ({
             disabled={initializing}
             type="button"
             onClick={initializePhotoSchedule}
-            className="px-4 py-2.5 rounded-xl border border-orange-500/30 text-brand text-xs uppercase tracking-luxury font-bold disabled:opacity-50 hover:bg-orange-500/10 transition-colors"
+            className="px-4 py-2.5 rounded-xl border border-orange-500/30 text-brand text-xs font-bold disabled:opacity-50 hover:bg-orange-500/10 transition-colors"
           >
-            {initializing ? 'Loading…' : 'Load official timetable'}
+            {initializing ? <Spinner label="Loading…" /> : 'Load official timetable'}
           </button>
           <button
             type="button"
             onClick={() => openScheduleEditor()}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--glass-border)] hover:border-[var(--text-primary)] text-xs uppercase tracking-luxury font-bold transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--glass-border)] hover:border-[var(--text-primary)] text-xs font-bold transition-colors"
           >
             <Plus size={14} /> New class
           </button>
         </div>
       </div>
 
-      {notice && <div role="status" className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-success">{notice}</div>}
+      
       {error && <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-danger">{error}</div>}
 
       {/* Timetable Legend */}
-      <div className="flex flex-wrap items-center gap-4 px-2 py-1 text-xs uppercase tracking-luxury">
+      <div className="flex flex-wrap items-center gap-4 px-2 py-1 text-xs">
         <span className="text-[var(--text-secondary)] font-medium">Classes:</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-sky-500" /> Kids Taekwondo</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500" /> Little Kids Karate</span>
@@ -197,13 +201,15 @@ const TemplateManagement = ({
       {/* Monday - Saturday Weekly Shift Grid */}
       <div className="overflow-x-auto rounded-2xl border border-[var(--glass-border)]">
         <div className="min-w-[980px] grid grid-cols-[100px_repeat(6,minmax(140px,1fr))] bg-[var(--glass-bg)]">
-          <div className="p-3 border-b border-r border-[var(--glass-border)] text-xs uppercase tracking-luxury text-[var(--text-secondary)]">Time</div>
+          <div className="p-3 border-b border-r border-[var(--glass-border)] text-xs text-[var(--text-secondary)]">Time</div>
           {DAYS.map((day) => (
-            <div key={day} className="p-3 border-b border-r last:border-r-0 border-[var(--glass-border)] text-center text-xs uppercase tracking-luxury font-bold">
+            <div key={day} className="p-3 border-b border-r last:border-r-0 border-[var(--glass-border)] text-center text-xs font-bold">
               {day}
             </div>
           ))}
-          {gridTimes.flatMap((time) => [
+          {gridTimes.flatMap((time) => {
+            const rowHasClass = activeTemplates.some((template) => timeTo24(template.time) === time);
+            return [
             <div key={`${time}-label`} className="p-3 border-b border-r border-[var(--glass-border)] text-xs font-bold text-[var(--text-secondary)]">
               {formatHour(time)}
             </div>,
@@ -212,7 +218,7 @@ const TemplateManagement = ({
                 (template) => parseDays(template.days).includes(day) && timeTo24(template.time) === time
               );
               return (
-                <div key={`${day}-${time}`} className="min-h-28 p-2 border-b border-r last:border-r-0 border-[var(--glass-border)] space-y-2 group/cell">
+                <div key={`${day}-${time}`} className={`${rowHasClass ? 'min-h-28' : 'min-h-12'} p-2 border-b border-r last:border-r-0 border-[var(--glass-border)] space-y-2 group/cell`}>
                   {matches.map((template) => (
                     <button
                       key={template.id || `${template.className}-${day}-${time}`}
@@ -220,7 +226,7 @@ const TemplateManagement = ({
                       onClick={() => openScheduleEditor(template)}
                       className={`w-full text-left rounded-xl border p-3 transition-colors ${classColor(template.className).card}`}
                     >
-                      <span className="block text-xs font-black uppercase tracking-wide">{template.className}</span>
+                      <span className="block text-xs font-bold">{template.className}</span>
                       <span className="block text-xs mt-1">{formatTimeRange(template.time)}</span>
                       <span className="block text-xs mt-0.5">
                         {template.enrolled || 0} enrolled{template.capacity ? ` / ${template.capacity}` : ''}
@@ -230,21 +236,22 @@ const TemplateManagement = ({
                   <button
                     type="button"
                     onClick={() => openScheduleEditor(null, day, time)}
-                    className="w-full py-2 rounded-lg border border-dashed border-[var(--glass-border)] text-xs uppercase tracking-luxury text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    className="w-full py-2 rounded-lg border border-dashed border-[var(--glass-border)] text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   >
                     + Add
                   </button>
                 </div>
               );
             })
-          ])}
+            ];
+          })}
         </div>
       </div>
 
       {/* Schedule Templates Card Roster */}
       {activeTemplates.length > 0 && (
         <div className="space-y-3 pt-2">
-          <h3 className="text-xs font-bold uppercase tracking-luxury text-[var(--text-secondary)]">
+          <h3 className="text-xs font-bold text-[var(--text-secondary)]">
             Active Schedule Templates ({activeTemplates.length})
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -303,16 +310,16 @@ const TemplateManagement = ({
           setCapacity={setCapacity}
           trainer={trainer}
           setTrainer={setTrainer}
-          onAddTemplate={(template) => run(() => onAddScheduleTemplate && onAddScheduleTemplate(template), 'Schedule template created.')}
-          onUpdateTemplate={(template) => run(() => onUpdateScheduleTemplate && onUpdateScheduleTemplate(template), 'Schedule template updated.')}
+          onAddTemplate={(template) => run(() => onAddScheduleTemplate && onAddScheduleTemplate(template))}
+          onUpdateTemplate={(template) => run(() => onUpdateScheduleTemplate && onUpdateScheduleTemplate(template))}
         />
       )}
 
       {/* Delete Confirmation Modal */}
       {pendingDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60">
           <div className="glass-card max-w-sm w-full p-6 border border-[var(--glass-border)] bg-[var(--bg-secondary)]">
-            <h3 className="text-sm font-bold uppercase tracking-luxury">Delete template?</h3>
+            <h3 className="text-sm font-bold">Delete template?</h3>
             <p className="text-xs text-[var(--text-secondary)] mt-3">
               Delete “{pendingDelete.className}” ({pendingDelete.days} @ {formatTimeRange(pendingDelete.time)})?
               {pendingDelete.enrolled ? ` ${pendingDelete.enrolled} enrolled ${pendingDelete.enrolled === 1 ? 'member' : 'members'} will be removed from this slot; past sessions are kept.` : ''}
@@ -321,14 +328,14 @@ const TemplateManagement = ({
               <button
                 type="button"
                 onClick={confirmDelete}
-                className="flex-1 py-3 rounded-xl bg-danger-solid text-white text-xs uppercase tracking-luxury font-bold"
+                className="flex-1 py-3 rounded-xl bg-danger-solid text-white text-xs font-bold"
               >
                 Delete
               </button>
               <button
                 type="button"
                 onClick={() => setPendingDelete(null)}
-                className="flex-1 py-3 rounded-xl border border-[var(--glass-border)] text-xs uppercase tracking-luxury font-bold"
+                className="flex-1 py-3 rounded-xl border border-[var(--glass-border)] text-xs font-bold"
               >
                 Cancel
               </button>

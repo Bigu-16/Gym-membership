@@ -1,25 +1,17 @@
-import { Users, Activity, CalendarClock } from 'lucide-react';
 import { membershipStatus } from '../../utils/membership';
 
-const Tile = ({ label, value, unit, detail, detailClass = 'text-[var(--text-secondary)]', icon, onClick }) => {
+const Tile = ({ label, value, unit, detail, detailClass = 'text-[var(--text-secondary)]', onClick }) => {
   const Wrapper = onClick ? 'button' : 'div';
   return (
     <Wrapper
       {...(onClick ? { type: 'button', onClick } : {})}
-      className={`glass-card p-6 text-left w-full ${onClick ? 'cursor-pointer hover:border-[var(--text-primary)] group' : ''}`}
+      className={`glass-card px-5 py-4 text-left w-full ${onClick ? 'hover:border-[var(--text-primary)] transition-colors' : ''}`}
     >
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">{label}</span>
-          <span className="text-3xl font-light tracking-wide">
-            {value} <span className="text-xs text-[var(--text-secondary)]">{unit}</span>
-          </span>
-        </div>
-        <div className="p-3 bg-[var(--card-hover)] rounded-xl group-hover:bg-[var(--text-primary)] group-hover:text-[var(--bg-primary)] transition-all duration-300">
-          {icon}
-        </div>
-      </div>
-      <span className={`text-xs uppercase tracking-luxury font-bold ${detailClass}`}>{detail}</span>
+      <p className="label">{label}</p>
+      <p className="text-3xl font-semibold mt-1">
+        {value} <span className="text-sm font-normal text-[var(--text-secondary)]">{unit}</span>
+      </p>
+      <p className={`text-xs mt-1 ${detailClass}`}>{detail}</p>
     </Wrapper>
   );
 };
@@ -36,14 +28,13 @@ const DashboardMetrics = ({ dashboardStats, members = [], inClubCount = 0, today
   const remaining = todayClasses.filter((s) => s.status === 'scheduled' || s.status === 'upcoming').length;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <Tile
         label="Members"
         value={totalRegistered}
         unit="registered"
         detail={`${active} active${expiring ? ` • ${expiring} expiring this week` : ''}`}
         detailClass={expiring ? 'text-warning' : 'text-[var(--text-secondary)]'}
-        icon={<Users size={20} />}
         onClick={() => onTabChange('members')}
       />
       <Tile
@@ -51,7 +42,6 @@ const DashboardMetrics = ({ dashboardStats, members = [], inClubCount = 0, today
         value={inClubCount}
         unit="checked in"
         detail={`${checkInsToday} check-in${checkInsToday === 1 ? '' : 's'} today`}
-        icon={<Activity size={20} />}
       />
       <Tile
         label="Today's classes"
@@ -59,7 +49,6 @@ const DashboardMetrics = ({ dashboardStats, members = [], inClubCount = 0, today
         unit={todayClasses.length === 1 ? 'class' : 'classes'}
         detail={todayClasses.length ? `${running} running • ${completed} done • ${remaining} to go` : 'No classes today'}
         detailClass={running ? 'text-success' : 'text-[var(--text-secondary)]'}
-        icon={<CalendarClock size={20} />}
         onClick={() => onTabChange('schedule')}
       />
     </div>

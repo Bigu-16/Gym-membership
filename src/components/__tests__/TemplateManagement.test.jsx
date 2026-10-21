@@ -81,7 +81,6 @@ describe('TemplateManagement', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Load official timetable/i }));
     await waitFor(() => expect(onLoadOfficialTimetable).toHaveBeenCalledTimes(1));
-    expect(await screen.findByText(/11 missing class slots added/i)).toBeInTheDocument();
   });
 
   it('saves edited times in 24h form with the coach', async () => {

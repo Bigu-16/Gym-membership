@@ -5,7 +5,6 @@ import { useSessionActions } from '../hooks/useSessionActions';
 import DashboardMetrics from './dashboard/DashboardMetrics';
 import LiveSessionsCard from './dashboard/LiveSessionsCard';
 import DeskCheckInCard from './dashboard/DeskCheckInCard';
-import RecentActivityLog from './dashboard/RecentActivityLog';
 
 const DashboardOverview = ({
   members = [],
@@ -19,8 +18,6 @@ const DashboardOverview = ({
 }) => {
   const [dashboardStats, setDashboardStats] = useState(null);
   const [recentActivities, setRecentActivities] = useState([]);
-  const [loadingStats, setLoadingStats] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [now, setNow] = useState(() => new Date());
   const actions = useSessionActions(saveSession);
 
@@ -33,7 +30,6 @@ const DashboardOverview = ({
   useEffect(() => {
     let isMounted = true;
     const fetchDashboardData = async () => {
-      setLoadingStats(true);
       try {
         const [stats, activities] = await Promise.all([
           apiService.getDashboardStats(),
@@ -45,8 +41,6 @@ const DashboardOverview = ({
         }
       } catch (err) {
         console.error('Failed to load dashboard stats/activities:', err);
-      } finally {
-        if (isMounted) setLoadingStats(false);
       }
     };
     fetchDashboardData();
@@ -59,10 +53,6 @@ const DashboardOverview = ({
     () => sessionsForDate(now, { sessions, templates: scheduleTemplates, now }),
     [now, sessions, scheduleTemplates]
   );
-  const displayedClasses = useMemo(
-    () => sessionsForDate(selectedDate, { sessions, templates: scheduleTemplates, now }),
-    [selectedDate, now, sessions, scheduleTemplates]
-  );
 
   // Today's roster: members enrolled in one of today's classes.
   const todayRoster = useMemo(() => todayClasses
@@ -71,7 +61,7 @@ const DashboardOverview = ({
     .filter((group) => group.trainees.length > 0), [todayClasses, members]);
 
   return (
-    <div className="space-y-10 animate-fade-in">
+    <div className="space-y-6">
       <DashboardMetrics
         dashboardStats={dashboardStats}
         members={members}
@@ -80,33 +70,16 @@ const DashboardOverview = ({
         onTabChange={onTabChange}
       />
 
-      {actions.error && (
-        <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-danger flex justify-between gap-3">
-          <span>{actions.error}</span>
-          <button type="button" onClick={actions.clearError} className="font-bold uppercase tracking-luxury">Dismiss</button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <LiveSessionsCard
-          sessions={displayedClasses}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          onTabChange={onTabChange}
-          actions={actions}
-          now={now}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <LiveSessionsCard sessions={todayClasses} onTabChange={onTabChange} actions={actions} />
+        <DeskCheckInCard
+          members={members}
+          todayRoster={todayRoster}
+          inClubList={inClubList}
+          checkIn={checkIn}
+          checkOut={checkOut}
+          recentActivities={recentActivities}
         />
-
-        <div className="space-y-8">
-          <DeskCheckInCard
-            members={members}
-            todayRoster={todayRoster}
-            inClubList={inClubList}
-            checkIn={checkIn}
-            checkOut={checkOut}
-          />
-          <RecentActivityLog recentActivities={recentActivities} loadingStats={loadingStats} />
-        </div>
       </div>
     </div>
   );

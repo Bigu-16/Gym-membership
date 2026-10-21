@@ -63,8 +63,9 @@ describe('EnrollmentForm', () => {
 
     change(screen.getByLabelText('Parent/guardian full name'), 'John Smith');
     change(screen.getByLabelText('Parent/guardian mobile'), '+971 50 123 4567');
-    fireEvent.click(screen.getByRole('button', { name: 'Select Karate, 1 month, 3 classes per week, 350 AED' }));
-    fireEvent.click(screen.getByRole('button', { name: '+ Add sibling' }));
+    // The sibling starts on the same package as the first child.
+    change(within(screen.getByTestId('trainee-card')).getByLabelText('Package'), '2');
+    fireEvent.click(screen.getByRole('button', { name: 'Add sibling' }));
 
     const [first, second] = screen.getAllByTestId('trainee-card');
     fillChild(first, { name: 'Leo Smith', age: '3' });
@@ -99,7 +100,7 @@ describe('EnrollmentForm', () => {
       expect(t.expiryDate).toBeUndefined();
     });
 
-    expect(await screen.findByText('Enrollment Successful')).toBeInTheDocument();
+    expect(await screen.findByText('Enrollment successful')).toBeInTheDocument();
   });
 
   it('registers an adult without a parent and requires their own phone', async () => {
@@ -108,6 +109,7 @@ describe('EnrollmentForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Adult (registers themself)' }));
     expect(screen.queryByLabelText('Parent/guardian full name')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add sibling' })).not.toBeInTheDocument();
 
     const card = screen.getByTestId('trainee-card');
     change(within(card).getByLabelText('Full name'), 'Sara Ali');
@@ -144,13 +146,13 @@ describe('EnrollmentForm', () => {
       termsAccepted: true
     });
 
-    expect(await screen.findByText('Enrollment Successful')).toBeInTheDocument();
+    expect(await screen.findByText('Enrollment successful')).toBeInTheDocument();
     expect(screen.getByText(/not added to Adult Karate/)).toBeInTheDocument();
   });
 
   it('defaults the payment amount to the selected package price', () => {
     renderForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Select Karate, 3 months, 3 classes per week, 900 AED' }));
+    change(screen.getByLabelText('Package'), '3');
     expect(screen.getByLabelText('Amount paid for trainee 1')).toHaveValue(900);
     expect(screen.getByLabelText('Payment method')).toHaveValue('cash');
     expect(screen.getAllByText(/Free uniform/).length).toBeGreaterThan(0);
@@ -162,13 +164,13 @@ describe('EnrollmentForm', () => {
 
     change(screen.getByLabelText('Parent/guardian full name'), 'John Smith');
     change(screen.getByLabelText('Parent/guardian mobile'), '+971501234567');
-    fireEvent.click(screen.getByRole('button', { name: 'Select Taekwondo, 1 month, 3 classes per week, 350 AED' }));
+    change(screen.getByLabelText('Package'), '1');
     fillChild(screen.getByTestId('trainee-card'), { name: 'Leo Smith', age: '8' });
 
     submit();
 
     expect(await screen.findByText('phone: phone number already registered')).toBeInTheDocument();
-    expect(screen.queryByText('Enrollment Successful')).not.toBeInTheDocument();
+    expect(screen.queryByText('Enrollment successful')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Full name')).toHaveValue('Leo Smith');
   });
 
@@ -179,16 +181,16 @@ describe('EnrollmentForm', () => {
 
     change(screen.getByLabelText('Parent/guardian full name'), 'John Smith');
     change(screen.getByLabelText('Parent/guardian mobile'), '+971501234567');
-    fireEvent.click(screen.getByRole('button', { name: 'Select Taekwondo, 1 month, 3 classes per week, 350 AED' }));
+    change(screen.getByLabelText('Package'), '1');
     fillChild(screen.getByTestId('trainee-card'), { name: 'Leo Smith', age: '8' });
     submit();
 
     await waitFor(() => expect(onEnroll).toHaveBeenCalled());
-    expect(screen.queryByText('Enrollment Successful')).not.toBeInTheDocument();
+    expect(screen.queryByText('Enrollment successful')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Saving/ })).toBeDisabled();
 
     resolve({ members: [{ id: 1, name: 'Leo Smith' }], warnings: [] });
-    expect(await screen.findByText('Enrollment Successful')).toBeInTheDocument();
+    expect(await screen.findByText('Enrollment successful')).toBeInTheDocument();
   });
 
   it('requires agreement to the registration-form terms', async () => {
@@ -204,5 +206,16 @@ describe('EnrollmentForm', () => {
   it('only offers group packages (no personal training)', () => {
     renderForm();
     expect(screen.queryByText(/Personal Training/i)).not.toBeInTheDocument();
+  });
+
+  it('clears the form', async () => {
+    renderForm();
+    change(screen.getByLabelText('Parent/guardian full name'), 'John Smith');
+    change(screen.getByLabelText('Full name'), 'Leo Smith');
+    fireEvent.click(screen.getByRole('button', { name: 'Add sibling' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear form' }));
+    await waitFor(() => expect(screen.getByLabelText('Parent/guardian full name')).toHaveValue(''));
+    expect(screen.getAllByTestId('trainee-card')).toHaveLength(1);
+    expect(screen.getByLabelText('Full name')).toHaveValue('');
   });
 });

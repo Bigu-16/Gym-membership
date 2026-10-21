@@ -64,21 +64,39 @@ body {
   font-family: 'Montserrat', sans-serif;
   /* WCAG 1.4.8: comfortable line spacing */
   line-height: 1.5;
-  transition: background-color 0.5s ease, color 0.5s ease;
-  background-image: 
-    radial-gradient(circle at 0% 0%, var(--glass-border) 0%, transparent 50%),
-    radial-gradient(circle at 100% 100%, var(--glass-border) 0%, transparent 50%);
 }
 
 @layer components {
+  /* Minimal surfaces: one flat card style used everywhere. */
   .glass-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: var(--bg-secondary);
     border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
-    border-radius: 24px;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 16px;
+  }
+
+  /* Three button styles used across the app. */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90;
+  }
+  .btn-secondary {
+    @apply btn border border-[var(--glass-border)] text-[var(--text-primary)] hover:bg-[var(--card-hover)];
+  }
+  .btn-danger {
+    @apply btn bg-danger-solid text-white hover:opacity-90;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  /* Small grey label above a value or a group of fields. */
+  .label {
+    @apply block text-xs font-semibold text-[var(--text-secondary)];
+  }
+  .section-title {
+    @apply text-base font-semibold text-[var(--text-primary)];
   }
 }
 
@@ -122,8 +140,6 @@ body {
   background: var(--bg-secondary) !important;
   border: 1px solid var(--glass-border) !important;
   border-radius: 16px !important;
-  box-shadow: var(--glass-shadow) !important;
-  backdrop-filter: blur(16px) !important;
 }
 
 .luxury-phone-input .react-international-phone-country-selector-dropdown__list-item {
@@ -166,8 +182,6 @@ input::-webkit-calendar-picker-indicator {
   border-color: var(--text-primary);
   background: var(--text-primary);
   color: var(--bg-primary);
-  transform: scale(1.02);
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2);
 }
 
 .training-type-btn:not(.active):hover {
@@ -186,9 +200,9 @@ input::-webkit-calendar-picker-indicator {
 
 /* Family Container Grouping */
 .family-group {
-  @apply p-5 sm:p-8 rounded-[24px] sm:rounded-[32px] border transition-all duration-500 space-y-6 sm:space-y-8;
+  @apply p-5 sm:p-6 rounded-2xl border space-y-6;
   border-color: var(--glass-border);
-  background: linear-gradient(135deg, var(--glass-bg), transparent);
+  background: var(--bg-secondary);
 }
 
 .family-group:hover {
@@ -196,7 +210,7 @@ input::-webkit-calendar-picker-indicator {
 }
 
 .family-badge {
-  @apply absolute -top-3 left-6 sm:left-8 px-3 py-1 sm:px-4 rounded-full text-[8px] sm:text-[9px] uppercase tracking-luxury font-bold;
+  @apply absolute -top-3 left-6 px-3 py-1 rounded-full text-xs font-semibold;
   background: var(--text-primary);
   color: var(--bg-primary);
 }

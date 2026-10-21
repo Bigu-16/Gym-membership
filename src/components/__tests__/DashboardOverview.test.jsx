@@ -58,11 +58,11 @@ describe('DashboardOverview', () => {
     renderDashboard();
 
     await waitFor(() => expect(screen.getByText('3 check-ins today')).toBeInTheDocument());
-    const classes = screen.getAllByRole('article');
+    const classes = screen.getAllByRole('listitem').filter((li) => li.getAttribute('aria-label'));
     expect(classes).toHaveLength(2);
     expect(within(classes[0]).getByText('Kids Taekwondo')).toBeInTheDocument();
     expect(within(classes[0]).getByText(/Coach Nasser/)).toBeInTheDocument();
-    expect(within(classes[0]).getByText('1/15 enrolled')).toBeInTheDocument();
+    expect(within(classes[0]).getByText(/1\/15 enrolled/)).toBeInTheDocument();
     expect(screen.queryByText(/Adult Karate/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\+8%/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Capacity reached/i)).not.toBeInTheDocument();
@@ -70,7 +70,7 @@ describe('DashboardOverview', () => {
 
   it('starting a class saves that exact class slot and date', async () => {
     const props = renderDashboard();
-    const [first] = screen.getAllByRole('article');
+    const [first] = screen.getAllByRole('listitem').filter((li) => li.getAttribute('aria-label'));
 
     fireEvent.click(within(first).getByRole('button', { name: 'Start class' }));
 
@@ -80,31 +80,11 @@ describe('DashboardOverview', () => {
     expect(changes).toEqual({ status: 'in-progress' });
   });
 
-  it('checklist starts empty and edits go to the backend, with confirmation before removing', async () => {
-    const recorded = {
-      id: 501, templateId: 1, dateKey: '2026-10-14', title: 'Kids Taekwondo', isProjected: false, status: 'upcoming',
-      start: new Date(2026, 9, 14, 16), end: new Date(2026, 9, 14, 17),
-      checklist: [{ id: 1, text: 'Belt test sign-up', checked: false }]
-    };
-    const props = renderDashboard({ sessions: [recorded] });
-    const [first, second] = screen.getAllByRole('article');
-
-    // Nothing is pre-filled on classes that have not been recorded.
-    expect(within(second).getByText(/No checklist items/)).toBeInTheDocument();
-    fireEvent.change(within(second).getByLabelText('New checklist item'), { target: { value: 'Bring pads' } });
-    fireEvent.click(within(second).getByRole('button', { name: 'Add' }));
-    await waitFor(() => expect(props.saveSession).toHaveBeenCalledTimes(1));
-    expect(props.saveSession.mock.calls[0][1].checklist).toEqual([{ id: 1, text: 'Bring pads', checked: false }]);
-
-    fireEvent.click(within(first).getByLabelText('Belt test sign-up'));
-    await waitFor(() => expect(props.saveSession).toHaveBeenCalledTimes(2));
-    expect(props.saveSession.mock.calls[1][1].checklist[0].checked).toBe(true);
-
-    fireEvent.click(within(first).getByRole('button', { name: 'Remove Belt test sign-up' }));
-    expect(props.saveSession).toHaveBeenCalledTimes(2);
-    fireEvent.click(within(first).getByRole('button', { name: 'Confirm removing Belt test sign-up' }));
-    await waitFor(() => expect(props.saveSession).toHaveBeenCalledTimes(3));
-    expect(props.saveSession.mock.calls[2][1].checklist).toEqual([]);
+  it('keeps the overview compact: no checklist editors, and a link to the full schedule', async () => {
+    const props = renderDashboard();
+    expect(screen.queryByLabelText('New checklist item')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open schedule' }));
+    expect(props.onTabChange).toHaveBeenCalledWith('schedule');
   });
 
   it("lists members enrolled in today's classes and checks them in", async () => {

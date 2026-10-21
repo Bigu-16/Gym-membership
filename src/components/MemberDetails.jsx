@@ -1,6 +1,9 @@
 import { useState } from 'react';
+import { useFeedback } from './common/Feedback';
+import { freezeSummary } from '../utils/membership';
 import MemberHeader from './member-details/MemberHeader';
-import MemberProfileCard from './member-details/MemberProfileCard';
+import FreezePanel from './member-details/FreezePanel';
+import ConfirmDelete from './member-details/ConfirmDelete';
 import MemberEditForm from './member-details/MemberEditForm';
 import FamilyGroupSection from './member-details/FamilyGroupSection';
 import IndividualMemberInfo from './member-details/IndividualMemberInfo';
@@ -26,16 +29,16 @@ const MemberDetails = ({
   const [editErrors, setEditErrors] = useState([]);
   const [showDeleteConfirmId, setShowDeleteConfirmId] = useState(null);
   const [showRenewModal, setShowRenewModal] = useState(false);
+  const [showFreezePanel, setShowFreezePanel] = useState(false);
   const [busy, setBusy] = useState(false);
+  const { confirm } = useFeedback();
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
 
   if (!member) return null;
 
   const run = async (action, failureMessage) => {
     setBusy(true);
     setError('');
-    setNotice('');
     try {
       await action();
       return true;
@@ -48,11 +51,21 @@ const MemberDetails = ({
   };
 
   // Freezing pauses the remaining days; the server gives them back when the freeze ends.
-  const handleFreeze = (until = null) =>
-    run(() => onUpdateMember({ ...member, isFrozen: true, freezeUntil: until || null }), 'Could not freeze membership');
+  const handleFreeze = async (until = null) => {
+    const ok = await run(() => onUpdateMember({ ...member, isFrozen: true, freezeUntil: until || null }), 'Could not freeze membership');
+    if (ok) setShowFreezePanel(false);
+  };
 
-  const handleUnfreeze = () =>
-    run(() => onUpdateMember({ ...member, isFrozen: false }), 'Could not unfreeze membership');
+  const handleUnfreeze = async () => {
+    const ok = await confirm({
+      title: `Unfreeze ${member.name} now?`,
+      message: member.isGroup
+        ? 'Every trainee in this family becomes active again; their paused days continue from today.'
+        : `${freezeSummary(member)}. The paused days continue from today.`,
+      confirmLabel: 'Unfreeze now'
+    });
+    if (ok) run(() => onUpdateMember({ ...member, isFrozen: false }), 'Could not unfreeze membership');
+  };
 
   const handleDeleteConfirm = (memberId) =>
     run(async () => {
@@ -83,7 +96,6 @@ const MemberDetails = ({
     try {
       await onUpdateMember(applyMemberForm(editing, editForm));
       cancelEditing();
-      setNotice('Profile saved.');
     } catch (err) {
       setEditErrors([err?.message || 'Could not save changes.']);
     } finally {
@@ -95,68 +107,70 @@ const MemberDetails = ({
     // Errors propagate to the modal, which shows them inline.
     await onRenewMember(member, renewal);
     setShowRenewModal(false);
-    setNotice('Membership renewed.');
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <MemberHeader onBack={onBack} />
+    <div>
+      <MemberHeader
+        member={member}
+        busy={busy}
+        editing={Boolean(editing)}
+        onBack={onBack}
+        onRenew={() => setShowRenewModal(true)}
+        onFreeze={() => setShowFreezePanel((open) => !open)}
+        onUnfreeze={handleUnfreeze}
+        onEdit={() => startEditing(member)}
+        onDelete={() => setShowDeleteConfirmId(member.id)}
+      />
 
-      {(error || notice) && (
-        <div
-          role={error ? 'alert' : 'status'}
-          className={`mb-6 rounded-xl border p-3 text-xs ${
-            error ? 'border-rose-500/40 bg-rose-500/10 text-danger' : 'border-emerald-500/40 bg-emerald-500/10 text-success'
-          }`}
-        >
-          {error || notice}
+      {error && (
+        <div role="alert" className="rounded-xl bg-rose-500/10 p-3 text-sm text-danger">{error}</div>
+      )}
+
+      {showFreezePanel && !member.isFrozen && (
+        <FreezePanel member={member} busy={busy} onCancel={() => setShowFreezePanel(false)} onConfirm={handleFreeze} />
+      )}
+
+      {!member.isGroup && showDeleteConfirmId === member.id && (
+        <div className="mb-6">
+          <ConfirmDelete
+            name={member.name}
+            busy={busy}
+            onCancel={() => setShowDeleteConfirmId(null)}
+            onConfirm={() => handleDeleteConfirm(member.id)}
+          />
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <MemberProfileCard
-          member={member}
+      {editing ? (
+        <MemberEditForm
+          editForm={editForm}
+          setEditForm={setEditForm}
+          planOptions={planOptionsFor(membershipPlans, editing.planId)}
+          isChild={Boolean(editing.parentPhone || editing.familyId)}
+          onCancel={cancelEditing}
+          onSave={handleSaveEdit}
+          saving={busy}
+          errors={editErrors}
+        />
+      ) : member.isGroup ? (
+        <FamilyGroupSection
+          group={member}
           busy={busy}
-          onRenew={() => setShowRenewModal(true)}
-          onFreeze={handleFreeze}
-          onUnfreeze={handleUnfreeze}
           showDeleteConfirmId={showDeleteConfirmId}
           setShowDeleteConfirmId={setShowDeleteConfirmId}
           handleDeleteConfirm={handleDeleteConfirm}
           startEditing={startEditing}
+          scheduleTemplates={scheduleTemplates}
+          onSetMemberClasses={onSetMemberClasses}
         />
-
-        <div className="lg:col-span-2 space-y-6">
-          {editing ? (
-            <MemberEditForm
-              editForm={editForm}
-              setEditForm={setEditForm}
-              planOptions={planOptionsFor(membershipPlans, editing.planId)}
-              isChild={Boolean(editing.parentPhone || editing.familyId)}
-              onCancel={cancelEditing}
-              onSave={handleSaveEdit}
-              saving={busy}
-              errors={editErrors}
-            />
-          ) : member.isGroup ? (
-            <FamilyGroupSection
-              group={member}
-              showDeleteConfirmId={showDeleteConfirmId}
-              setShowDeleteConfirmId={setShowDeleteConfirmId}
-              handleDeleteConfirm={handleDeleteConfirm}
-              startEditing={startEditing}
-              scheduleTemplates={scheduleTemplates}
-              onSetMemberClasses={onSetMemberClasses}
-            />
-          ) : (
-            <IndividualMemberInfo
-              member={member}
-              scheduleTemplates={scheduleTemplates}
-              onSetMemberClasses={onSetMemberClasses}
-            />
-          )}
-        </div>
-      </div>
+      ) : (
+        <IndividualMemberInfo
+          member={member}
+          scheduleTemplates={scheduleTemplates}
+          onSetMemberClasses={onSetMemberClasses}
+        />
+      )}
 
       {showRenewModal && (
         <MemberRenewModal

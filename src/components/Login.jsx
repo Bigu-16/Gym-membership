@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiService, API_BASE_URL } from '../services/api';
 
 const Login = ({ onLoginSuccess, notice = '' }) => {
@@ -6,6 +6,17 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [slow, setSlow] = useState(false);
+
+  // Free hosting puts the server to sleep; explain a slow first sign-in instead of looking stuck.
+  useEffect(() => {
+    if (!loading) return undefined;
+    const timer = setTimeout(() => setSlow(true), 5000);
+    return () => {
+      clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [loading]);
   const [isEditingUrl, setIsEditingUrl] = useState(false);
   const [apiUrl, setApiUrl] = useState(API_BASE_URL);
   const [tempUrl, setTempUrl] = useState(API_BASE_URL);
@@ -53,15 +64,15 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none"></div>
 
-      <div className="w-full max-w-md glass-card p-8 sm:p-10 border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-md relative z-10 animate-in fade-in zoom-in-95 duration-500">
+      <div className="w-full max-w-md glass-card p-8 sm:p-10 border border-white/10 rounded-2xl relative z-10">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl overflow-hidden flex items-center justify-center bg-[#0d0f14] border border-white/15 shadow-xl">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl overflow-hidden flex items-center justify-center bg-[#0d0f14] border border-white/15">
             <img src="/nt-logo.svg" alt="N & T Taekwondo & Karate Center logo" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-3xl font-light uppercase tracking-luxury text-white mb-2">
+          <h1 className="text-3xl font-semibold text-white mb-2">
             N & T <span className="font-bold text-orange-300">Center</span>
           </h1>
-          <p className="text-xs uppercase tracking-luxury text-slate-300">
+          <p className="text-xs text-slate-300">
             Taekwondo & Karate Management Portal
           </p>
         </div>
@@ -80,7 +91,7 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
         )}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-xs uppercase tracking-luxury text-slate-300 block ml-1">
+            <label className="text-xs text-slate-300 block ml-1">
               Email Address
             </label>
             <input
@@ -94,7 +105,7 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs uppercase tracking-luxury text-slate-300 block ml-1">
+            <label className="text-xs text-slate-300 block ml-1">
               Password
             </label>
             <input
@@ -110,14 +121,22 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-2xl bg-white text-black text-xs font-bold uppercase tracking-luxury hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 mt-4 shadow-lg shadow-white/5"
+            className="w-full py-3.5 rounded-2xl bg-white text-black text-xs font-bold transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 mt-4"
           >
             {loading ? (
-              <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+              <>
+                <span aria-hidden="true" className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                Signing in…
+              </>
             ) : (
               'Sign In'
             )}
           </button>
+          {slow && (
+            <p role="status" className="text-xs text-center text-slate-300">
+              Waking up the server… the first sign-in of the day can take up to a minute.
+            </p>
+          )}
         </form>
 
         <div className="mt-8 pt-6 border-t border-white/5 text-center flex flex-col items-center gap-4">
@@ -125,7 +144,7 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
             <button
               onClick={useDefaultCredentials}
               type="button"
-              className="text-xs uppercase tracking-luxury text-emerald-300 hover:text-emerald-200 transition-colors border border-emerald-500/20 bg-emerald-500/5 px-4 py-2 rounded-full hover:scale-105"
+              className="text-xs text-emerald-300 hover:text-emerald-200 transition-colors border border-emerald-500/20 bg-emerald-500/5 px-4 py-2 rounded-full"
             >
               Use Demo Admin Credentials
             </button>
@@ -143,8 +162,8 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
                   required
                 />
                 <div className="flex gap-1.5">
-                  <button type="submit" className="text-emerald-300 hover:underline font-bold uppercase tracking-wider text-xs">Save</button>
-                  <button type="button" onClick={() => setIsEditingUrl(false)} className="text-slate-200 hover:underline font-bold uppercase tracking-wider text-xs">Cancel</button>
+                  <button type="submit" className="text-emerald-300 hover:underline font-bold text-xs">Save</button>
+                  <button type="button" onClick={() => setIsEditingUrl(false)} className="text-slate-200 hover:underline font-bold text-xs">Cancel</button>
                 </div>
               </form>
             ) : (
@@ -156,7 +175,7 @@ const Login = ({ onLoginSuccess, notice = '' }) => {
                     setTempUrl(apiUrl);
                     setIsEditingUrl(true);
                   }}
-                  className="text-emerald-300 hover:text-emerald-200 transition-colors underline text-xs uppercase tracking-wider font-bold"
+                  className="text-emerald-300 hover:text-emerald-200 transition-colors underline text-xs font-bold"
                 >
                   Configure
                 </button>

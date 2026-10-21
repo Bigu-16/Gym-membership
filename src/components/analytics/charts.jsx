@@ -4,23 +4,23 @@ const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 
 export const Card = ({ title, subtitle, children, className = '' }) => (
   <section className={`glass-card p-6 border border-[var(--glass-border)] ${className}`}>
-    <h3 className="text-sm uppercase tracking-luxury text-[var(--text-secondary)] font-semibold leading-none mb-1">{title}</h3>
-    {subtitle && <p className="text-xs text-[var(--text-secondary)] uppercase tracking-widest mb-5">{subtitle}</p>}
+    <h3 className="text-sm text-[var(--text-secondary)] font-semibold leading-none mb-1">{title}</h3>
+    {subtitle && <p className="text-xs text-[var(--text-secondary)] mb-5">{subtitle}</p>}
     {!subtitle && <div className="mb-5" />}
     {children}
   </section>
 );
 
 export const EmptyState = ({ children }) => (
-  <div className="py-8 text-center text-xs text-[var(--text-secondary)] uppercase tracking-luxury">{children}</div>
+  <div className="py-8 text-center text-xs text-[var(--text-secondary)]">{children}</div>
 );
 
 export const KpiTile = ({ label, value, detail, tone }) => (
   <div className="glass-card p-6">
-    <span className="text-xs uppercase tracking-luxury text-[var(--text-secondary)] block mb-1">{label}</span>
-    <span className="text-3xl font-light text-[var(--text-primary)]" data-testid={`kpi-${label}`}>{value}</span>
+    <span className="text-xs text-[var(--text-secondary)] block mb-1">{label}</span>
+    <span className="text-3xl font-semibold text-[var(--text-primary)]" data-testid={`kpi-${label}`}>{value}</span>
     {detail && (
-      <div className={`mt-3 text-xs font-medium uppercase tracking-wide ${tone || 'text-[var(--text-secondary)]'}`}>{detail}</div>
+      <div className={`mt-3 text-xs font-medium ${tone || 'text-[var(--text-secondary)]'}`}>{detail}</div>
     )}
   </div>
 );
@@ -44,7 +44,7 @@ export const ColumnChart = ({ data, height = 160, labelEvery = 1, ariaLabel }) =
           );
         })}
       </svg>
-      <div className="flex mt-2 text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+      <div className="flex mt-2 text-xs text-[var(--text-secondary)]">
         {data.map((d, i) => (
           <span key={d.key} className="flex-1 text-center truncate">
             {i % labelEvery === 0 || i === data.length - 1 ? d.label : ''}

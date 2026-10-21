@@ -1,101 +1,41 @@
-const AppHeader = ({
-  activeTab,
-  theme,
-  toggleTheme,
-  handleLogout,
-  onOpenAccount,
-  currentUser,
-  totalMembersCount = 0,
-  activeNowCount = 0
-}) => {
-  return (
-    <header className="mb-8 lg:mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-      <div className="w-full md:w-auto">
-        <div className="flex items-center gap-4 mb-4 justify-between md:justify-start">
-          <h1 className="text-2xl sm:text-3xl md:text-5xl font-light tracking-luxury uppercase mb-0">
-            {activeTab === 'dashboard' ? (
-              <>Club <span className="font-bold">Overview</span></>
-            ) : activeTab === 'members' ? (
-              <>Member <span className="font-bold">Directory</span></>
-            ) : activeTab === 'enrollment' ? (
-              <>New <span className="font-bold">Registration</span></>
-            ) : activeTab === 'schedule' ? (
-              <>Class <span className="font-bold">Schedule</span></>
-            ) : activeTab === 'packages' ? (
-              <>Membership <span className="font-bold">Packages</span></>
-            ) : activeTab === 'activity' ? (
-              <>Activity <span className="font-bold">Log</span></>
-            ) : activeTab === 'notifications' ? (
-              <>Member <span className="font-bold">Messages</span></>
-            ) : activeTab === 'analytics' ? (
-              <>Business <span className="font-bold">Analytics</span></>
-            ) : (
-              <>{activeTab} <span className="font-bold">Panel</span></>
-            )}
-          </h1>
-          <div className="flex items-center gap-2">
-            <button 
-              type="button"
-              onClick={toggleTheme}
-              className="glass-card p-2.5 sm:p-3 rounded-full hover:scale-110 transition-transform active:scale-95"
-              aria-label="Toggle Theme"
-            >
-              {theme === 'dark' ? (
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onOpenAccount}
-              className="glass-card p-2.5 sm:p-3 rounded-full hover:scale-110 transition-transform active:scale-95"
-              aria-label="Account and password"
-              title="Account and password"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </button>
-            <button 
-              type="button"
-              onClick={handleLogout}
-              className="glass-card p-2.5 sm:p-3 rounded-full hover:scale-110 hover:text-danger transition-all active:scale-95 text-danger border border-rose-500/10"
-              aria-label="Sign Out"
-              title="Sign Out"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        <p className="text-[var(--text-secondary)] text-xs sm:text-sm tracking-wide uppercase">
-          Managing <span className="text-brand font-semibold">N & T Taekwondo & Karate Center</span>
-          {currentUser && (
-            <span className="block text-xs mt-1 normal-case text-success font-medium">
-              Logged in as <span className="font-bold">{currentUser.full_name}</span> ({currentUser.role})
-            </span>
-          )}
-        </p>
-      </div>
-      
-      <div className="grid grid-cols-2 md:flex gap-4 w-full md:w-auto">
-        <div className="glass-card px-4 py-2.5 sm:px-6 sm:py-3 text-center md:text-left">
-          <span className="text-xs sm:text-xs uppercase tracking-luxury text-[var(--text-secondary)] block mb-0.5">Total Members</span>
-          <span className="text-xl sm:text-2xl font-semibold">{totalMembersCount}</span>
-        </div>
-        <div className="glass-card px-4 py-2.5 sm:px-6 sm:py-3 text-center md:text-left">
-          <span className="text-xs sm:text-xs uppercase tracking-luxury text-[var(--text-secondary)] block mb-0.5">In Center</span>
-          <span className="text-xl sm:text-2xl font-semibold text-success">{activeNowCount}</span>
-        </div>
-      </div>
-    </header>
-  );
+import { LogOut, Moon, Sun, UserRound } from 'lucide-react';
+import { Spinner } from '../common/Feedback';
+
+const TITLES = {
+  dashboard: 'Overview',
+  members: 'Members',
+  enrollment: 'New registration',
+  schedule: 'Schedule',
+  packages: 'Packages',
+  analytics: 'Analytics',
+  notifications: 'Messages',
+  activity: 'Activity log'
 };
+
+const iconButton = 'p-2.5 rounded-xl border border-[var(--glass-border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover)] transition-colors';
+
+/** One slim row: page title on the left, theme / account / sign out on the right. */
+const AppHeader = ({ activeTab, theme, toggleTheme, handleLogout, onOpenAccount, currentUser, refreshing = false }) => (
+  <header className="mb-6 flex items-center justify-between gap-4">
+    <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{TITLES[activeTab] || 'N & T Center'}</h1>
+    <div className="flex items-center gap-2">
+      {refreshing && <Spinner label="Updating…" className="text-xs text-[var(--text-secondary)] mr-2" />}
+      {currentUser && (
+        <span className="hidden md:block text-xs text-[var(--text-secondary)] mr-2">
+          {currentUser.full_name} · {currentUser.role}
+        </span>
+      )}
+      <button type="button" onClick={toggleTheme} className={iconButton} aria-label="Toggle Theme" title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
+        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
+      <button type="button" onClick={onOpenAccount} className={iconButton} aria-label="Account and password" title="Account and password">
+        <UserRound size={18} />
+      </button>
+      <button type="button" onClick={handleLogout} className={iconButton} aria-label="Sign Out" title="Sign out">
+        <LogOut size={18} />
+      </button>
+    </div>
+  </header>
+);
 
 export default AppHeader;

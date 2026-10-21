@@ -301,10 +301,6 @@ export const apiService = {
     return data.map(mapMemberToFrontend);
   },
 
-  async getMember(memberId) {
-    const data = await request(`/members/${memberId}`, { fallbackError: 'Failed to load member details' });
-    return mapMemberToFrontend(data);
-  },
 
   async getFamilies(parentPhone = null) {
     const data = await request('/members/families', {
@@ -410,9 +406,6 @@ export const apiService = {
   },
 
   // Payments API
-  async getPayments(params = {}) {
-    return request('/payments/', { query: params, fallbackError: 'Failed to load payments' });
-  },
 
   // Dashboard API
   async getActiveCheckIns() {
@@ -564,9 +557,6 @@ export const apiService = {
     return request('/plans/', { method: 'POST', body: planData, fallbackError: 'Failed to create plan' });
   },
 
-  async getPlan(planId) {
-    return request(`/plans/${planId}`, { fallbackError: 'Failed to load plan' });
-  },
 
   async updatePlan(planId, planData) {
     return request(`/plans/${planId}`, { method: 'PATCH', body: planData, fallbackError: 'Failed to update plan' });
@@ -587,9 +577,6 @@ export const apiService = {
     return request('/analytics/summary', { fallbackError: 'Failed to load analytics' });
   },
 
-  async getNotificationAnalytics() {
-    return request('/analytics/notifications', { fallbackError: 'Failed to load notification analytics' });
-  },
 
   async getReminderSettings() {
     return request('/notifications/reminder-settings', { fallbackError: 'Failed to load reminder settings' });
@@ -610,17 +597,8 @@ export const apiService = {
     return request('/notifications/jobs', { fallbackError: 'Failed to load notification jobs' });
   },
 
-  async triggerMembershipExpiryReminders() {
-    return request('/tasks/membership-expiry-reminders', { method: 'POST', fallbackError: 'Failed to trigger expiry reminders' });
-  },
 
-  async triggerProcessNotificationJobs() {
-    return request('/tasks/process-notification-jobs', { method: 'POST', fallbackError: 'Failed to trigger processing notification jobs' });
-  },
 
-  async triggerSeedDemoData() {
-    return request('/tasks/seed-demo-data', { method: 'POST', fallbackError: 'Failed to seed demo data' });
-  }
 };
 
 // Re-exported for components that format class times.
