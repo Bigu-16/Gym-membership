@@ -8,6 +8,18 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Theme-aware, contrast-checked colours (see src/index.css).
+        success: 'var(--success)',
+        warning: 'var(--warning)',
+        danger: 'var(--danger)',
+        info: 'var(--info)',
+        violet: 'var(--violet)',
+        brand: 'var(--brand)',
+        'success-solid': 'var(--success-solid)',
+        'warning-solid': 'var(--warning-solid)',
+        'danger-solid': 'var(--danger-solid)',
+        'info-solid': 'var(--info-solid)',
+        'brand-solid': 'var(--brand-solid)',
         luxury: {
           dark: '#0a0a0a',
           slate: '#1a1d23',
