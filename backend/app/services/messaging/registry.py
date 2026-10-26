@@ -27,7 +27,8 @@ def channel_available(channel: NotificationChannel) -> bool:
 def recipient_for(member: Member, channel: NotificationChannel) -> str | None:
     """The address/identifier a member is reachable at on a given channel, if any."""
     if channel is NotificationChannel.whatsapp:
-        return member.phone
+        # Children are reached on the parent/guardian's number.
+        return member.whatsapp_number or member.phone or member.parent_phone
     if channel is NotificationChannel.telegram:
         return member.telegram_chat_id
     if channel is NotificationChannel.email:

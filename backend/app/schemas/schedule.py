@@ -12,6 +12,9 @@ TIME_PATTERN = (
 )
 
 
+CLOCK_PATTERN = r"^(?:[01]\d|2[0-3]):[0-5]\d$"
+
+
 def validate_days(days: list[str]) -> list[str]:
     normalized = [sanitize_plain_text(day).capitalize() for day in days]
     if any(day.lower() not in VALID_WEEKDAYS for day in normalized):
@@ -26,12 +29,20 @@ class ScheduleTemplateCreate(BaseModel):
     type: ScheduleType
     days: list[str] = Field(min_length=1)
     time: str = Field(pattern=TIME_PATTERN)
-    capacity: int = Field(ge=1, le=10000)
+    capacity: int | None = Field(default=None, ge=1, le=10000)
+    trainer_name: str | None = Field(default=None, max_length=120)
 
     @field_validator("title", mode="before")
     @classmethod
     def sanitize_title(cls, value: str) -> str:
         return sanitize_plain_text(value)
+
+    @field_validator("trainer_name", mode="before")
+    @classmethod
+    def sanitize_trainer(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return sanitize_plain_text(value) or None
 
     @field_validator("days", mode="before")
     @classmethod
@@ -48,11 +59,19 @@ class ScheduleTemplateUpdate(BaseModel):
         pattern=TIME_PATTERN,
     )
     capacity: int | None = Field(default=None, ge=1, le=10000)
+    trainer_name: str | None = Field(default=None, max_length=120)
 
     @field_validator("title", mode="before")
     @classmethod
     def sanitize_title(cls, value: str | None) -> str | None:
         return sanitize_plain_text(value) if value is not None else None
+
+    @field_validator("trainer_name", mode="before")
+    @classmethod
+    def sanitize_trainer(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return sanitize_plain_text(value) or None
 
     @field_validator("days", mode="before")
     @classmethod
@@ -61,7 +80,7 @@ class ScheduleTemplateUpdate(BaseModel):
 
     @model_validator(mode="after")
     def reject_nulls(self) -> "ScheduleTemplateUpdate":
-        for field in self.model_fields_set:
+        for field in self.model_fields_set - {"trainer_name", "capacity"}:
             if getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
         return self
@@ -78,14 +97,16 @@ class ScheduleTemplateResponse(ScheduleTemplateCreate):
 class SessionCreate(BaseModel):
     template_id: int | None = None
     date: Date
-    trainer_name: str
+    start_time: str | None = Field(default=None, pattern=CLOCK_PATTERN)
+    end_time: str | None = Field(default=None, pattern=CLOCK_PATTERN)
+    trainer_name: str | None = None
     status: SessionStatus = SessionStatus.upcoming
     checklist_data: dict = Field(default_factory=dict)
 
     @field_validator("trainer_name", mode="before")
     @classmethod
-    def validate_trainer_name(cls, value: str) -> str:
-        return validate_person_name(value)
+    def validate_trainer_name(cls, value: str | None) -> str | None:
+        return validate_person_name(value) if value else None
 
     @field_validator("checklist_data", mode="before")
     @classmethod
@@ -95,6 +116,8 @@ class SessionCreate(BaseModel):
 
 class SessionUpdate(BaseModel):
     date: Date | None = None
+    start_time: str | None = Field(default=None, pattern=CLOCK_PATTERN)
+    end_time: str | None = Field(default=None, pattern=CLOCK_PATTERN)
     trainer_name: str | None = None
     status: SessionStatus | None = None
     checklist_data: dict | list = Field(default_factory=dict)
@@ -111,7 +134,7 @@ class SessionUpdate(BaseModel):
 
     @model_validator(mode="after")
     def reject_nulls(self) -> "SessionUpdate":
-        for field in self.model_fields_set:
+        for field in self.model_fields_set - {"trainer_name"}:
             if getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
         return self
@@ -127,7 +150,9 @@ class SessionResponse(BaseModel):
     id: int
     template_id: int | None
     date: Date
-    trainer_name: str
+    start_time: str | None = None
+    end_time: str | None = None
+    trainer_name: str | None
     status: SessionStatus
     checklist_data: dict | list
     created_at: datetime

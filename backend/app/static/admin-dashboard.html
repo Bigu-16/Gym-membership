@@ -182,13 +182,10 @@
               <h2>Create Template</h2>
               <form id="templateForm" class="form-grid">
                 <input name="title" placeholder="Class title" required />
-                <select name="type">
-                  <option value="group">Group</option>
-                  <option value="personal">Personal</option>
-                </select>
+                <input type="hidden" name="type" value="group" />
                 <input name="days" placeholder="Monday,Wednesday,Friday" required />
-                <input name="time" placeholder="18:00" required />
-                <input name="capacity" type="number" min="1" value="10" required />
+                <input name="time" placeholder="16:00 - 17:00" required />
+                <input name="capacity" type="number" min="1" placeholder="Max size (optional)" />
                 <button>Create template</button>
               </form>
               <hr />

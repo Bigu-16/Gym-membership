@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_admin_user, get_current_user
 from app.db import get_db_session
-from app.models import BusinessProfile
+from app.services.audit import record_audit
+from app.models import AppUser, BusinessProfile
 from app.schemas.business import BusinessProfileRequest, BusinessProfileResponse, PaymentProvider
 from app.services.payment_providers import get_payment_providers, normalize_account_details
 
@@ -16,7 +18,10 @@ async def payment_providers() -> list[PaymentProvider]:
 
 
 @router.get("/business", response_model=BusinessProfileResponse)
-async def get_business(db: AsyncSession = Depends(get_db_session)) -> BusinessProfileResponse:
+async def get_business(
+    db: AsyncSession = Depends(get_db_session),
+    _: AppUser = Depends(get_current_user),
+) -> BusinessProfileResponse:
     profile = await _get_or_create_business_profile(db)
     return BusinessProfileResponse(
         accountDetails=[normalize_account_details_item for normalize_account_details_item in profile.account_details],
@@ -28,10 +33,12 @@ async def get_business(db: AsyncSession = Depends(get_db_session)) -> BusinessPr
 async def patch_business(
     payload: BusinessProfileRequest,
     db: AsyncSession = Depends(get_db_session),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> BusinessProfileResponse:
     profile = await _get_or_create_business_profile(db)
     account_details = normalize_account_details(payload.accountDetails)
     profile.account_details = [account.model_dump(mode="json") for account in account_details]
+    record_audit(db, actor, "payment_accounts_updated", "settings", profile.id, "Updated business payment accounts")
     await db.commit()
     await db.refresh(profile)
     return BusinessProfileResponse(accountDetails=account_details, paymentProviders=get_payment_providers())

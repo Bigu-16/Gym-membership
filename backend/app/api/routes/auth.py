@@ -5,21 +5,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.config import settings
-from app.core.rate_limit import login_rate_limiter
+from app.core.rate_limit import email_lookup_rate_limiter, login_rate_limiter, password_change_rate_limiter
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db import get_db_session
 from app.models import AppUser
 from app.models.enums import UserRole
-from app.schemas.auth import BootstrapAdminRequest, CheckEmailRequest, CheckEmailResponse, LoginResponse, UserResponse
+from app.schemas.auth import (
+    BootstrapAdminRequest,
+    ChangePasswordRequest,
+    CheckEmailRequest,
+    CheckEmailResponse,
+    LoginResponse,
+    UserResponse,
+)
+from app.services.audit import record_audit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/check-email", response_model=CheckEmailResponse)
 async def check_email(
+    request: Request,
     payload: CheckEmailRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> CheckEmailResponse:
+    await email_lookup_rate_limiter.check(request)
     email = payload.email.strip().lower()
     user_id = await db.scalar(select(AppUser.id).where(AppUser.email == email))
     return CheckEmailResponse(exists=user_id is not None)
@@ -66,10 +76,39 @@ async def login(
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is inactive")
 
-    token = create_access_token(user.email)
+    token = create_access_token(user.email, user.token_version)
     return LoginResponse(access_token=token)
 
 
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: AppUser = Depends(get_current_user)) -> UserResponse:
     return UserResponse.model_validate(current_user)
+
+
+@router.post("/change-password", response_model=LoginResponse)
+async def change_password(
+    request: Request,
+    payload: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: AppUser = Depends(get_current_user),
+) -> LoginResponse:
+    """Change your own password. Every other login of this account is signed out."""
+    await password_change_rate_limiter.check(request)
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    current_user.password_hash = hash_password(payload.new_password)
+    current_user.token_version += 1
+    record_audit(db, current_user, "password_changed", "user", current_user.id, f"{current_user.email} changed their password")
+    await db.commit()
+    return LoginResponse(access_token=create_access_token(current_user.email, current_user.token_version))
+
+
+@router.post("/logout-all", status_code=status.HTTP_204_NO_CONTENT)
+async def logout_everywhere(
+    db: AsyncSession = Depends(get_db_session),
+    current_user: AppUser = Depends(get_current_user),
+) -> None:
+    """Sign this account out on every device (e.g. after leaving a desk computer logged in)."""
+    current_user.token_version += 1
+    record_audit(db, current_user, "signed_out_everywhere", "user", current_user.id, f"{current_user.email} signed out on all devices")
+    await db.commit()

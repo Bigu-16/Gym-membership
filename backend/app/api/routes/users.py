@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin_user
+from app.services.audit import record_audit
 from app.core.security import hash_password
 from app.db import get_db_session
 from app.models import AppUser
@@ -24,7 +25,7 @@ async def list_users(
 async def create_user(
     payload: UserCreateRequest,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    admin: AppUser = Depends(get_current_admin_user),
 ) -> UserResponse:
     existing = await db.scalar(select(AppUser).where(AppUser.email == payload.email.lower()))
     if existing is not None:
@@ -38,6 +39,8 @@ async def create_user(
         is_active=payload.is_active,
     )
     db.add(user)
+    await db.flush()
+    record_audit(db, admin, "user_created", "user", user.id, f"Created {user.role.value} account {user.email}")
     await db.commit()
     await db.refresh(user)
     return UserResponse.model_validate(user)
@@ -80,8 +83,11 @@ async def update_user(
             detail="You cannot deactivate your own account",
         )
 
+    if updates.get("is_active") is False and user.is_active:
+        user.token_version += 1  # a deactivated account is signed out everywhere immediately
     for field, value in updates.items():
         setattr(user, field, value)
+    record_audit(db, current_admin, "user_updated", "user", user.id, f"Updated account {user.email}", {"fields": sorted(updates)})
 
     await db.commit()
     await db.refresh(user)
@@ -93,13 +99,15 @@ async def reset_user_password(
     user_id: int,
     payload: UserPasswordResetRequest,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    admin: AppUser = Depends(get_current_admin_user),
 ) -> UserResponse:
     user = await db.get(AppUser, user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     user.password_hash = hash_password(payload.password)
+    user.token_version += 1  # existing logins with the old password stop working
+    record_audit(db, admin, "password_reset", "user", user.id, f"Reset password for {user.email}")
     await db.commit()
     await db.refresh(user)
     return UserResponse.model_validate(user)

@@ -1,9 +1,12 @@
+from datetime import date as Date
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin_or_staff_user, get_current_admin_user, get_current_user
 from app.db import get_db_session
+from app.services.audit import record_audit
 from app.models import AppUser, Enrollment, ScheduleTemplate, Session
 from app.schemas.schedule import (
     ScheduleTemplateCreate,
@@ -14,6 +17,7 @@ from app.schemas.schedule import (
     SessionStatusUpdate,
     SessionUpdate,
 )
+from app.services.catalog import sync_official_timetable
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
 
@@ -31,13 +35,27 @@ async def list_schedule_templates(
 async def create_schedule_template(
     payload: ScheduleTemplateCreate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> ScheduleTemplateResponse:
     template = ScheduleTemplate(**payload.model_dump())
     db.add(template)
+    await db.flush()
+    record_audit(db, actor, "class_created", "class", template.id, f"Added class {template.title} {', '.join(template.days)} {template.time}")
     await db.commit()
     await db.refresh(template)
     return ScheduleTemplateResponse.model_validate(template)
+
+
+@router.post("/templates/sync-official")
+async def load_official_timetable(
+    db: AsyncSession = Depends(get_db_session),
+    actor: AppUser = Depends(get_current_admin_user),
+) -> dict[str, int]:
+    """Add any missing slots from the official Mon–Sat timetable. Never deletes or edits."""
+    result = await sync_official_timetable(db)
+    record_audit(db, actor, "timetable_loaded", "class", None, f"Loaded official timetable: {result['created']} class(es) added")
+    await db.commit()
+    return result
 
 
 @router.patch("/templates/{template_id}", response_model=ScheduleTemplateResponse)
@@ -45,7 +63,7 @@ async def update_schedule_template(
     template_id: int,
     payload: ScheduleTemplateUpdate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> ScheduleTemplateResponse:
     template = await db.get(ScheduleTemplate, template_id)
     if template is None:
@@ -54,6 +72,7 @@ async def update_schedule_template(
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(template, field, value)
 
+    record_audit(db, actor, "class_updated", "class", template.id, f"Updated class {template.title} {template.time}", {"fields": sorted(payload.model_dump(exclude_unset=True))})
     await db.commit()
     await db.refresh(template)
     return ScheduleTemplateResponse.model_validate(template)
@@ -63,7 +82,7 @@ async def update_schedule_template(
 async def delete_schedule_template(
     template_id: int,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> None:
     template = await db.get(ScheduleTemplate, template_id)
     if template is None:
@@ -72,16 +91,24 @@ async def delete_schedule_template(
     # Preserve session and enrollment history while removing their template reference.
     await db.execute(update(Session).where(Session.template_id == template_id).values(template_id=None))
     await db.execute(update(Enrollment).where(Enrollment.template_id == template_id).values(template_id=None))
+    record_audit(db, actor, "class_deleted", "class", template.id, f"Deleted class {template.title} {', '.join(template.days)} {template.time}")
     await db.delete(template)
     await db.commit()
 
 
 @router.get("/sessions", response_model=list[SessionResponse])
 async def list_sessions(
+    date_from: Date | None = None,
+    date_to: Date | None = None,
     db: AsyncSession = Depends(get_db_session),
     _: AppUser = Depends(get_current_user),
 ) -> list[SessionResponse]:
-    result = await db.scalars(select(Session).order_by(Session.date.desc()))
+    stmt = select(Session).order_by(Session.date.desc(), Session.id.desc())
+    if date_from is not None:
+        stmt = stmt.where(Session.date >= date_from)
+    if date_to is not None:
+        stmt = stmt.where(Session.date <= date_to)
+    result = await db.scalars(stmt)
     return [SessionResponse.model_validate(item) for item in result.all()]
 
 
@@ -89,8 +116,23 @@ async def list_sessions(
 async def create_session(
     payload: SessionCreate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    _: AppUser = Depends(get_current_admin_or_staff_user),
 ) -> SessionResponse:
+    if payload.template_id is not None:
+        template = await db.get(ScheduleTemplate, payload.template_id)
+        if template is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule template not found")
+        # A class runs once per day: starting it twice must not create a second session.
+        existing = await db.scalar(
+            select(Session).where(Session.template_id == payload.template_id, Session.date == payload.date).limit(1)
+        )
+        if existing is not None:
+            for field, value in payload.model_dump(exclude_unset=True, exclude={"template_id", "date"}).items():
+                setattr(existing, field, value)
+            await db.commit()
+            await db.refresh(existing)
+            return SessionResponse.model_validate(existing)
+
     session = Session(**payload.model_dump())
     db.add(session)
     await db.commit()
@@ -122,7 +164,7 @@ async def update_session_status(
     session_id: int,
     payload: SessionStatusUpdate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    _: AppUser = Depends(get_current_admin_or_staff_user),
 ) -> SessionResponse:
     session = await db.get(Session, session_id)
     if session is None:

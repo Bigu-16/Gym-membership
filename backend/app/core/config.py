@@ -5,10 +5,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "Gym Management Backend"
-    app_env: str = "development"
+    app_name: str = "N & T Taekwondo & Karate Center API"
+    # Safe defaults: production unless the environment explicitly opts into development.
+    app_env: str = "production"
     api_v1_prefix: str = "/api/v1"
-    debug: bool = True
+    debug: bool = False
+    sql_echo: bool = False
+    # All "today", expiry and reporting calculations use the gym's local clock.
+    gym_timezone: str = "Asia/Dubai"
+    # Optional error tracking (https://sentry.io). Leave empty to disable.
+    sentry_dsn: str = ""
+    # Front-desk computers are shared: the web app signs out after this much inactivity.
+    idle_logout_minutes: int = Field(default=60, ge=5)
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60 * 24
     redis_host: str = "redis"
@@ -28,10 +36,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://gym-membership-beta.vercel.app"
 
     # --- Messaging / notifications ---
-    # When true (the default), unconfigured channels log the payload and report a
-    # synthetic success ("dev-stub") so flows are fully testable without credentials.
-    # Set to false in production so only configured channels are dispatched.
-    messaging_dev_mode: bool = True
+    # When true, unconfigured channels log the payload and report a synthetic
+    # success ("dev-stub") so flows are testable without credentials. Left unset it
+    # follows APP_ENV, so production never reports stubbed messages as delivered.
+    messaging_dev_mode_override: bool | None = Field(default=None, validation_alias="MESSAGING_DEV_MODE")
     notification_max_attempts: int = 3
 
     # WhatsApp (Meta Cloud API)
@@ -48,8 +56,18 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from_email: str = ""
-    smtp_from_name: str = "Gym Membership"
-    smtp_use_tls: bool = True
+    smtp_from_name: str = "N & T Taekwondo & Karate Center"
+    smtp_use_tls: bool = True  # STARTTLS (port 587); port 465 always uses implicit TLS
+
+    # --- Membership expiry reminders ---
+    # Days before expiry on which a reminder goes out, e.g. "5,3". A day that was
+    # missed (server asleep) is caught up on the next run, never skipped.
+    expiry_reminder_days: str = "5,3"
+    # Shared secret for the scheduled daily job (GitHub Actions / Render cron) to call
+    # POST /api/v1/tasks/daily-reminders without a staff login. Empty = disabled.
+    cron_secret: str = ""
+    # Shown at the bottom of reminder emails, e.g. "Call or WhatsApp 050 123 4567".
+    center_contact_line: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -92,6 +110,28 @@ class Settings(BaseSettings):
     @property
     def allows_development_endpoints(self) -> bool:
         return self.app_env.lower() in {"development", "dev", "test", "testing", "local"}
+
+    def production_problems(self) -> list[str]:
+        """Settings that make a production deployment unsafe."""
+        problems = []
+        weak = {"change-me-in-production", "secret", "changeme", ""}
+        if self.secret_key in weak or len(self.secret_key) < 32:
+            problems.append("SECRET_KEY must be a random value of at least 32 characters")
+        if self.debug:
+            problems.append("DEBUG must be false")
+        return problems
+
+    @property
+    def reminder_offsets(self) -> list[int]:
+        """Reminder days, most distant first (e.g. [5, 3])."""
+        values = {int(part) for part in self.expiry_reminder_days.split(",") if part.strip().isdigit()}
+        return sorted(values, reverse=True) or [5, 3]
+
+    @property
+    def messaging_dev_mode(self) -> bool:
+        if self.messaging_dev_mode_override is not None:
+            return self.messaging_dev_mode_override
+        return self.allows_development_endpoints
 
 
 def normalize_database_url(url: str) -> str:

@@ -16,13 +16,17 @@ class RenderedMessage:
 
     subject: str
     text: str
+    html: str | None = None  # optional rich version for email; other channels use text
 
     def to_payload(self) -> dict[str, str]:
-        return {"subject": self.subject, "text": self.text}
+        payload = {"subject": self.subject, "text": self.text}
+        if self.html:
+            payload["html"] = self.html
+        return payload
 
     @classmethod
     def from_payload(cls, payload: dict) -> "RenderedMessage":
-        return cls(subject=payload.get("subject", ""), text=payload.get("text", ""))
+        return cls(subject=payload.get("subject", ""), text=payload.get("text", ""), html=payload.get("html"))
 
 
 @dataclass(frozen=True)

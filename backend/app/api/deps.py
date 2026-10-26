@@ -24,13 +24,14 @@ async def get_current_user(
     try:
         payload = decode_access_token(token)
         subject = payload.get("sub")
+        token_version = payload.get("ver", 0)
         if not subject:
             raise credentials_error
     except InvalidTokenError as exc:
         raise credentials_error from exc
 
     user = await db.scalar(select(AppUser).where(AppUser.email == subject))
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or user.token_version != token_version:
         raise credentials_error
     return user
 

@@ -2,7 +2,8 @@ import re
 from html.parser import HTMLParser
 
 
-NAME_PATTERN = re.compile(r"^[A-Za-z\s\-']+$")
+# Any script's letters (Latin, Arabic, ...) plus spaces, hyphens, apostrophes and periods.
+NAME_PATTERN = re.compile(r"^[^\W\d_](?:[^\W\d_]|[\s\-'.])*$")
 
 
 class _PlainTextExtractor(HTMLParser):
@@ -41,6 +42,33 @@ def validate_person_name(value: str) -> str:
     if not NAME_PATTERN.fullmatch(sanitized):
         raise ValueError("name may contain only letters, spaces, hyphens, and apostrophes")
     return sanitized
+
+
+PHONE_PATTERN = re.compile(r"^\+?[0-9][0-9\s\-()]{5,28}$")
+EMIRATES_ID_PATTERN = re.compile(r"^784-?\d{4}-?\d{7}-?\d$")
+
+
+def normalize_phone(value: str | None) -> str | None:
+    if value is None:
+        return None
+    sanitized = sanitize_plain_text(value)
+    if not sanitized:
+        return None
+    if not PHONE_PATTERN.fullmatch(sanitized):
+        raise ValueError("phone number is not valid")
+    return sanitized
+
+
+def normalize_emirates_id(value: str | None) -> str | None:
+    if value is None:
+        return None
+    sanitized = sanitize_plain_text(value).replace(" ", "")
+    if not sanitized:
+        return None
+    if not EMIRATES_ID_PATTERN.fullmatch(sanitized):
+        raise ValueError("Emirates ID must look like 784-YYYY-NNNNNNN-N")
+    digits = sanitized.replace("-", "")
+    return f"{digits[:3]}-{digits[3:7]}-{digits[7:14]}-{digits[14]}"
 
 
 def sanitize_json_text(value: object) -> object:

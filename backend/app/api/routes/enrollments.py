@@ -5,7 +5,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin_user, get_current_user
+from app.core.timeutils import gym_today
 from app.db import get_db_session
+from app.services.audit import record_audit
 from app.models import AppUser
 from app.models import Enrollment, Member, ScheduleTemplate, Session
 from app.schemas.enrollment import EnrollmentCreate, EnrollmentResponse
@@ -28,7 +30,7 @@ async def list_enrollments(
 async def create_enrollment(
     payload: EnrollmentCreate,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> EnrollmentResponse:
     member = await db.scalar(select(Member).where(Member.id == payload.member_id).with_for_update())
     if member is None:
@@ -38,6 +40,11 @@ async def create_enrollment(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Frozen members cannot be enrolled",
+        )
+    if member.expiry_date is not None and member.expiry_date < gym_today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Membership has expired; renew before enrolling in a class",
         )
 
     class_label = "your class"
@@ -63,7 +70,7 @@ async def create_enrollment(
         existing_count = await db.scalar(
             select(func.count(Enrollment.id)).where(Enrollment.template_id == payload.template_id)
         )
-        if (existing_count or 0) >= template.capacity:
+        if template.capacity is not None and (existing_count or 0) >= template.capacity:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Schedule template is at capacity",
@@ -82,11 +89,11 @@ async def create_enrollment(
                 select(ScheduleTemplate).where(ScheduleTemplate.id == session.template_id).with_for_update()
             )
 
-        if template is not None:
+        if template is not None and template.capacity is not None:
             existing_count = await db.scalar(
                 select(func.count(Enrollment.id)).where(Enrollment.session_id == payload.session_id)
             )
-            if (existing_count or 0) >= template.capacity:
+            if template.capacity is not None and (existing_count or 0) >= template.capacity:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Session is at capacity",
@@ -94,6 +101,8 @@ async def create_enrollment(
 
     enrollment = Enrollment(**payload.model_dump())
     db.add(enrollment)
+    await db.flush()
+    record_audit(db, actor, "class_enrollment_added", "member", member.id, f"Enrolled {member.name} in {class_label}")
     await db.commit()
     await db.refresh(enrollment)
 
@@ -110,10 +119,11 @@ async def create_enrollment(
 async def delete_enrollment(
     enrollment_id: int,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    actor: AppUser = Depends(get_current_admin_user),
 ) -> None:
     enrollment = await db.get(Enrollment, enrollment_id)
     if enrollment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enrollment not found")
+    record_audit(db, actor, "class_enrollment_removed", "member", enrollment.member_id, f"Removed class enrollment #{enrollment.id}")
     await db.delete(enrollment)
     await db.commit()

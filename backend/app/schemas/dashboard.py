@@ -13,7 +13,7 @@ class DashboardStatsResponse(BaseModel):
 class ActiveMemberResponse(BaseModel):
     member_id: int
     member_name: str
-    phone: str
+    phone: str | None
     check_in_time: datetime
 
 

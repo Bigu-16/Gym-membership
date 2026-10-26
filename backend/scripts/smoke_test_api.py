@@ -95,7 +95,9 @@ def login() -> str:
 
 def run() -> None:
     suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + uuid4().hex[:8]
-    phone_suffix = suffix[-10:]
+    phone_suffix = f"{int(uuid4().hex[:12], 16) % 10**7:07d}"
+    # Person names may only contain letters, so encode the run id as letters for names.
+    name_suffix = "".join(chr(ord("a") + int(ch, 16) % 26) for ch in uuid4().hex[:10])
     today = date.today().isoformat()
     tomorrow = (date.today() + timedelta(days=1)).isoformat()
     next_month = (date.today() + timedelta(days=30)).isoformat()
@@ -119,7 +121,7 @@ def run() -> None:
         "/api/v1/users/",
         token=token,
         json_body={
-            "full_name": f"Smoke Staff {suffix}",
+            "full_name": f"Smoke Staff {name_suffix}",
             "email": f"smoke.staff.{suffix}@example.com",
             "password": "ChangeMe123!",
             "role": "staff",
@@ -128,7 +130,7 @@ def run() -> None:
     )
     request("GET", "/api/v1/users/", token=token)
     request("GET", f"/api/v1/users/{staff['id']}", token=token)
-    request("PATCH", f"/api/v1/users/{staff['id']}", token=token, json_body={"full_name": f"Smoke Staff Updated {suffix}"})
+    request("PATCH", f"/api/v1/users/{staff['id']}", token=token, json_body={"full_name": f"Smoke Staff Updated {name_suffix}"})
     request("PATCH", f"/api/v1/users/{staff['id']}/password", token=token, json_body={"password": "ChangeMe456!"})
     checks.append("users CRUD/update password")
 
@@ -217,7 +219,7 @@ def run() -> None:
         "/api/v1/members/",
         token=token,
         json_body={
-            "name": f"Smoke Member {suffix}",
+            "name": f"Smoke Member {name_suffix}",
             "phone": f"+15559{phone_suffix}",
             "age": 33,
             "gender": "other",
@@ -245,7 +247,7 @@ def run() -> None:
         token=token,
         json_body={
             "parent": {
-                "name": f"Smoke Parent {suffix}",
+                "name": f"Smoke Parent {name_suffix}",
                 "phone": family_phone,
                 "email": f"parent-{suffix}@example.com",
                 "address": "100 Smoke Test Ave",
@@ -254,7 +256,7 @@ def run() -> None:
             },
             "members": [
                 {
-                    "name": f"Smoke Family A {suffix}",
+                    "name": f"Smoke Family A {name_suffix}",
                     "phone": f"+15557{phone_suffix}",
                     "parent_phone": family_phone,
                     "age": 11,
@@ -262,7 +264,7 @@ def run() -> None:
                     "expiry_date": tomorrow,
                 },
                 {
-                    "name": f"Smoke Family B {suffix}",
+                    "name": f"Smoke Family B {name_suffix}",
                     "phone": f"+15556{phone_suffix}",
                     "parent_phone": family_phone,
                     "age": 9,
@@ -304,8 +306,13 @@ def run() -> None:
     assert seed_result["status"] == "seeded"
     checks.append("dashboard/analytics/notifications/demo seed")
 
-    request("POST", "/api/v1/tasks/membership-expiry-reminders", token=token)
-    request("POST", "/api/v1/tasks/process-notification-jobs", token=token)
+    for task_path in ("/api/v1/tasks/membership-expiry-reminders", "/api/v1/tasks/process-notification-jobs"):
+        try:
+            request("POST", task_path, token=token)
+        except ApiError as exc:
+            # Without a Redis broker the API must answer 503, never crash.
+            if exc.status != 503:
+                raise
     checks.append("task enqueue endpoints")
 
     request("DELETE", f"/api/v1/members/{member['id']}", token=token)

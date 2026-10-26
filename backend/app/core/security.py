@@ -1,26 +1,31 @@
 from datetime import UTC, datetime, timedelta
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 
 ALGORITHM = "HS256"
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt only uses the first 72 bytes of a password.
+BCRYPT_MAX_BYTES = 72
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode()[:BCRYPT_MAX_BYTES], bcrypt.gensalt()).decode()
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    return pwd_context.verify(password, password_hash)
+    """Checks hashes written by the previous passlib setup too (same $2b$ bcrypt format)."""
+    try:
+        return bcrypt.checkpw(password.encode()[:BCRYPT_MAX_BYTES], password_hash.encode())
+    except ValueError:
+        return False
 
 
-def create_access_token(subject: str) -> str:
+def create_access_token(subject: str, token_version: int = 0) -> str:
     expires_delta = timedelta(minutes=settings.access_token_expire_minutes)
-    expire = datetime.now(UTC) + expires_delta
-    payload = {"sub": subject, "exp": expire}
+    now = datetime.now(UTC)
+    payload = {"sub": subject, "exp": now + expires_delta, "iat": now, "ver": token_version}
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 

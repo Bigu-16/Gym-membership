@@ -14,7 +14,10 @@ class Session(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     template_id: Mapped[int | None] = mapped_column(ForeignKey("schedule_templates.id"), nullable=True)
     date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
-    trainer_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    # "HH:MM" gym-local times; personal sessions need them, group sessions inherit the class slot.
+    start_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    end_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    trainer_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     status: Mapped[SessionStatus] = mapped_column(
         Enum(SessionStatus, name="session_status_enum"),
         nullable=False,

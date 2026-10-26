@@ -1,7 +1,7 @@
 import asyncio
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.celery_app import celery_app
@@ -11,6 +11,8 @@ from app.models import Member, MembershipPlan, NotificationJob
 from app.models.enums import NotificationChannel, NotificationStatus, NotificationType
 from app.services.messaging.base import RenderedMessage
 from app.services.messaging.registry import channels_for_member, get_adapter
+from app.services.freezes import release_due_freezes
+from app.services.reminders import queue_expiry_reminders
 from app.services.messaging.templates import (
     build_class_enrollment_message,
     build_enrollment_message,
@@ -98,41 +100,20 @@ async def _queue_class_enrollment_confirmation(member_id: int, class_label: str)
 
 
 async def _queue_membership_expiry_reminders() -> dict[str, int]:
-    today = date.today()
-    reminder_dates = {today, today + timedelta(days=3)}
-
-    created = 0
     async with SessionLocal() as session:
-        result = await session.scalars(
-            select(Member).where(
-                and_(
-                    Member.messaging_opt_in.is_(True),
-                    Member.expiry_date.is_not(None),
-                    Member.expiry_date.in_(reminder_dates),
-                )
-            )
-        )
-        members = result.all()
-
-        for member in members:
-            expiry = member.expiry_date.isoformat() if member.expiry_date else "soon"
-            message = RenderedMessage(
-                subject="Membership Expiry Reminder",
-                text=(
-                    f"Hi {member.name}, your gym membership expires on {expiry}. "
-                    "Please renew to keep your access active."
-                ),
-            )
-            created += await create_member_jobs(
-                session,
-                member=member,
-                notification_type=NotificationType.membership_expiry,
-                message=message,
-                scheduled_for=datetime.now(UTC),
-            )
+        result = await queue_expiry_reminders(session)
         await session.commit()
+    return result
 
-    return {"queued_jobs": created}
+
+async def run_daily_reminders() -> dict[str, int]:
+    """Resume ended freezes, then queue today's due reminders and send them right away (no Celery worker needed)."""
+    async with SessionLocal() as session:
+        resumed = await release_due_freezes(session)
+        await session.commit()
+    queued = await _queue_membership_expiry_reminders()
+    sent = await _process_pending_notification_jobs()
+    return {"freezes_resumed": resumed, **queued, **sent}
 
 
 async def _process_pending_notification_jobs(limit: int = 100) -> dict[str, int]:
@@ -149,6 +130,8 @@ async def _process_pending_notification_jobs(limit: int = 100) -> dict[str, int]
             )
             .order_by(NotificationJob.scheduled_for.asc())
             .limit(limit)
+            # Overlapping runs (beat + manual trigger) must not claim the same job twice.
+            .with_for_update(skip_locked=True)
         )
         jobs = result.all()
 

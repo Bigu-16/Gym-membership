@@ -1,4 +1,4 @@
-from app.schemas.analytics import AttendancePoint, GrowthPoint
+from app.schemas.analytics import AnalyticsSummary, AttendancePoint, GrowthPoint
 from app.schemas.auth import BootstrapAdminRequest, LoginResponse, UserResponse
 from app.schemas.auth import UserCreateRequest, UserPasswordResetRequest, UserUpdateRequest
 from app.schemas.check_in import CheckInCreate, CheckInResponse, CheckOutRequest
@@ -29,6 +29,7 @@ from app.schemas.schedule import (
 
 __all__ = [
     "ActiveMemberResponse",
+    "AnalyticsSummary",
     "AttendancePoint",
     "BootstrapAdminRequest",
     "CheckInCreate",

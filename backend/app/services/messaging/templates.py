@@ -24,13 +24,16 @@ def _plan_lines(plan: MembershipPlan | None) -> list[str]:
 def build_enrollment_message(member: Member, plan: MembershipPlan | None) -> RenderedMessage:
     """Confirmation sent when a member registers — echoes all their data + plan."""
     lines = [
-        f"Hi {member.name}, welcome to the gym! Here are your registration details:",
+        f"Hi {member.name}, welcome to N & T Taekwondo & Karate Center! Here are your registration details:",
         "",
         "— Your Details —",
         f"Name: {member.name}",
-        f"Phone: {member.phone}",
         f"Age: {member.age}",
     ]
+    if member.phone:
+        lines.append(f"Phone: {member.phone}")
+    if member.whatsapp_number and member.whatsapp_number != member.phone:
+        lines.append(f"WhatsApp: {member.whatsapp_number}")
     if member.gender:
         lines.append(f"Gender: {member.gender.value}")
     if member.email:
@@ -45,7 +48,7 @@ def build_enrollment_message(member: Member, plan: MembershipPlan | None) -> Ren
     lines.append("")
     lines.extend(_plan_lines(plan))
     lines.append("")
-    lines.append("Please reply if any detail is incorrect. See you at the gym!")
+    lines.append("Please reply if any detail is incorrect. See you on the mat!")
 
     return RenderedMessage(subject="Welcome — Registration Confirmed", text="\n".join(lines))
 
@@ -61,7 +64,6 @@ def build_class_enrollment_message(
         "",
         "— Your Details —",
         f"Name: {member.name}",
-        f"Phone: {member.phone}",
     ]
     if member.expiry_date:
         lines.append(f"Membership valid until: {member.expiry_date.isoformat()}")

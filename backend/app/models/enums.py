@@ -24,6 +24,18 @@ class UserRole(StrEnum):
     staff = "staff"
 
 
+class PaymentMethod(StrEnum):
+    cash = "cash"
+    card = "card"
+    bank_transfer = "bank_transfer"
+    other = "other"
+
+
+class PaymentKind(StrEnum):
+    new = "new"
+    renewal = "renewal"
+
+
 class NotificationType(StrEnum):
     welcome = "welcome"
     membership_expiry = "membership_expiry"
