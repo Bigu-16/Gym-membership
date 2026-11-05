@@ -87,6 +87,24 @@ describe('DashboardOverview', () => {
     expect(props.onTabChange).toHaveBeenCalledWith('schedule');
   });
 
+  it("opens a class's tasks in place and saves a new one", async () => {
+    const props = renderDashboard();
+    const [first] = screen.getAllByRole('listitem').filter((li) => li.getAttribute('aria-label'));
+    const toggle = within(first).getByRole('button', { name: /Tasks/ });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.change(within(first).getByLabelText('New checklist item'), { target: { value: 'Warm-up drills' } });
+    fireEvent.click(within(first).getByRole('button', { name: 'Add' }));
+
+    await waitFor(() => expect(props.saveSession).toHaveBeenCalledWith(
+      expect.objectContaining({ templateId: 1, dateKey: '2026-10-14' }),
+      { checklist: [{ id: 1, text: 'Warm-up drills', checked: false }] }
+    ));
+    expect(screen.getAllByLabelText('New checklist item')).toHaveLength(1);
+  });
+
   it("lists members enrolled in today's classes and checks them in", async () => {
     const props = renderDashboard();
 

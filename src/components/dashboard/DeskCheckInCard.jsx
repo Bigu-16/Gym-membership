@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { CheckCircle2, LogIn, LogOut, Search } from 'lucide-react';
 import { membershipStatus } from '../../utils/membership';
 import { Spinner, useFeedback } from '../common/Feedback';
 
@@ -18,24 +19,46 @@ const formatWhen = (timestamp) => {
     : `${when.toLocaleDateString([], { day: 'numeric', month: 'short' })}, ${time}`;
 };
 
+const initials = (name = '') => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+
+const Avatar = ({ member }) => (
+  member.image
+    ? <img src={member.image} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-[var(--bg-secondary)]" />
+    : (
+      <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--card-hover)] text-xs font-bold">
+        {initials(member.name)}
+      </span>
+    )
+);
+
 const MemberRow = ({ member, action }) => {
   const chip = STATUS_CHIP[membershipStatus(member)];
   return (
-    <li className="flex items-center justify-between gap-3 py-2">
+    <li className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-[var(--card-hover)]">
       <div className="flex items-center gap-3 min-w-0">
-        <img src={member.image} alt="" className="w-8 h-8 rounded-full object-cover" />
+        <Avatar member={member} />
         <div className="min-w-0">
-          <p className="text-sm font-medium truncate">{member.name}</p>
-          <p className="text-xs text-[var(--text-secondary)] truncate">
-            {member.plan}
-            {chip && <span className={`ml-1.5 px-1.5 rounded font-semibold ${chip.className}`}>{chip.text}</span>}
+          <p className="flex items-center gap-1.5 min-w-0">
+            <span className="text-sm font-semibold truncate">{member.name}</span>
+            {chip && <span className={`shrink-0 px-1.5 py-0.5 rounded-md text-xs font-semibold ${chip.className}`}>{chip.text}</span>}
           </p>
+          <p className="text-xs text-[var(--text-secondary)] truncate">{member.plan}</p>
         </div>
       </div>
       {action}
     </li>
   );
 };
+
+/** A section heading with a count pill. */
+const GroupHeading = ({ children, count }) => (
+  <div className="mb-1 flex items-center justify-between px-2">
+    <h3 className="label">{children}</h3>
+    {count != null && (
+      <span className="rounded-full bg-[var(--card-hover)] px-2 py-0.5 text-xs font-semibold tabular-nums">{count}</span>
+    )}
+  </div>
+);
 
 /** Check members in and out at the desk; today's enrolled members are listed first. */
 const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], checkIn, checkOut, recentActivities = [] }) => {
@@ -92,19 +115,22 @@ const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], chec
   const list = searching ? searchResults : rosterMembers.filter((m) => !inClubList.includes(m.id));
 
   return (
-    <section className="glass-card" aria-label="Desk check-in">
+    <section className="glass-card lg:col-span-2 overflow-hidden" aria-label="Desk check-in">
       <div className="px-5 py-4 border-b border-[var(--glass-border)] space-y-3">
         <h2 className="section-title">Desk check-in</h2>
-        <input
-          type="search"
-          placeholder="Search name, phone or parent"
-          aria-label="Search members to check in"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-[var(--bg-primary)] border border-[var(--glass-border)] rounded-xl px-3 py-2 text-sm"
-        />
+        <div className="relative">
+          <Search size={16} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />
+          <input
+            type="search"
+            placeholder="Search name, phone or parent"
+            aria-label="Search members to check in"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-xl border border-[var(--glass-border)] bg-[var(--bg-primary)] py-2.5 pl-10 pr-3 text-sm hover:border-[var(--text-secondary)] transition-colors"
+          />
+        </div>
         {blocked && (
-          <div role="alert" className="text-sm rounded-lg p-3 bg-amber-500/10 text-warning space-y-2">
+          <div role="alert" className="text-sm rounded-xl border border-amber-500/30 p-3 bg-amber-500/10 text-warning space-y-2">
             <p><strong>{blocked.member.name}</strong>: {blocked.reason}. Renew at the desk, or let them in for today.</p>
             <div className="flex gap-2">
               <button type="button" onClick={() => handleCheckIn(blocked.member, true)} className="btn-primary btn-sm">Let in anyway</button>
@@ -114,20 +140,24 @@ const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], chec
         )}
       </div>
 
-      <div className="px-5 py-3">
-        <p className="label">{searching ? 'Search results' : 'Expected today'}</p>
+      <div className="px-3 py-3">
+        <GroupHeading count={list.length || null}>{searching ? 'Search results' : 'Expected today'}</GroupHeading>
         {list.length === 0 ? (
-          <p className="text-sm text-[var(--text-secondary)] py-2">
+          <p className="px-2 py-3 text-sm text-[var(--text-secondary)]">
             {searching ? 'No matching members.' : 'Nobody else is expected today. Search above for walk-ins.'}
           </p>
         ) : (
-          <ul className="divide-y divide-[var(--glass-border)] max-h-72 overflow-y-auto">
+          <ul className="max-h-72 overflow-y-auto">
             {list.map((member) => (
               <MemberRow
                 key={member.id}
                 member={member}
                 action={inClubList.includes(member.id)
-                  ? <span className="text-xs font-semibold text-success shrink-0">In center</span>
+                  ? (
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-success">
+                      <CheckCircle2 size={14} aria-hidden="true" /> In center
+                    </span>
+                  )
                   : (
                     <button type="button" disabled={busyId === member.id} onClick={() => handleCheckIn(member)} className="btn-primary btn-sm shrink-0">
                       {busyId === member.id ? <Spinner label="Checking in…" /> : 'Check in'}
@@ -139,12 +169,12 @@ const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], chec
         )}
       </div>
 
-      <div className="px-5 py-3 border-t border-[var(--glass-border)]">
-        <p className="label">In the center now ({checkedInMembers.length})</p>
+      <div className="px-3 py-3 border-t border-[var(--glass-border)]">
+        <GroupHeading count={checkedInMembers.length}>In the center now</GroupHeading>
         {checkedInMembers.length === 0 ? (
-          <p className="text-sm text-[var(--text-secondary)] py-2">Nobody checked in right now.</p>
+          <p className="px-2 py-3 text-sm text-[var(--text-secondary)]">Nobody checked in right now.</p>
         ) : (
-          <ul className="divide-y divide-[var(--glass-border)] max-h-60 overflow-y-auto">
+          <ul className="max-h-60 overflow-y-auto">
             {checkedInMembers.map((member) => (
               <MemberRow
                 key={member.id}
@@ -161,17 +191,24 @@ const DeskCheckInCard = ({ members = [], todayRoster = [], inClubList = [], chec
       </div>
 
       {recentActivities.length > 0 && (
-        <div className="px-5 py-3 border-t border-[var(--glass-border)]">
-          <p className="label">Recent check-ins</p>
-          <ul className="text-sm divide-y divide-[var(--glass-border)]">
-            {recentActivities.slice(0, 5).map((act) => (
-              <li key={`${act.check_in_id}-${act.timestamp}`} className="flex justify-between gap-3 py-1.5">
-                <span className="truncate">
-                  {act.member_name} <span className="text-[var(--text-secondary)]">{act.action === 'check_in' ? 'checked in' : 'checked out'}</span>
-                </span>
-                <span className="text-xs text-[var(--text-secondary)] shrink-0">{formatWhen(act.timestamp)}</span>
-              </li>
-            ))}
+        <div className="px-3 py-3 border-t border-[var(--glass-border)] bg-[var(--bg-primary)]">
+          <GroupHeading>Recent check-ins</GroupHeading>
+          <ul className="text-sm">
+            {recentActivities.slice(0, 5).map((act) => {
+              const isIn = act.action === 'check_in';
+              const Icon = isIn ? LogIn : LogOut;
+              return (
+                <li key={`${act.check_in_id}-${act.timestamp}`} className="flex items-center justify-between gap-3 px-2 py-1.5">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Icon size={14} aria-hidden="true" className={`shrink-0 ${isIn ? 'text-success' : 'text-[var(--text-secondary)]'}`} />
+                    <span className="truncate">
+                      {act.member_name} <span className="text-[var(--text-secondary)]">{isIn ? 'checked in' : 'checked out'}</span>
+                    </span>
+                  </span>
+                  <span className="text-xs text-[var(--text-secondary)] shrink-0 tabular-nums">{formatWhen(act.timestamp)}</span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
