@@ -8,18 +8,20 @@ describe('Sidebar', () => {
     const [desktop] = screen.getAllByRole('navigation', { name: 'Main' });
     expect(within(desktop).getByText('Front desk')).toBeInTheDocument();
     expect(within(desktop).getByText('Manage')).toBeInTheDocument();
-    for (const label of ['Overview', 'Members', 'New registration', 'Schedule', 'Packages', 'Messages', 'Analytics']) {
+    for (const label of ['Overview', 'Members', 'New registration', 'Schedule', 'Packages', 'Messages']) {
       expect(within(desktop).getByRole('button', { name: label })).toBeInTheDocument();
     }
+    expect(within(desktop).queryByRole('button', { name: 'Analytics' })).not.toBeInTheDocument();
+    expect(within(desktop).queryByRole('button', { name: /Activity/ })).not.toBeInTheDocument();
     // No duplicated "today" panel; the Overview already shows today.
     expect(screen.queryByText(/classes ·/)).not.toBeInTheDocument();
   });
 
-  it('shows the activity log to admins only', () => {
+  it('keeps the activity log hidden even for admins', () => {
     const { rerender } = render(<Sidebar activeTab="dashboard" onTabChange={vi.fn()} />);
     expect(screen.queryByRole('button', { name: /Activity/ })).not.toBeInTheDocument();
     rerender(<Sidebar activeTab="dashboard" onTabChange={vi.fn()} isAdmin />);
-    expect(screen.getAllByRole('button', { name: /Activity/ }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByRole('button', { name: /Activity/ })).not.toBeInTheDocument();
   });
 
   it('marks the current page and changes page on click (desktop and mobile)', () => {

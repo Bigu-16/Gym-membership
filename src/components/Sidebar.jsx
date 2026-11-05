@@ -16,14 +16,17 @@ const GROUPS = [
     items: [
       { id: 'packages', label: 'Packages', icon: Package },
       { id: 'notifications', label: 'Messages', icon: Mail },
-      { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-      { id: 'activity', label: 'Activity log', short: 'Activity', icon: Activity, adminOnly: true }
+      { id: 'analytics', label: 'Analytics', icon: BarChart3, hidden: true },
+      { id: 'activity', label: 'Activity log', short: 'Activity', icon: Activity, adminOnly: true, hidden: true }
     ]
   }
 ];
 
 const Sidebar = ({ activeTab = 'dashboard', onTabChange, isAdmin = false }) => {
-  const groups = GROUPS.map((group) => ({ ...group, items: group.items.filter((item) => !item.adminOnly || isAdmin) }));
+  const groups = GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => (!item.adminOnly || isAdmin) && !item.hidden)
+  }));
   const allItems = groups.flatMap((group) => group.items);
 
   return (
