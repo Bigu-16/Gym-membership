@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import FormSection from './FormSection';
 import TraineeCard from './TraineeCard';
+import PhoneInputField from './PhoneInputField';
 import { inputClass, labelClass } from './fieldStyles';
 
 /** Shown instead of a package list when no active packages exist yet. */
@@ -48,7 +49,11 @@ export const ParentSection = ({ number, parent, onParentChange }) => {
         </div>
         <div>
           <label htmlFor="parent-phone" className={labelClass}>Parent/guardian mobile</label>
-          <input id="parent-phone" type="tel" value={parent.phone} onChange={setParent('phone')} className={inputClass} placeholder="+971 50 123 4567" />
+          <PhoneInputField
+            id="parent-phone"
+            value={parent.phone}
+            onChange={(phone) => onParentChange({ phone })}
+          />
         </div>
         <div>
           <label htmlFor="parent-email" className={labelClass}>Parent/guardian email (optional)</label>

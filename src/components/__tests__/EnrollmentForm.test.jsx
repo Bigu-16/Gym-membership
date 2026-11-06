@@ -83,7 +83,7 @@ describe('EnrollmentForm', () => {
 
     await waitFor(() => expect(onEnroll).toHaveBeenCalledTimes(1));
     const registration = onEnroll.mock.calls[0][0];
-    expect(registration.parent).toEqual({ name: 'John Smith', phone: '+971 50 123 4567', email: null });
+    expect(registration.parent).toEqual({ name: 'John Smith', phone: '+971501234567', email: null });
     expect(registration.trainees).toHaveLength(2);
     expect(registration.trainees[0]).toEqual({
       name: 'Leo Smith',

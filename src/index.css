@@ -117,52 +117,92 @@ body {
 }
 
 /* Luxury Phone Input Overrides for react-international-phone */
-.luxury-phone-input .react-international-phone-input-container {
+.luxury-phone-input {
   width: 100%;
 }
 
+.luxury-phone-input .react-international-phone-input-container {
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
 .luxury-phone-input .react-international-phone-input {
-  height: 46px !important;
+  height: 38px !important;
+  width: 100% !important;
+  background-color: var(--bg-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-left: none !important;
+  border-radius: 0 0.75rem 0.75rem 0 !important;
+  padding: 0 0.75rem !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
   color: var(--text-primary) !important;
   font-family: inherit !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.luxury-phone-input .react-international-phone-input:focus {
+  outline: none !important;
+  border-color: var(--focus-ring) !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
 }
 
 .luxury-phone-input .react-international-phone-country-selector-button {
-  height: 46px !important;
-  background: transparent !important;
-  border-color: var(--glass-border) !important;
-  padding-left: 12px !important;
-  padding-right: 12px !important;
-  border-radius: 12px 0 0 12px !important;
+  height: 38px !important;
+  background-color: var(--bg-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-right: none !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.5rem !important;
+  border-radius: 0.75rem 0 0 0.75rem !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-button:hover {
+  background-color: var(--card-hover) !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-button:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
 }
 
 .luxury-phone-input .react-international-phone-country-selector-dropdown {
-  background: var(--bg-secondary) !important;
+  background-color: var(--bg-secondary) !important;
   border: 1px solid var(--glass-border) !important;
-  border-radius: 16px !important;
+  border-radius: 1rem !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: blur(16px) !important;
+  z-index: 50 !important;
+  max-height: 240px !important;
 }
 
 .luxury-phone-input .react-international-phone-country-selector-dropdown__list-item {
   color: var(--text-primary) !important;
-  padding: 10px !important;
-  transition: all 0.2s ease !important;
+  padding: 0.5rem 0.75rem !important;
+  transition: background-color 0.15s ease !important;
+  cursor: pointer !important;
 }
 
 .luxury-phone-input .react-international-phone-country-selector-dropdown__list-item-country-name {
   color: var(--text-primary) !important;
+  font-size: 0.875rem !important;
 }
 
 .luxury-phone-input .react-international-phone-country-selector-dropdown__list-item-dial-code {
   color: var(--text-secondary) !important;
+  font-size: 0.875rem !important;
 }
 
 .luxury-phone-input .react-international-phone-country-selector-dropdown__list-item:hover,
 .luxury-phone-input .react-international-phone-country-selector-dropdown__list-item--focused {
-  background: var(--card-hover) !important;
+  background-color: var(--card-hover) !important;
 }
 
 .luxury-phone-input .react-international-phone-country-selector-dropdown__list-item--selected {
-  background: var(--card-hover) !important;
+  background-color: var(--card-hover) !important;
+  font-weight: 600 !important;
 }
 
 /* Hide native datalist arrow */

@@ -1,5 +1,6 @@
 import { ADULT_AGE, MIN_MEMBER_AGE } from '../../config/scheduleConfig';
 import ClassSlotPicker from './ClassSlotPicker';
+import PhoneInputField from './PhoneInputField';
 import { groupPlansByProgram, planOptionLabel } from './enrollmentHelpers';
 import { inputClass, selectClass, labelClass } from './fieldStyles';
 
@@ -71,13 +72,10 @@ const TraineeCard = ({
           <label htmlFor={id('phone')} className={labelClass}>
             Mobile{isAdult ? '' : ' (optional)'}
           </label>
-          <input
+          <PhoneInputField
             id={id('phone')}
-            type="tel"
             value={trainee.phone}
-            onChange={set('phone')}
-            className={inputClass}
-            placeholder="+971 50 123 4567"
+            onChange={(phone) => onChange({ phone })}
           />
           <label className="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-secondary)] cursor-pointer">
             <input
@@ -91,13 +89,10 @@ const TraineeCard = ({
         {!trainee.whatsappSameAsMobile && (
           <div>
             <label htmlFor={id('whatsapp')} className={labelClass}>WhatsApp number</label>
-            <input
+            <PhoneInputField
               id={id('whatsapp')}
-              type="tel"
               value={trainee.whatsappNumber}
-              onChange={set('whatsappNumber')}
-              className={inputClass}
-              placeholder="+971 50 123 4567"
+              onChange={(whatsappNumber) => onChange({ whatsappNumber })}
             />
           </div>
         )}

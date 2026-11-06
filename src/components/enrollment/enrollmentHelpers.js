@@ -103,12 +103,24 @@ const clean = (value) => {
   return trimmed === '' ? undefined : trimmed;
 };
 
+/**
+ * Returns trimmed phone string if it contains subscriber digits beyond just a dial code.
+ * Rejects empty, whitespace-only, or dial-code-only inputs (e.g. "+971" or "+").
+ */
+export const cleanPhone = (value) => {
+  const trimmed = String(value ?? '').trim();
+  if (!trimmed) return undefined;
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length < 5) return undefined;
+  return trimmed;
+};
+
 export const effectiveAmount = (trainee, plan) =>
   trainee.amount !== null && trainee.amount !== undefined ? trainee.amount : (plan ? String(planPrice(plan)) : '');
 
 const whatsappFor = (trainee) => {
-  if (trainee.whatsappSameAsMobile) return clean(trainee.phone);
-  return clean(trainee.whatsappNumber);
+  if (trainee.whatsappSameAsMobile) return cleanPhone(trainee.phone);
+  return cleanPhone(trainee.whatsappNumber);
 };
 
 export const validateRegistration = ({ registrant, parent, trainees, plansById, termsAccepted }) => {
@@ -117,8 +129,9 @@ export const validateRegistration = ({ registrant, parent, trainees, plansById, 
   if (registrant === 'child') {
     if (!clean(parent.name)) errors.push('Parent/guardian name is required.');
     else if (!NAME_PATTERN.test(parent.name.trim())) errors.push('Parent/guardian name may contain only letters, spaces, hyphens and apostrophes.');
-    if (!clean(parent.phone)) errors.push('Parent/guardian mobile number is required.');
-    else if (!PHONE_PATTERN.test(parent.phone.trim())) errors.push('Parent/guardian mobile number is not valid.');
+    const parentPhone = cleanPhone(parent.phone);
+    if (!parentPhone) errors.push('Parent/guardian mobile number is required.');
+    else if (!PHONE_PATTERN.test(parentPhone)) errors.push('Parent/guardian mobile number is not valid.');
     if (clean(parent.email) && !EMAIL_PATTERN.test(parent.email.trim())) errors.push('Parent/guardian email address is not valid.');
   }
 
@@ -134,8 +147,9 @@ export const validateRegistration = ({ registrant, parent, trainees, plansById, 
       errors.push(`${label}: adults registering themselves must be ${ADULT_AGE}+. Register children under a parent/guardian.`);
     }
 
-    if (registrant === 'adult' && !clean(trainee.phone)) errors.push(`${label}: mobile number is required.`);
-    if (clean(trainee.phone) && !PHONE_PATTERN.test(trainee.phone.trim())) errors.push(`${label}: mobile number is not valid.`);
+    const traineePhone = cleanPhone(trainee.phone);
+    if (registrant === 'adult' && !traineePhone) errors.push(`${label}: mobile number is required.`);
+    if (traineePhone && !PHONE_PATTERN.test(traineePhone)) errors.push(`${label}: mobile number is not valid.`);
     const whatsapp = whatsappFor(trainee);
     if (whatsapp && !PHONE_PATTERN.test(whatsapp)) errors.push(`${label}: WhatsApp number is not valid.`);
     if (clean(trainee.emiratesId) && !EMIRATES_ID_PATTERN.test(trainee.emiratesId.replace(/\s/g, ''))) {
@@ -155,7 +169,7 @@ export const validateRegistration = ({ registrant, parent, trainees, plansById, 
 /** Shape the form state into the `registration` object App's handleEnroll expects. */
 export const buildRegistration = ({ registrant, parent, trainees, paymentMethod, plansById }) => ({
   parent: registrant === 'child'
-    ? { name: parent.name.trim(), phone: parent.phone.trim(), email: clean(parent.email) || null }
+    ? { name: parent.name.trim(), phone: (cleanPhone(parent.phone) || parent.phone).trim(), email: clean(parent.email) || null }
     : null,
   trainees: trainees.map((trainee) => {
     const plan = plansById.get(Number(trainee.planId)) || null;
@@ -170,7 +184,7 @@ export const buildRegistration = ({ registrant, parent, trainees, paymentMethod,
       termsAccepted: true
     };
     const optional = {
-      phone: clean(trainee.phone),
+      phone: cleanPhone(trainee.phone),
       whatsappNumber: whatsappFor(trainee),
       emiratesId: clean(trainee.emiratesId),
       email: clean(trainee.email),
