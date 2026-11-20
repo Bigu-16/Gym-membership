@@ -13,8 +13,7 @@ from app.main import app
 from app.models import AppUser
 from app.models.enums import UserRole
 from app.schemas.auth import UserCreateRequest
-from app.schemas.member import FamilyCreate, MemberCreate
-from app.schemas.membership_plan import MembershipPlanCreate
+from app.schemas.people import GuardianIn
 
 
 PASSWORD = "Desk2026Secure"
@@ -98,18 +97,16 @@ async def test_admin_password_reset_revokes_and_is_logged(real_client):
     assert (await real_client.get("/api/v1/audit-logs/", headers=staff_again)).status_code == 403
 
 
-async def test_member_changes_are_recorded_in_the_activity_log(real_client):
+async def test_branch_changes_are_recorded_in_the_activity_log(real_client):
     admin = await login(real_client, "admin@nt.test")
-    created = await real_client.post(
-        "/api/v1/members/", headers=admin, json={"name": "Layla Example", "phone": "+971503330003", "age": 9}
-    )
-    assert created.status_code == 201
-    member_id = created.json()["id"]
-    await real_client.patch(f"/api/v1/members/{member_id}/freeze", headers=admin, json={"is_frozen": True})
-    await real_client.delete(f"/api/v1/members/{member_id}", headers=admin)
+    club = await real_client.post("/api/v1/clubs", headers=admin, json={"name": "Bole"})
+    assert club.status_code == 201
+    headers = {**admin, "X-Club-Id": str(club.json()["id"])}
+    updated = await real_client.patch("/api/v1/clubs/current", headers=headers, json={"monthly_fee": "1500"})
+    assert updated.status_code == 200
 
-    actions = [row["action"] for row in (await real_client.get("/api/v1/audit-logs/?entity_type=member", headers=admin)).json()]
-    assert actions == ["member_deleted", "member_frozen", "member_created"]
+    log = (await real_client.get(f"/api/v1/audit-logs/?club_id={club.json()['id']}", headers=admin)).json()
+    assert [row["action"] for row in log] == ["branch_updated", "branch_created"]
 
 
 async def test_responses_carry_security_headers_and_request_id(real_client):
@@ -145,17 +142,11 @@ def test_password_policy():
     assert UserCreateRequest(full_name="New Staff", email="new@example.com", password="FrontDesk2026").password
 
 
-def test_email_addresses_are_validated():
-    assert MemberCreate(name="Omar Example", phone="+971504440004", age=30, email=" Omar@Example.COM ").email == "omar@example.com"
-    assert MemberCreate(name="Omar Example", phone="+971504440004", age=30, email="").email is None
-    with pytest.raises(ValidationError, match="email address is not valid"):
-        MemberCreate(name="Omar Example", phone="+971504440004", age=30, email="not-an-email")
-    with pytest.raises(ValidationError, match="email address is not valid"):
-        FamilyCreate(parent={"name": "Sara Example", "phone": "+971500000100", "email": "sara@"}, members=[{"name": "Lina Example", "age": 3}])
-
-
-def test_package_text_is_cleaned():
-    plan = MembershipPlanCreate(name="<b>Karate</b> Special", program="Karate", description="<script>x</script>Promo", included_items=["<i>Free belt</i>", " "])
-    assert plan.name == "Karate Special"
-    assert plan.description == "Promo"
-    assert plan.included_items == ["Free belt"]
+def test_parent_text_and_phone_are_cleaned():
+    parent = GuardianIn(name="<b>Abebe</b> Kebede", phone="0911 22 33 44", notes="<script>x</script>Pays monthly")
+    assert parent.name == "Abebe Kebede"
+    assert parent.phone == "+251911223344"
+    assert parent.notes == "Pays monthly"
+    assert GuardianIn(name="አበበ ከበደ", phone="+251 711 223 344").phone == "+251711223344"
+    with pytest.raises(ValidationError, match="phone number is not valid"):
+        GuardianIn(name="Abebe Kebede", phone="12345")

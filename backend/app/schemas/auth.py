@@ -57,6 +57,7 @@ class UserResponse(BaseModel):
     email: str
     role: UserRole
     is_active: bool
+    club_id: int | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -67,6 +68,8 @@ class UserCreateRequest(BaseModel):
     password: str
     role: UserRole = UserRole.staff
     is_active: bool = True
+    # Required for staff (their branch). Owners have no branch.
+    club_id: int | None = None
 
     @field_validator("full_name", mode="before")
     @classmethod
@@ -84,6 +87,7 @@ class UserUpdateRequest(BaseModel):
     email: EmailStr | None = None
     role: UserRole | None = None
     is_active: bool | None = None
+    club_id: int | None = None
 
     @field_validator("full_name", mode="before")
     @classmethod

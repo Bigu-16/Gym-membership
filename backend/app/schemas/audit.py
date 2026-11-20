@@ -8,6 +8,7 @@ class AuditLogResponse(BaseModel):
 
     id: int
     created_at: datetime
+    club_id: int | None = None
     actor_user_id: int | None
     actor_email: str | None
     action: str

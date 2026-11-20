@@ -4,8 +4,40 @@
     {
       "name": "frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5174", "--strictPort"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5174",
+        "--strictPort"
+      ],
       "port": 5174
+    },
+    {
+      "name": "api-local",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd backend && exec env DATABASE_URL=sqlite+aiosqlite:///./dev.db APP_ENV=development LOGIN_RATE_LIMIT_ENABLED=false .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8010"
+      ],
+      "port": 8010,
+      "autoPort": false
+    },
+    {
+      "name": "frontend-local",
+      "runtimeExecutable": "/usr/bin/env",
+      "runtimeArgs": [
+        "VITE_API_URL=http://127.0.0.1:8010/api/v1",
+        "npm",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5175",
+        "--strictPort"
+      ],
+      "port": 5175
     }
   ]
 }

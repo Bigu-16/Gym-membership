@@ -11,10 +11,12 @@ def record_audit(
     entity_id: object,
     summary: str,
     details: dict | None = None,
+    club_id: int | None = None,
 ) -> None:
     """Add an activity-log row to the caller's transaction (committed with the change itself)."""
     db.add(
         AuditLog(
+            club_id=club_id,
             actor_user_id=actor.id if actor else None,
             actor_email=actor.email if actor else None,
             action=action,

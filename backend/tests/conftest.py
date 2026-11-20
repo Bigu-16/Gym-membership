@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 import app.core.database as database_module
-import app.tasks.notifications as notifications_module
 from app.api.deps import get_current_admin_user, get_current_user
 from app.core.database import Base
 from app.db import get_db_session
@@ -31,9 +30,8 @@ async def engine():
 @pytest_asyncio.fixture
 async def session_factory(engine, monkeypatch):
     factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
-    # Point the app's SessionLocal (used by Celery task helpers) at the test DB too.
+    # Point the app's SessionLocal (used by the health check) at the test DB too.
     monkeypatch.setattr(database_module, "SessionLocal", factory)
-    monkeypatch.setattr(notifications_module, "SessionLocal", factory)
     return factory
 
 

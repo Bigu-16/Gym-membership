@@ -6,10 +6,20 @@ from app.api.deps import get_current_admin_user
 from app.services.audit import record_audit
 from app.core.security import hash_password
 from app.db import get_db_session
-from app.models import AppUser
+from app.models import AppUser, Club
+from app.models.enums import UserRole
 from app.schemas.auth import UserCreateRequest, UserPasswordResetRequest, UserResponse, UserUpdateRequest
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+async def _check_branch(db: AsyncSession, role: UserRole, club_id: int | None) -> int | None:
+    """Staff must belong to an existing branch; owners never do."""
+    if role == UserRole.admin:
+        return None
+    if club_id is None or await db.get(Club, club_id) is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Choose the branch this staff member works in")
+    return club_id
 
 
 @router.get("/", response_model=list[UserResponse])
@@ -37,6 +47,7 @@ async def create_user(
         password_hash=hash_password(payload.password),
         role=payload.role,
         is_active=payload.is_active,
+        club_id=await _check_branch(db, payload.role, payload.club_id),
     )
     db.add(user)
     await db.flush()
@@ -76,6 +87,15 @@ async def update_user(
         if existing is not None:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already in use")
         updates["email"] = normalized_email
+
+    if "role" in updates or "club_id" in updates:
+        role = updates.get("role") or user.role
+        club_id = updates["club_id"] if "club_id" in updates else user.club_id
+        if user.id == current_admin.id and role != UserRole.admin:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot remove your own owner access")
+        updates["club_id"] = await _check_branch(db, role, club_id)
+        if updates["club_id"] != user.club_id or role != user.role:
+            user.token_version += 1  # moved branch / role: sign out so the new access applies
 
     if user.id == current_admin.id and updates.get("is_active") is False:
         raise HTTPException(
