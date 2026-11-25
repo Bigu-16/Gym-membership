@@ -113,7 +113,7 @@ export default function Reports() {
               <p className="mb-3 text-muted">{t('reports.missingHint')}</p>
               <ul className="flex flex-wrap gap-2">
                 {worrying.map((s) => (
-                  <li key={s.student_id} className="inline-flex items-center gap-2 rounded-lg border-2 border-crit-strong bg-crit-soft px-3 py-1 font-semibold text-crit">
+                  <li key={s.student_id} className="inline-flex items-center gap-2 rounded-lg border border-crit-strong bg-crit-soft px-3 py-1 font-semibold text-crit">
                     <AlertTriangle className="h-4 w-4" aria-hidden="true" />
                     {s.name} · {t('reports.missedN', { count: s.absent_streak, n: s.absent_streak })}
                   </li>

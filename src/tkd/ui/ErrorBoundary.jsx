@@ -32,14 +32,14 @@ export default class ErrorBoundary extends Component {
     if (!this.state.error) return this.props.children;
     const t = this.context?.t || ((k) => k);
     return (
-      <div role="alert" className="mx-auto my-12 max-w-xl rounded-xl border-2 border-crit-strong bg-white p-8 text-center">
+      <div role="alert" className="mx-auto my-12 max-w-xl rounded-xl border border-crit-strong bg-white p-8 text-center">
         <h2 className="text-xl font-bold text-ink">{t('errors.crashTitle')}</h2>
         <p className="mt-2 text-muted">{t('errors.crashText')}</p>
         <div className="mt-4 flex justify-center gap-3">
           <button type="button" className="min-h-[48px] rounded-lg bg-brand px-5 font-semibold text-white" onClick={() => this.setState({ error: null })}>
             {t('common.retry')}
           </button>
-          <button type="button" className="min-h-[48px] rounded-lg border-2 border-brand px-5 font-semibold text-brand" onClick={() => window.location.reload()}>
+          <button type="button" className="min-h-[48px] rounded-lg border border-brand px-5 font-semibold text-brand" onClick={() => window.location.reload()}>
             {t('errors.reload')}
           </button>
         </div>

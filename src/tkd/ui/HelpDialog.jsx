@@ -41,7 +41,7 @@ export default function HelpDialog({ open, onClose, page }) {
           <dl className="grid gap-2 sm:grid-cols-2">
             {colours.map((c) => (
               <div key={c.label} className="flex items-start gap-3 rounded-xl border border-line-soft p-3">
-                <dt className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border-2 px-2.5 py-0.5 text-[0.95rem] font-semibold ${c.cls}`}>
+                <dt className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[0.95rem] font-semibold ${c.cls}`}>
                   <c.icon className="h-4 w-4" aria-hidden="true" />{c.label}
                 </dt>
                 <dd className="text-[0.95rem] text-muted">{c.text}</dd>

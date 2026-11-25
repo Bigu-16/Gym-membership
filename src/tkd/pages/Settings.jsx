@@ -20,7 +20,7 @@ function DayPicker({ legend, value, onChange }) {
         {DAYS.map((d) => {
           const on = value.includes(d);
           return (
-            <label key={d} className={clsx('flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border-2 px-3 font-semibold',
+            <label key={d} className={clsx('flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border px-3 font-semibold',
               on ? 'border-brand bg-tint text-brand' : 'border-line bg-white text-ink')}>
               <input type="checkbox" className="h-5 w-5 accent-[var(--brand)]" checked={on}
                 onChange={(e) => onChange(e.target.checked ? [...value, d].sort() : value.filter((x) => x !== d))} />

@@ -63,7 +63,7 @@ function StockTable({ sizes, onCount, onEdit }) {
   const { t, formatMoney } = useI18n();
   if (!sizes.length) return <EmptyState icon={Shirt} title={t('uniforms.noSizes')} />;
   return (
-    <div className="overflow-x-auto rounded-xl border border-line-soft bg-white shadow-card">
+    <div className="overflow-x-auto rounded-xl border border-line-soft bg-white">
       <table className="w-full text-left">
         <caption className="sr-only">{t('uniforms.tabStock')}</caption>
         <thead className="bg-page">
@@ -83,7 +83,7 @@ function StockTable({ sizes, onCount, onEdit }) {
               <td className="px-4 py-3 text-right tabular-nums">{s.pending || '—'}</td>
               <td className="px-4 py-3 text-right">
                 <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-bold tabular-nums',
-                  s.in_stock === 0 ? 'border-2 border-crit-strong bg-crit-soft text-crit' : s.low ? 'border-2 border-warn-strong bg-warn-soft text-warn' : 'text-ink')}>
+                  s.in_stock === 0 ? 'border border-crit-strong bg-crit-soft text-crit' : s.low ? 'border border-warn-strong bg-warn-soft text-warn' : 'text-ink')}>
                   {s.low ? <AlertTriangle className="h-4 w-4" aria-hidden="true" /> : null}
                   {s.in_stock}
                   {s.in_stock === 0 ? <span className="font-semibold">{t('uniforms.none')}</span> : s.low ? <span className="font-semibold">{t('uniforms.low')}</span> : null}
@@ -124,7 +124,7 @@ function Orders({ sizes, onChange, onNew }) {
         <li key={o.id}>
           <Card as="article" headingLevel={3}
             title={`${t('uniforms.orderN', { n: o.id })}${o.supplier ? ` · ${o.supplier}` : ''}`}
-            action={<span className={clsx('rounded-full border-2 px-3 py-0.5 font-semibold', tone[o.status])}>{t(`uniforms.status.${o.status}`)}</span>}>
+            action={<span className={clsx('rounded-full border px-3 py-0.5 font-semibold', tone[o.status])}>{t(`uniforms.status.${o.status}`)}</span>}>
             <p className="text-muted">
               {t('uniforms.orderedOn', { date: formatDate(o.ordered_on) })}
               {o.received_on ? ` · ${t('uniforms.receivedOn', { date: formatDate(o.received_on) })}` : ''}
@@ -171,7 +171,7 @@ function Sales({ onChange }) {
   if (!sales.data.length) return <EmptyState icon={Shirt} title={t('uniforms.noSales')} />;
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border border-line-soft bg-white shadow-card">
+      <div className="overflow-x-auto rounded-xl border border-line-soft bg-white">
         <table className="w-full text-left">
           <caption className="sr-only">{t('uniforms.tabSales')}</caption>
           <thead className="bg-page"><tr>

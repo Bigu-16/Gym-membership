@@ -48,7 +48,7 @@ export default function Dashboard() {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {data.today_slots.map((s) => (
               <a key={s.slot_id} href={`#/attendance?slot=${s.slot_id}`}
-                className="flex flex-col gap-2 rounded-xl border-2 border-line-soft bg-white p-4 shadow-card hover:border-brand">
+                className="flex flex-col gap-2 rounded-xl border border-line-soft bg-white p-4 hover:border-brand">
                 <SlotText slot={slotById[s.slot_id] || s} />
                 <p className="text-2xl font-bold tabular-nums text-ink">
                   {s.saved ? t('dashboard.presentOf', { present: s.present, total: s.expected }) : t('dashboard.kidsCount', { count: s.expected, n: s.expected })}
@@ -121,7 +121,7 @@ export default function Dashboard() {
                 <p className="mb-2 flex items-center gap-2 font-semibold text-warn"><AlertTriangle className="h-5 w-5" aria-hidden="true" />{t('dashboard.lowStock')}</p>
                 <ul className="flex flex-wrap gap-2">
                   {data.low_stock.map((s) => (
-                    <li key={s.size_id} className="rounded-lg border-2 border-warn-strong bg-warn-soft px-3 py-1 font-semibold text-warn">
+                    <li key={s.size_id} className="rounded-lg border border-warn-strong bg-warn-soft px-3 py-1 font-semibold text-warn">
                       {t('dashboard.sizeLeft', { size: s.label, n: s.in_stock })}{s.pending ? ` · ${t('dashboard.onTheWay', { n: s.pending })}` : ''}
                     </li>
                   ))}

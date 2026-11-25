@@ -75,11 +75,11 @@ export default function Family({ id }) {
 
       <Card className="mb-6" title={t('family.contact')} headingLevel={2}>
         <div className="flex flex-wrap gap-3">
-          <a href={`tel:${g.phone}`} className="inline-flex min-h-[48px] items-center gap-2 rounded-lg border-2 border-brand px-4 font-semibold text-brand hover:bg-tint">
+          <a href={`tel:${g.phone}`} className="inline-flex min-h-[48px] items-center gap-2 rounded-lg border border-brand px-4 font-semibold text-brand hover:bg-tint">
             <Phone className="h-5 w-5" aria-hidden="true" /> {g.phone}
           </a>
           {g.phone_alt ? (
-            <a href={`tel:${g.phone_alt}`} className="inline-flex min-h-[48px] items-center gap-2 rounded-lg border-2 border-line px-4 font-semibold text-ink hover:bg-tint">
+            <a href={`tel:${g.phone_alt}`} className="inline-flex min-h-[48px] items-center gap-2 rounded-lg border border-line px-4 font-semibold text-ink hover:bg-tint">
               <Phone className="h-5 w-5" aria-hidden="true" /> {g.phone_alt}
             </a>
           ) : null}
@@ -90,7 +90,7 @@ export default function Family({ id }) {
       <h2 className="mb-3 text-xl font-bold text-ink">{t('family.kids')}</h2>
       <div className="mb-8 grid gap-4 lg:grid-cols-2">
         {g.students.map((kid) => (
-          <article key={kid.id} className={clsx('rounded-xl border border-line-soft bg-white p-4 shadow-card', STATUS_ROW[kid.status])} aria-labelledby={`kid-${kid.id}`}>
+          <article key={kid.id} className={clsx('rounded-xl border border-line-soft bg-white p-4', STATUS_ROW[kid.status])} aria-labelledby={`kid-${kid.id}`}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <h3 id={`kid-${kid.id}`} className="text-lg font-bold text-ink">{kid.name}</h3>
@@ -291,7 +291,7 @@ function HistoryDialog({ kid, onClose }) {
             {d.attendance.length ? (
               <ul className="mt-3 flex flex-wrap gap-2" aria-label={t('family.lastClasses')}>
                 {d.attendance.slice(0, 24).map((a) => (
-                  <li key={a.date} className={clsx('rounded-md border-2 px-2 py-1 text-[0.95rem] font-semibold',
+                  <li key={a.date} className={clsx('rounded-md border px-2 py-1 text-[0.95rem] font-semibold',
                     a.status === 'present' ? 'border-ok-strong bg-ok-soft text-ok' : 'border-crit-strong bg-crit-soft text-crit')}>
                     {formatDate(a.date, { withYear: false })} · {t(`attendance.${a.status}`)}
                   </li>

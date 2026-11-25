@@ -62,7 +62,7 @@ export default function Students({ params }) {
       <div className="mb-5 flex flex-wrap items-center gap-2" role="group" aria-label={t('students.filterBy')}>
         {FILTERS.map((f) => (
           <button key={f.value} type="button" aria-pressed={status === f.value} onClick={() => setStatus(f.value)}
-            className={clsx('min-h-[44px] rounded-full border-2 px-4 font-semibold',
+            className={clsx('min-h-[44px] rounded-full border px-4 font-semibold',
               status === f.value ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink hover:border-brand')}>
             {t(f.key)}
           </button>
@@ -80,7 +80,7 @@ export default function Students({ params }) {
       {data && data.length ? (
         <>
           {/* Wide screens: table */}
-          <div className="hidden overflow-x-auto rounded-xl border border-line-soft bg-white shadow-card md:block">
+          <div className="hidden overflow-x-auto rounded-xl border border-line-soft bg-white md:block">
             <table className="w-full text-left">
               <caption className="sr-only">{t('students.title')}</caption>
               <thead className="bg-page">
@@ -118,7 +118,7 @@ export default function Students({ params }) {
           <ul className="flex flex-col gap-3 md:hidden">
             {data.map((kid) => (
               <li key={kid.id}>
-                <a href={`#/family/${kid.guardian_id}`} className={clsx('block rounded-xl border border-line-soft bg-white p-4 shadow-card', STATUS_ROW[kid.status])}>
+                <a href={`#/family/${kid.guardian_id}`} className={clsx('block rounded-xl border border-line-soft bg-white p-4', STATUS_ROW[kid.status])}>
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-lg font-bold text-brand">{kid.name}</p>
                     {kid.uniform_size ? <span className="rounded-md bg-tint px-2 font-semibold text-brand">{t('students.sizeN', { n: kid.uniform_size })}</span> : null}

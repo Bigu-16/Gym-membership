@@ -30,9 +30,7 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigat
 
 const typingIn = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
 
-const initials = (name = '') => name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
-
-function LanguageToggle({ onNavy = false, compact = false }) {
+function LanguageToggle({ compact = false }) {
   const { lang, setLang, t } = useI18n();
   const next = lang === 'en' ? 'am' : 'en';
   return (
@@ -42,8 +40,7 @@ function LanguageToggle({ onNavy = false, compact = false }) {
       lang={next}
       aria-label={t('app.switchLanguage')}
       className={clsx(
-        'inline-flex min-h-[44px] items-center gap-2 rounded-xl border-2 px-3 font-semibold transition-colors',
-        onNavy ? 'border-[#b9c4d9] text-white hover:bg-white/10' : 'border-line-soft bg-white text-brand hover:border-brand hover:bg-tint',
+        'inline-flex min-h-[44px] items-center gap-2 rounded-lg px-3 font-semibold text-brand transition-colors hover:bg-tint',
       )}
     >
       <Languages className="h-5 w-5" aria-hidden="true" />
@@ -55,34 +52,29 @@ function LanguageToggle({ onNavy = false, compact = false }) {
 function NavLinks({ current, onPick }) {
   const { t } = useI18n();
   return (
-    <div className="flex flex-col gap-5">
-      {['daily', 'manage'].map((group) => (
-        <div key={group}>
-          <p className="mb-1.5 px-3 text-[0.8rem] font-bold uppercase tracking-wider text-[#b9c4d9]">{t(`nav.group.${group}`)}</p>
-          <ul className="flex flex-col gap-1">
-            {NAV.filter((n) => n.group === group).map((item) => {
-              const active = isActive(item.path, current);
-              return (
-                <li key={item.path}>
-                  <a
-                    href={`#${item.path}`}
-                    onClick={onPick}
-                    aria-current={active ? 'page' : undefined}
-                    className={clsx(
-                      'group flex min-h-[46px] items-center gap-3 rounded-xl px-3 font-semibold transition-colors',
-                      active ? 'bg-white text-navy shadow-soft' : 'text-[#e9eef7] hover:bg-white/10',
-                    )}
-                  >
-                    <span className={clsx('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', active ? 'bg-tint text-brand' : 'bg-white/10 text-white')}>
-                      <item.icon className="h-[1.15rem] w-[1.15rem]" aria-hidden="true" />
-                    </span>
-                    {t(item.key)}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+    <div className="flex flex-col gap-3">
+      {['daily', 'manage'].map((group, gi) => (
+        <ul key={group} aria-label={t(`nav.group.${group}`)} className={clsx('flex flex-col gap-0.5', gi > 0 && 'border-t border-line-soft pt-3')}>
+          {NAV.filter((n) => n.group === group).map((item) => {
+            const active = isActive(item.path, current);
+            return (
+              <li key={item.path}>
+                <a
+                  href={`#${item.path}`}
+                  onClick={onPick}
+                  aria-current={active ? 'page' : undefined}
+                  className={clsx(
+                    'flex min-h-[44px] items-center gap-3 rounded-lg px-3 font-semibold transition-colors',
+                    active ? 'bg-tint text-brand' : 'text-muted hover:bg-page hover:text-ink',
+                  )}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  {t(item.key)}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
       ))}
     </div>
   );
@@ -91,14 +83,13 @@ function NavLinks({ current, onPick }) {
 function UserCard({ user, onSignOut }) {
   const { t } = useI18n();
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-white/[0.07] p-2.5">
-      <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white font-bold text-navy">{initials(user.full_name)}</span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-white">{user.full_name}</p>
-        <p className="truncate text-[0.9rem] text-[#b9c4d9]">{t(user.role === 'admin' ? 'settings.roleAdmin' : 'settings.roleStaff')}</p>
+    <div className="flex items-center gap-3 border-t border-line-soft pt-3">
+      <div className="min-w-0 flex-1 px-1">
+        <p className="truncate font-semibold text-ink">{user.full_name}</p>
+        <p className="truncate text-[0.9rem] text-muted">{t(user.role === 'admin' ? 'settings.roleAdmin' : 'settings.roleStaff')}</p>
       </div>
       <button type="button" onClick={onSignOut} aria-label={t('app.signOut')} title={t('app.signOut')}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white hover:bg-white/10">
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-tint hover:text-ink">
         <LogOut className="h-5 w-5" aria-hidden="true" />
       </button>
     </div>
@@ -247,16 +238,14 @@ export default function App() {
       <a href="#main" className="skip-link" onClick={(e) => { e.preventDefault(); document.getElementById('main')?.focus(); }}>
         {t('app.skipToContent')}
       </a>
-      <div className="min-h-screen lg:grid lg:grid-cols-[17.5rem_1fr]">
+      <div className="min-h-screen lg:grid lg:grid-cols-[15.5rem_1fr]">
         {/* Desktop sidebar */}
-        <aside className="on-navy no-print hidden bg-navy lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:gap-6 lg:p-4">
-          <div className="flex items-center gap-3 px-2 pt-2">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white p-1.5 shadow-soft">
-              <img src="/logo.svg" alt="" className="h-full w-full" />
-            </span>
+        <aside className="no-print hidden border-r border-line-soft bg-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:gap-6 lg:p-4">
+          <div className="flex items-center gap-3 px-2 pt-1">
+            <img src="/logo.svg" alt="" className="h-9 w-9" />
             <div className="min-w-0">
-              <p className="truncate text-lg font-bold leading-tight text-white">{t('app.name')}</p>
-              <p className="truncate text-[0.9rem] text-[#b9c4d9]">{branchName}</p>
+              <p className="truncate font-bold leading-tight text-ink">{t('app.name')}</p>
+              {branchName !== t('app.name') ? <p className="truncate text-[0.9rem] text-muted">{branchName}</p> : null}
             </div>
           </div>
           <nav aria-label={t('app.mainMenu')} className="-mx-1 flex-1 overflow-y-auto px-1"><NavLinks current={path} /></nav>
@@ -271,22 +260,22 @@ export default function App() {
           ) : null}
 
           {/* Top bar: search, help and language are always in the same place */}
-          <header className="no-print sticky top-0 z-30 border-b border-line-soft bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+          <header className="no-print sticky top-0 z-30 border-b border-line-soft bg-white">
             <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2.5 sm:px-6 lg:px-10">
               <button type="button" onClick={() => setMenuOpen(true)} aria-label={t('app.openMenu')} aria-expanded={menuOpen}
-                className="flex h-11 w-11 items-center justify-center rounded-xl text-ink hover:bg-tint lg:hidden">
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-ink hover:bg-tint lg:hidden">
                 <Menu className="h-6 w-6" aria-hidden="true" />
               </button>
               <p className="min-w-0 flex-1 truncate font-bold text-ink lg:hidden">{branchName}</p>
               <button type="button" onClick={() => setSearchOpen(true)} aria-label={t('search.title')} aria-keyshortcuts="Control+K Meta+K /"
-                className="flex h-11 min-w-[2.75rem] items-center justify-center gap-3 rounded-xl border-2 border-line-soft bg-page px-3 text-muted transition-colors hover:border-brand hover:text-ink lg:flex-1 lg:justify-start lg:max-w-md">
+                className="flex h-11 min-w-[2.75rem] items-center justify-center gap-3 rounded-lg px-3 text-muted transition-colors hover:bg-tint hover:text-ink lg:flex-1 lg:justify-start lg:max-w-sm lg:border lg:border-line-soft">
                 <Search className="h-5 w-5 shrink-0" aria-hidden="true" />
                 <span className="hidden flex-1 truncate text-left lg:inline">{t('search.placeholder')}</span>
                 <kbd className="hidden lg:inline">{searchLabel}</kbd>
               </button>
               <span className="hidden flex-1 lg:block" />
               <button type="button" onClick={() => setHelpOpen(true)} aria-label={t('help.title')} aria-keyshortcuts="?" title={t('help.title')}
-                className="flex h-11 items-center justify-center gap-2 rounded-xl px-2.5 font-semibold text-brand hover:bg-tint">
+                className="flex h-11 items-center justify-center gap-2 rounded-lg px-2.5 font-semibold text-brand hover:bg-tint">
                 <CircleHelp className="h-5 w-5" aria-hidden="true" /><span className="hidden sm:inline">{t('help.short')}</span>
               </button>
               <LanguageToggle compact />
@@ -300,12 +289,12 @@ export default function App() {
           </main>
 
           {/* Mobile bottom bar: the four daily jobs */}
-          <nav aria-label={t('app.quickMenu')} className="no-print fixed bottom-0 left-0 right-0 z-30 grid grid-cols-4 gap-1 border-t border-line-soft bg-white/95 px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-4px_20px_-8px_rgba(15,23,42,0.15)] backdrop-blur lg:hidden">
+          <nav aria-label={t('app.quickMenu')} className="no-print fixed bottom-0 left-0 right-0 z-30 grid grid-cols-4 gap-1 border-t border-line-soft bg-white px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 lg:hidden">
             {NAV.filter((n) => n.mobile).map((item) => {
               const active = isActive(item.path, path);
               return (
                 <a key={item.path} href={`#${item.path}`} aria-current={active ? 'page' : undefined}
-                  className={clsx('flex min-h-[58px] flex-col items-center justify-center gap-0.5 rounded-xl text-[0.85rem] font-semibold transition-colors', active ? 'bg-tint text-brand' : 'text-muted hover:text-ink')}>
+                  className={clsx('flex min-h-[58px] flex-col items-center justify-center gap-0.5 rounded-lg text-[0.85rem] font-semibold transition-colors', active ? 'text-brand' : 'text-muted hover:text-ink')}>
                   <item.icon className="h-6 w-6" aria-hidden="true" />
                   {t(item.key)}
                 </a>
@@ -317,23 +306,23 @@ export default function App() {
 
       {/* Mobile full menu */}
       {menuOpen ? (
-        <div className="anim-fade fixed inset-0 z-40 bg-[rgba(15,23,42,0.55)] lg:hidden" onClick={() => setMenuOpen(false)}>
+        <div className="anim-fade fixed inset-0 z-40 bg-[rgba(15,23,42,0.5)] lg:hidden" onClick={() => setMenuOpen(false)}>
           <div role="dialog" aria-modal="true" aria-label={t('app.mainMenu')} onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => { if (e.key === 'Escape') setMenuOpen(false); }}
-            className="on-navy anim-slide flex h-full w-[85%] max-w-xs flex-col gap-5 overflow-y-auto bg-navy p-4">
+            className="anim-slide flex h-full w-[85%] max-w-xs flex-col gap-5 overflow-y-auto bg-white p-4">
             <div className="flex items-center justify-between">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1.5"><img src="/logo.svg" alt="" className="h-full w-full" /></span>
-                <p className="truncate text-lg font-bold text-white">{t('app.name')}</p>
+                <img src="/logo.svg" alt="" className="h-9 w-9 shrink-0" />
+                <p className="truncate font-bold text-ink">{t('app.name')}</p>
               </div>
               <button type="button" autoFocus onClick={() => setMenuOpen(false)} aria-label={t('common.close')}
-                className="flex h-11 w-11 items-center justify-center rounded-xl text-white hover:bg-white/10">
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-ink hover:bg-tint">
                 <X className="h-6 w-6" aria-hidden="true" />
               </button>
             </div>
             <nav aria-label={t('app.mainMenu')}><NavLinks current={path} onPick={() => setMenuOpen(false)} /></nav>
             <button type="button" onClick={() => { setMenuOpen(false); setHelpOpen(true); }}
-              className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 font-semibold text-white hover:bg-white/10">
+              className="flex min-h-[44px] items-center gap-3 rounded-lg px-3 font-semibold text-muted hover:bg-page hover:text-ink">
               <CircleHelp className="h-5 w-5" aria-hidden="true" /> {t('help.title')}
             </button>
             <div className="mt-auto"><UserCard user={user} onSignOut={signOut} /></div>

@@ -6,10 +6,10 @@ import { useI18n } from '../i18n/context';
 // ----- Buttons ----------------------------------------------------------------------------
 
 const BUTTON = {
-  primary: 'bg-brand text-white hover:bg-brand-hover border border-brand shadow-sm hover:shadow-soft',
-  secondary: 'bg-white text-brand border-2 border-brand hover:bg-tint',
+  primary: 'bg-brand text-white hover:bg-brand-hover border border-brand',
+  secondary: 'bg-white text-brand border border-line hover:border-brand hover:bg-tint',
   ghost: 'bg-transparent text-ink border border-transparent hover:bg-tint',
-  danger: 'bg-crit-strong text-white border border-crit-strong shadow-sm hover:brightness-90',
+  danger: 'bg-crit-strong text-white border border-crit-strong hover:brightness-90',
 };
 
 export function Button({ variant = 'primary', size = 'md', icon: Icon, loading = false, className, children, type = 'button', ...props }) {
@@ -17,7 +17,7 @@ export function Button({ variant = 'primary', size = 'md', icon: Icon, loading =
     <button
       type={type}
       className={clsx(
-        'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition duration-150 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed',
         size === 'sm' ? 'min-h-[44px] px-3 text-[0.95rem]' : 'min-h-[48px] px-5 text-base',
         BUTTON[variant],
         className,
@@ -38,7 +38,7 @@ export function IconButton({ label, icon: Icon, className, ...props }) {
       type="button"
       aria-label={label}
       title={label}
-      className={clsx('inline-flex h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-tint', className)}
+      className={clsx('inline-flex h-11 w-11 items-center justify-center rounded-lg text-ink transition-colors hover:bg-tint', className)}
       {...props}
     >
       <Icon className="h-5 w-5" aria-hidden="true" />
@@ -81,7 +81,7 @@ export function Field({ label, hint, error, required, optional, children, classN
   );
 }
 
-const CONTROL = 'min-h-[48px] w-full rounded-xl border-2 border-line bg-white px-3.5 text-base text-ink shadow-sm transition-colors placeholder:text-muted hover:border-ink focus:border-brand aria-[invalid=true]:border-crit-strong';
+const CONTROL = 'min-h-[48px] w-full rounded-lg border border-line bg-white px-3.5 text-base text-ink transition-colors placeholder:text-muted hover:border-ink focus:border-brand aria-[invalid=true]:border-2 aria-[invalid=true]:border-crit-strong';
 
 export const Input = ({ className, ...props }) => <input className={clsx(CONTROL, className)} {...props} />;
 export const Select = ({ className, children, ...props }) => (
@@ -114,8 +114,8 @@ export function ChoiceGroup({ legend, name, options, value, onChange, columns = 
             <label
               key={opt.value}
               className={clsx(
-                'flex min-h-[56px] cursor-pointer items-center gap-3 rounded-xl border-2 px-3.5 py-2 transition-colors',
-                checked ? 'border-brand bg-tint shadow-sm' : 'border-line bg-white hover:border-brand',
+                'flex min-h-[56px] cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-2 transition-colors',
+                checked ? 'border-brand bg-tint outline outline-1 outline-brand' : 'border-line bg-white hover:border-brand',
                 opt.disabled && 'opacity-60 cursor-not-allowed',
               )}
             >
@@ -146,16 +146,12 @@ export function ChoiceGroup({ legend, name, options, value, onChange, columns = 
 export function Card({ title, subtitle, icon: Icon, action, children, className, as: Tag = 'section', headingLevel = 2 }) {
   const Heading = `h${headingLevel}`;
   return (
-    <Tag className={clsx('rounded-2xl border border-line-soft bg-white p-4 shadow-soft sm:p-6', className)}>
+    <Tag className={clsx('rounded-xl border border-line-soft bg-white p-4 sm:p-5', className)}>
       {title || action ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           {title ? (
             <div className="flex min-w-0 items-center gap-3">
-              {Icon ? (
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tint text-brand">
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                </span>
-              ) : null}
+              {Icon ? <Icon className="h-5 w-5 shrink-0 text-muted" aria-hidden="true" /> : null}
               <div className="min-w-0">
                 <Heading className="text-lg font-bold text-ink">{title}</Heading>
                 {subtitle ? <p className="text-[0.95rem] text-muted">{subtitle}</p> : null}
@@ -174,7 +170,7 @@ export function Card({ title, subtitle, icon: Icon, action, children, className,
 export function PageHeader({ title, subtitle, actions, crumbs }) {
   const { t } = useI18n();
   return (
-    <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {crumbs?.length ? (
           <nav aria-label={t('app.breadcrumb')} className="mb-2">
@@ -189,7 +185,7 @@ export function PageHeader({ title, subtitle, actions, crumbs }) {
             </ol>
           </nav>
         ) : null}
-        <h1 className="text-[1.75rem] font-extrabold leading-tight text-ink sm:text-[2rem]">{title}</h1>
+        <h1 className="text-2xl font-bold leading-tight text-ink sm:text-[1.75rem]">{title}</h1>
         {subtitle ? <p className="mt-1 text-muted">{subtitle}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
@@ -198,23 +194,14 @@ export function PageHeader({ title, subtitle, actions, crumbs }) {
 }
 
 export function Stat({ label, value, hint, icon: Icon, tone = 'brand' }) {
-  const tones = {
-    brand: 'bg-tint text-brand',
-    ok: 'bg-ok-soft text-ok',
-    warn: 'bg-warn-soft text-warn',
-    crit: 'bg-crit-soft text-crit',
-  };
+  const tones = { brand: 'text-brand', ok: 'text-ok', warn: 'text-warn', crit: 'text-crit' };
   return (
-    <div className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-line-soft bg-white p-5 shadow-soft">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[0.95rem] font-semibold text-muted">{label}</p>
-        {Icon ? (
-          <span className={clsx('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', tones[tone])}>
-            <Icon className="h-5 w-5" aria-hidden="true" />
-          </span>
-        ) : null}
-      </div>
-      <p className="text-[2rem] font-extrabold leading-none text-ink tabular-nums">{value}</p>
+    <div className="flex flex-col gap-2 rounded-xl border border-line-soft bg-white p-4 sm:p-5">
+      <p className="flex items-center gap-2 text-[0.95rem] font-semibold text-muted">
+        {Icon ? <Icon className={clsx('h-4 w-4 shrink-0', tones[tone])} aria-hidden="true" /> : null}
+        {label}
+      </p>
+      <p className="text-[1.75rem] font-bold leading-none text-ink tabular-nums">{value}</p>
       {hint ? <p className="text-[0.95rem] text-muted">{hint}</p> : null}
     </div>
   );
@@ -231,7 +218,7 @@ export function Tabs({ tabs, value, onChange, label }) {
     refs.current[next]?.focus();
   };
   return (
-    <div role="tablist" aria-label={label} className="mb-6 inline-flex max-w-full flex-wrap gap-1 rounded-2xl border border-line-soft bg-white p-1 shadow-sm">
+    <div role="tablist" aria-label={label} className="mb-6 flex flex-wrap gap-4 border-b border-line-soft">
       {tabs.map((tab, i) => {
         const selected = tab.value === value;
         return (
@@ -247,12 +234,12 @@ export function Tabs({ tabs, value, onChange, label }) {
             onClick={() => onChange(tab.value)}
             onKeyDown={(e) => onKey(e, i)}
             className={clsx(
-              'min-h-[44px] rounded-xl px-4 font-semibold transition-colors',
-              selected ? 'bg-brand text-white shadow-sm' : 'text-muted hover:bg-tint hover:text-ink',
+              '-mb-px min-h-[44px] border-b-[3px] px-1 font-semibold transition-colors',
+              selected ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-ink',
             )}
           >
             {tab.label}
-            {tab.count !== undefined ? <span className={clsx('ml-2 rounded-full px-2 text-[0.9rem]', selected ? 'bg-white text-brand' : 'bg-tint text-brand')}>{tab.count}</span> : null}
+            {tab.count !== undefined ? <span className="ml-1.5 text-[0.9rem] text-muted">{tab.count}</span> : null}
           </button>
         );
       })}
@@ -268,12 +255,8 @@ export const TabPanel = ({ value, children }) => (
 
 export function EmptyState({ icon: Icon, title, text, action }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-line-soft bg-white/70 px-6 py-12 text-center">
-      {Icon ? (
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-tint text-brand">
-          <Icon className="h-7 w-7" aria-hidden="true" />
-        </span>
-      ) : null}
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-line-soft px-6 py-12 text-center">
+      {Icon ? <Icon className="h-8 w-8 text-muted" aria-hidden="true" /> : null}
       <p className="text-lg font-bold text-ink">{title}</p>
       {text ? <p className="max-w-md text-muted">{text}</p> : null}
       {action}
@@ -301,7 +284,7 @@ export function ErrorNote({ error, onRetry }) {
         : error.status === 404 ? t('errors.notFound')
           : error.message;
   return (
-    <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-crit-strong bg-crit-soft p-4 text-crit">
+    <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-crit-strong bg-crit-soft p-4 text-crit">
       <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden="true" />
       <p className="flex-1 font-semibold">{message}</p>
       {onRetry ? <Button variant="secondary" size="sm" onClick={onRetry}>{t('common.retry')}</Button> : null}
@@ -317,7 +300,7 @@ export function Notice({ tone = 'info', children, icon: Icon }) {
     crit: 'border-crit-strong bg-crit-soft text-crit',
   };
   return (
-    <div className={clsx('flex items-start gap-3 rounded-xl border-l-4 p-4', tones[tone])}>
+    <div className={clsx('flex items-start gap-3 rounded-lg border-l-[3px] p-4', tones[tone])}>
       {Icon ? <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" /> : null}
       <div className="flex-1">{children}</div>
     </div>
@@ -347,7 +330,7 @@ export function StatusBadge({ status, daysLeft, compact = false }) {
     else detail = t('status.daysLeft', { count: daysLeft, n: daysLeft });
   }
   return (
-    <span className={clsx('inline-flex items-center gap-1.5 rounded-full border-2 px-2.5 py-0.5 text-[0.95rem] font-semibold whitespace-nowrap', style.cls)}>
+    <span className={clsx('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[0.95rem] font-semibold whitespace-nowrap', style.cls)}>
       <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
       {compact && detail ? detail : t(`status.${status}`)}
       {!compact && detail ? <span className="font-normal">· {detail}</span> : null}
@@ -403,20 +386,20 @@ export function Dialog({ open, title, onClose, children, footer, wide = false })
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="anim-fade fixed inset-0 z-50 flex items-end justify-center bg-[rgba(15,23,42,0.55)] backdrop-blur-[2px] sm:items-center sm:p-4">
+    <div className="anim-fade fixed inset-0 z-50 flex items-end justify-center bg-[rgba(15,23,42,0.5)] sm:items-center sm:p-4">
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={clsx('anim-rise flex max-h-[95vh] w-full flex-col rounded-t-3xl bg-white shadow-pop sm:rounded-3xl', wide ? 'sm:max-w-3xl' : 'sm:max-w-lg')}
+        className={clsx('anim-rise flex max-h-[95vh] w-full flex-col rounded-t-2xl bg-white shadow-pop sm:rounded-2xl', wide ? 'sm:max-w-3xl' : 'sm:max-w-lg')}
       >
         <div className="flex items-center justify-between gap-2 border-b border-line-soft px-6 py-4">
           <h2 id={titleId} className="text-xl font-bold text-ink">{title}</h2>
           <IconButton label={t('common.close')} icon={X} onClick={onClose} />
         </div>
         <div className="overflow-y-auto px-6 py-5">{children}</div>
-        {footer ? <div className="flex flex-wrap justify-end gap-2 rounded-b-3xl border-t border-line-soft bg-page px-6 py-4">{footer}</div> : null}
+        {footer ? <div className="flex flex-wrap justify-end gap-2 border-t border-line-soft px-6 py-4">{footer}</div> : null}
       </div>
     </div>
   );

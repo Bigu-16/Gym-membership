@@ -14,13 +14,13 @@ export function RangePicker({ value, onChange, presets = ['last4w', 'thisMonth',
         {presets.map((p) => (
           <button key={p} type="button" aria-pressed={value.preset === p && !custom}
             onClick={() => { setCustom(false); onChange({ preset: p, ...PRESETS[p]() }); }}
-            className={clsx('min-h-[44px] rounded-full border-2 px-4 font-semibold',
+            className={clsx('min-h-[44px] rounded-full border px-4 font-semibold',
               value.preset === p && !custom ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink hover:border-brand')}>
             {t(`range.${p}`)}
           </button>
         ))}
         <button type="button" aria-pressed={custom} onClick={() => setCustom(true)}
-          className={clsx('min-h-[44px] rounded-full border-2 px-4 font-semibold', custom ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink hover:border-brand')}>
+          className={clsx('min-h-[44px] rounded-full border px-4 font-semibold', custom ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink hover:border-brand')}>
           {t('range.custom')}
         </button>
       </div>

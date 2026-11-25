@@ -163,7 +163,7 @@ export default function Enrol({ params }) {
           {kids.map((kid, index) => {
             const size = sizeByLabel[kid.uniform_size];
             return (
-              <fieldset key={kid.key} className="rounded-xl border-2 border-line-soft p-4">
+              <fieldset key={kid.key} className="rounded-xl border border-line-soft p-4">
                 <legend className="px-2 text-lg font-bold text-ink">{t('enrol.kidN', { n: index + 1 })}</legend>
                 <div className="flex justify-end">
                   {kids.length > 1 ? (

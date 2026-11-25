@@ -19,7 +19,7 @@ export function ToastProvider({ children }) {
         {items.map((item) => (
           <div
             key={item.id}
-            className={`pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-lg border-2 px-4 py-3 shadow-lg ${
+            className={`pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-lg border px-4 py-3 shadow-lg ${
               item.tone === 'ok' ? 'border-ok-strong bg-ok-soft text-ok' : 'border-crit-strong bg-crit-soft text-crit'
             }`}
           >
