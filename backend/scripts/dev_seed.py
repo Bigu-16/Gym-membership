@@ -4,8 +4,11 @@ Never point this at a real database: it refuses anything that is not SQLite.
 
     DATABASE_URL=sqlite+aiosqlite:///./dev.db uv run python -m scripts.dev_seed
 
-Demo sign-in (local only): owner@demo.local / DemoOwner2026
-                           staff@demo.local / DemoStaff2026
+Two separate tenants are created:
+  1. the gym (N & T Center, gym app) with the gym's own demo data and logins
+     (see ADMIN_EMAIL / STAFF_EMAIL in app/services/demo_data.py)
+  2. the taekwondo club (taekwondo app):
+     admin@tkd.local / DemoTkdAdmin2026, desk@tkd.local / DemoTkdDesk2026
 """
 
 import asyncio
@@ -21,11 +24,13 @@ if not DB_URL.startswith("sqlite"):
     raise SystemExit("dev_seed only runs against a local SQLite DATABASE_URL")
 
 from app.core.database import Base, SessionLocal, engine  # noqa: E402
+from app.core.tenancy import bind_tenant  # noqa: E402
+from app.services.demo_data import seed_demo_data  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
 from app.models import (  # noqa: E402
     AppUser, Attendance, ClassSlot, Club, FeePayment, Guardian, Student, UniformOrder, UniformOrderLine, UniformSale, UniformSize,
 )
-from app.models.enums import AttendanceStatus, FeeMethod, UniformOrderStatus, UserRole  # noqa: E402
+from app.models.enums import AttendanceStatus, ClubKind, FeeMethod, UniformOrderStatus, UserRole  # noqa: E402
 from app.services.clubs import new_club, seed_club_defaults  # noqa: E402
 from app.services.fees import new_receipt_no  # noqa: E402
 from app.services.season import club_today, slot_runs_on  # noqa: E402
@@ -50,17 +55,25 @@ async def main() -> None:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
+    # Tenant 1: the gym, with the gym app's own demo data.
     async with SessionLocal() as db:
-        club = new_club("Bole", "ቦሌ", Decimal("1200"))
-        club.uniform_price = Decimal("1500")
-        other = new_club("Piassa", "ፒያሳ", Decimal("1000"))
-        db.add_all([club, other])
+        gym = Club(name="N & T Center", kind=ClubKind.gym, timezone="Asia/Dubai", currency="AED")
+        db.add(gym)
         await db.flush()
+        bind_tenant(db, gym.id)
+        await seed_demo_data(db, club_id=gym.id)
+
+    # Tenant 2: the taekwondo club.
+    async with SessionLocal() as db:
+        club = new_club("Taekwondo Club", "ቴኳንዶ ክለብ", Decimal("1200"))
+        club.uniform_price = Decimal("1500")
+        db.add(club)
+        await db.flush()
+        bind_tenant(db, club.id)
         seed_club_defaults(db, club)
-        seed_club_defaults(db, other)
         db.add_all([
-            AppUser(full_name="Demo Owner", email="owner@demo.local", password_hash=hash_password("DemoOwner2026"), role=UserRole.admin),
-            AppUser(full_name="Bole Desk", email="staff@demo.local", password_hash=hash_password("DemoStaff2026"), role=UserRole.staff, club_id=club.id),
+            AppUser(full_name="Club Admin", email="admin@tkd.local", password_hash=hash_password("DemoTkdAdmin2026"), role=UserRole.admin, club_id=club.id),
+            AppUser(full_name="Club Desk", email="desk@tkd.local", password_hash=hash_password("DemoTkdDesk2026"), role=UserRole.staff, club_id=club.id),
         ])
         await db.flush()
 

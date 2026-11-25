@@ -1,4 +1,4 @@
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from sqlalchemy import select
@@ -6,8 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db_session
 from app.core.security import decode_access_token
+from app.core.tenancy import bind_tenant
 from app.models import AppUser, Club
-from app.models.enums import UserRole
+from app.models.enums import ClubKind, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -48,33 +49,36 @@ async def get_current_admin_or_staff_user(current_user: AppUser = Depends(get_cu
     return current_user
 
 
-async def get_club(
-    x_club_id: int | None = Header(default=None, alias="X-Club-Id"),
+
+async def get_tenant(
     current_user: AppUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> Club:
-    """The branch this request works on. Every branch-owned query must filter on its id.
+    """The signed-in account's own tenant. There is no way to ask for another tenant."""
+    club = await db.get(Club, current_user.club_id)
+    if club is None or not club.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This gym account is not active")
+    # From here on every query in this request is limited to this tenant (app/core/tenancy.py).
+    bind_tenant(db, club.id)
+    return club
 
-    Staff are locked to their own branch. Owners pick a branch with the X-Club-Id header.
-    """
-    if current_user.role == UserRole.admin:
-        if x_club_id is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose a branch first")
-        club_id = x_club_id
-    else:
-        if current_user.club_id is None:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your account is not linked to a branch")
-        if x_club_id is not None and x_club_id != current_user.club_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only open your own branch")
-        club_id = current_user.club_id
-    club = await db.get(Club, club_id)
-    if club is None or (not club.is_active and current_user.role != UserRole.admin):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Branch not found")
+
+async def get_gym(club: Club = Depends(get_tenant)) -> Club:
+    """Tenant for the gym app (members, packages, schedule). Taekwondo accounts get 404 here."""
+    if club.kind != ClubKind.gym:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    return club
+
+
+async def get_club(club: Club = Depends(get_tenant)) -> Club:
+    """Tenant for the taekwondo app. Gym accounts get 404 here."""
+    if club.kind != ClubKind.taekwondo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     return club
 
 
 async def get_owned(db: AsyncSession, model, object_id: int, club: Club, label: str = "Record"):
-    """Fetch a row only if it belongs to this branch; otherwise behave as if it does not exist."""
+    """Fetch a row only if it belongs to this tenant; otherwise behave as if it does not exist."""
     row = await db.get(model, object_id)
     if row is None or getattr(row, "club_id", None) != club.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{label} not found")

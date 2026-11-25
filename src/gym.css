@@ -1,0 +1,320 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Loaded only when this app opens (see src/Root.jsx). */
+
+:root {
+  /* WCAG 2.2 AAA: every text colour below has at least 7:1 contrast on the page,
+     card, raised and hover surfaces, and on 10% tints of its own colour. */
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #3f4a5c;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.12);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --card-hover: rgba(0, 0, 0, 0.04);
+  /* Graphics only (bars, dots, rings): at least 3:1 against the surface. */
+  --accent-color: #047857;
+
+  /* Status / category text */
+  --success: #064e3b;
+  --warning: #78350f;
+  --danger: #881337;
+  --info: #0c4a6e;
+  --violet: #5b21b6;
+  --brand: #7c2d12;
+
+  /* Solid fills that carry white text (>= 7:1 with #fff in both themes) */
+  --success-solid: #065f46;
+  --warning-solid: #78350f;
+  --danger-solid: #9f1239;
+  --info-solid: #3730a3;
+  --brand-solid: #9a3412;
+
+  --focus-ring: #1d4ed8;
+}
+
+.dark {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #121212;
+  --text-primary: #ffffff;
+  --text-secondary: #b4bfcd;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --card-hover: rgba(255, 255, 255, 0.06);
+  --accent-color: #34d399;
+
+  --success: #6ee7b7;
+  --warning: #fcd34d;
+  --danger: #fecdd3;
+  --info: #7dd3fc;
+  --violet: #d8b4fe;
+  --brand: #fdba74;
+
+  --focus-ring: #93c5fd;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Montserrat', sans-serif;
+  /* WCAG 1.4.8: comfortable line spacing */
+  line-height: 1.5;
+}
+
+@layer components {
+  /* Minimal surfaces: one flat card style used everywhere. */
+  .glass-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+  }
+
+  /* Three button styles used across the app. */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90;
+  }
+  .btn-secondary {
+    @apply btn border border-[var(--glass-border)] text-[var(--text-primary)] hover:bg-[var(--card-hover)];
+  }
+  .btn-danger {
+    @apply btn bg-danger-solid text-white hover:opacity-90;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  /* Small grey label above a value or a group of fields. */
+  .label {
+    @apply block text-xs font-semibold text-[var(--text-secondary)];
+  }
+  .section-title {
+    @apply text-base font-semibold text-[var(--text-primary)];
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.95); }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 10px;
+}
+
+/* Luxury Phone Input Overrides for react-international-phone */
+.luxury-phone-input {
+  width: 100%;
+}
+
+.luxury-phone-input .react-international-phone-input-container {
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+.luxury-phone-input .react-international-phone-input {
+  height: 38px !important;
+  width: 100% !important;
+  background-color: var(--bg-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-left: none !important;
+  border-radius: 0 0.75rem 0.75rem 0 !important;
+  padding: 0 0.75rem !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+  color: var(--text-primary) !important;
+  font-family: inherit !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.luxury-phone-input .react-international-phone-input:focus {
+  outline: none !important;
+  border-color: var(--focus-ring) !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-button {
+  height: 38px !important;
+  background-color: var(--bg-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-right: none !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.5rem !important;
+  border-radius: 0.75rem 0 0 0.75rem !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-button:hover {
+  background-color: var(--card-hover) !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-button:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-dropdown {
+  background-color: var(--bg-secondary) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 1rem !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: blur(16px) !important;
+  z-index: 50 !important;
+  max-height: 240px !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item {
+  color: var(--text-primary) !important;
+  padding: 0.5rem 0.75rem !important;
+  transition: background-color 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item-country-name {
+  color: var(--text-primary) !important;
+  font-size: 0.875rem !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item-dial-code {
+  color: var(--text-secondary) !important;
+  font-size: 0.875rem !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item:hover,
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item--focused {
+  background-color: var(--card-hover) !important;
+}
+
+.luxury-phone-input .react-international-phone-country-selector-dropdown__list-item--selected {
+  background-color: var(--card-hover) !important;
+  font-weight: 600 !important;
+}
+
+/* Hide native datalist arrow */
+input::-webkit-calendar-picker-indicator {
+  display: none !important;
+  opacity: 0;
+}
+
+/* Training Type Selection */
+.training-type-btn {
+  @apply flex-1 py-6 px-4 rounded-2xl border transition-all duration-500 text-center space-y-3 relative overflow-hidden;
+  border-color: var(--glass-border);
+  background: var(--glass-bg);
+}
+
+.training-type-btn.active {
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+.training-type-btn:not(.active):hover {
+  background: var(--card-hover);
+  border-color: var(--text-secondary);
+}
+
+.training-type-btn .icon-container {
+  @apply w-12 h-12 rounded-xl flex items-center justify-center mx-auto transition-colors duration-500;
+  background: var(--card-hover);
+}
+
+.training-type-btn.active .icon-container {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Family Container Grouping */
+.family-group {
+  @apply p-5 sm:p-6 rounded-2xl border space-y-6;
+  border-color: var(--glass-border);
+  background: var(--bg-secondary);
+}
+
+.family-group:hover {
+  border-color: var(--text-secondary);
+}
+
+.family-badge {
+  @apply absolute -top-3 left-6 px-3 py-1 rounded-full text-xs font-semibold;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+/* Schedule Slots */
+.slot-pill {
+  @apply px-4 py-3 rounded-xl border text-[11px] uppercase tracking-wider font-semibold transition-all cursor-pointer text-center;
+  border-color: var(--glass-border);
+  background: var(--bg-primary);
+}
+
+.slot-pill.active {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+}
+
+.slot-pill:not(.active):hover {
+  border-color: var(--text-secondary);
+  background: var(--card-hover);
+}
+
+
+/* ---- Accessibility (WCAG 2.2 AAA) ---------------------------------------- */
+
+/* Placeholder text must stay readable (7:1), not a faded grey. */
+::placeholder {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+
+/* A thick, high-contrast focus outline for keyboard users (2.4.7 / 2.4.13). */
+:focus-visible {
+  outline: 3px solid var(--focus-ring) !important;
+  outline-offset: 2px !important;
+}
+
+/* Respect "reduce motion" (2.3.3): stop pulsing, spinning and sliding. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Dropdowns: our own arrow, set in from the right edge so it never touches the border.
+   Arrow colours match --text-secondary (well above the 3:1 needed for graphics). */
+.select-chevron {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24' stroke='%233f4a5c' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 1rem 1rem;
+}
+
+.dark .select-chevron {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24' stroke='%23b4bfcd' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}

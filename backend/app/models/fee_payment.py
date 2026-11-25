@@ -5,17 +5,16 @@ from sqlalchemy import Date, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.models.base import TimestampMixin
+from app.models.base import TenantMixin, TimestampMixin
 from app.models.enums import FeeMethod
 
 
-class FeePayment(TimestampMixin, Base):
+class FeePayment(TenantMixin, TimestampMixin, Base):
     """Monthly training fee for one kid. Kids paid together share a receipt number."""
 
     __tablename__ = "fee_payments"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    club_id: Mapped[int] = mapped_column(ForeignKey("clubs.id", ondelete="CASCADE"), nullable=False, index=True)
     student_id: Mapped[int] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
     guardian_id: Mapped[int] = mapped_column(ForeignKey("guardians.id"), nullable=False, index=True)
     receipt_no: Mapped[str] = mapped_column(String(32), nullable=False, index=True)

@@ -15,7 +15,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-from app.legacy.catalog_data import OFFICIAL_TIMETABLE, class_key, official_packages
+from app.services.catalog import OFFICIAL_TIMETABLE, class_key, official_packages
 
 revision: str = "20261015_0007"
 down_revision: str | None = "20261014_0006"

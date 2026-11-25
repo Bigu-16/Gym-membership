@@ -4,14 +4,13 @@ from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.models.base import TimestampMixin
+from app.models.base import TenantMixin, TimestampMixin
 
 
-class Student(TimestampMixin, Base):
+class Student(TenantMixin, TimestampMixin, Base):
     __tablename__ = "students"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    club_id: Mapped[int] = mapped_column(ForeignKey("clubs.id", ondelete="CASCADE"), nullable=False, index=True)
     guardian_id: Mapped[int] = mapped_column(ForeignKey("guardians.id"), nullable=False, index=True)
     slot_id: Mapped[int | None] = mapped_column(ForeignKey("class_slots.id", ondelete="SET NULL"), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False, index=True)

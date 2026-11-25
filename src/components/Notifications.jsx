@@ -1,0 +1,345 @@
+import { useState } from 'react';
+import ReminderSettingsCard from './notifications/ReminderSettingsCard';
+
+
+const Notifications = ({ jobs = [], members = [], onTriggerTask }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [selectedJob, setSelectedJob] = useState(null);
+
+  // Helper to map member name/phone from member_id or payload fallback
+  const getRecipientInfo = (job) => {
+    const member = members.find((m) => m.id === job.member_id);
+    if (member) {
+      return {
+        name: member.name,
+        // Children have no phone of their own; messages go to the parent.
+        phone: job.recipient || member.phone || member.parentPhone || '—',
+        image: member.image,
+      };
+    }
+    // Fallback to payload
+    return {
+      name: job.payload?.member_name || 'Former member',
+      phone: job.recipient || job.payload?.phone || '—',
+      image: `https://ui-avatars.com/api/?name=${encodeURIComponent(job.payload?.member_name || 'System')}&background=random&color=fff`,
+    };
+  };
+
+  // Filter & Search Logic
+  const filteredJobs = jobs.filter((job) => {
+    const recipient = getRecipientInfo(job);
+    const matchesSearch =
+      recipient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      recipient.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (job.error_message && job.error_message.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (job.provider || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === 'all' || job.status === statusFilter;
+    const matchesType = typeFilter === 'all' || job.notification_type === typeFilter;
+
+    return matchesSearch && matchesStatus && matchesType;
+  });
+
+  // Calculate Metrics
+  const metrics = {
+    total: jobs.length,
+    pending: jobs.filter((j) => j.status === 'pending').length,
+    processed: jobs.filter((j) => j.status === 'processed').length,
+    failed: jobs.filter((j) => j.status === 'failed').length,
+  };
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return '—';
+    try {
+      const d = new Date(dateString);
+      return d.toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <ReminderSettingsCard onSent={onTriggerTask} />
+
+      {/* Live Stream Header + Filters */}
+      <section className="space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4 flex-grow">
+            <div>
+              <h2 className="section-title">Message history</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
+                {metrics.total} total · <span className="text-success">{metrics.processed} sent</span> ·{' '}
+                <span className="text-warning">{metrics.pending} waiting</span> ·{' '}
+                <span className={metrics.failed > 0 ? 'text-danger font-semibold' : ''}>{metrics.failed} failed</span>
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center">
+            {/* Search Input */}
+            <div className="relative w-full sm:w-64">
+              <input
+                type="text"
+                placeholder="Search member, phone or error"
+                aria-label="Search messages"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-[var(--bg-secondary)] border border-[var(--glass-border)] rounded-xl pl-9 pr-3 py-2 text-sm text-[var(--text-primary)]"
+              />
+              <svg className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+
+            {/* Filters */}
+            <div className="flex gap-2 w-full sm:w-auto overflow-x-auto shrink-0 pb-1 sm:pb-0">
+              <select
+                aria-label="Filter by status"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="select-chevron bg-[var(--bg-secondary)] border border-[var(--glass-border)] rounded-xl pl-3 pr-10 py-2 text-sm text-[var(--text-primary)]"
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="processed">Processed</option>
+                <option value="failed">Failed</option>
+              </select>
+
+              <select
+                aria-label="Filter by message type"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="select-chevron bg-[var(--bg-secondary)] border border-[var(--glass-border)] rounded-xl pl-3 pr-10 py-2 text-sm text-[var(--text-primary)]"
+              >
+                <option value="all">All Types</option>
+                <option value="welcome">Welcome</option>
+                <option value="membership_expiry">Expiry</option>
+                <option value="session_reminder">Session</option>
+                <option value="enrollment">Registration</option>
+                <option value="class_enrollment">Class enrollment</option>
+                <option value="announcement">Announcement</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Table View */}
+        <div className="glass-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-[var(--glass-border)] text-[var(--text-secondary)] text-xs bg-[var(--card-hover)]">
+                  <th className="py-4 px-6">Recipient</th>
+                  <th className="py-4 px-6">Message Type</th>
+                  <th className="py-4 px-6">Status</th>
+                  <th className="py-4 px-6">Scheduled For</th>
+                  <th className="py-4 px-6">Processed At</th>
+                  <th className="py-4 px-6 text-right">Payload</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--glass-border)]">
+                {filteredJobs.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="py-12 text-center text-[var(--text-secondary)]">
+                      No notification jobs match the filter settings.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredJobs.map((job) => {
+                    const recipient = getRecipientInfo(job);
+                    return (
+                      <tr
+                        key={job.id}
+                        onClick={() => setSelectedJob(job)}
+                        className="hover:bg-[var(--card-hover)] transition-colors cursor-pointer group"
+                      >
+                        <td className="py-4 px-6 flex items-center gap-3">
+                          <img
+                            src={recipient.image}
+                            alt={recipient.name}
+                            className="w-8 h-8 rounded-full bg-[var(--glass-border)] object-cover shrink-0 border border-[var(--glass-border)]"
+                          />
+                          <div className="min-w-0">
+                            <span className="font-semibold block truncate text-[var(--text-primary)]">
+                              {recipient.name}
+                            </span>
+                            <span className="text-xs text-[var(--text-secondary)] block truncate">
+                              {recipient.phone}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+ job.notification_type === 'welcome'
+ ? 'bg-indigo-500/10 text-violet border border-indigo-500/10'
+ : job.notification_type === 'membership_expiry'
+ ? 'bg-amber-500/10 text-warning border border-amber-500/10'
+ : 'bg-cyan-500/10 text-info border border-cyan-500/10'
+ }`}
+                          >
+                            {job.notification_type === 'membership_expiry'
+                              ? 'Expiry Alert'
+                              : job.notification_type === 'session_reminder'
+                              ? 'Session reminder'
+                              : job.notification_type}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold inline-flex items-center gap-1.5 ${
+ job.status === 'processed'
+ ? 'bg-emerald-500/10 text-success border border-emerald-500/10'
+ : job.status === 'failed'
+ ? 'bg-rose-500/10 text-danger border border-rose-500/10'
+ : 'bg-amber-500/10 text-warning border border-amber-500/10'
+ }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+ job.status === 'processed'
+ ? 'bg-emerald-400'
+ : job.status === 'failed'
+ ? 'bg-rose-400'
+ : 'bg-amber-400'
+ }`}
+                            ></span>
+                            {job.status}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-[var(--text-secondary)]">
+                          {formatDateTime(job.scheduled_for)}
+                        </td>
+                        <td className="py-4 px-6 text-[var(--text-secondary)]">
+                          {formatDateTime(job.processed_at)}
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <button className="text-xs font-bold text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
+                            Inspect
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Details Inspect Modal */}
+      {selectedJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setSelectedJob(null)}
+            data-testid="modal-backdrop"
+          ></div>
+          <div className="glass-card w-full max-w-xl max-h-[85vh] flex flex-col relative z-10 overflow-hidden border border-[var(--glass-border)]">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-[var(--glass-border)] flex items-center justify-between">
+              <div>
+                <span className="text-xs text-[var(--text-secondary)] block mb-1">
+                  Job #{selectedJob.id} Details
+                </span>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                  Notification Audit Inspector
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedJob(null)}
+                className="glass-card p-1.5 hover:text-danger transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Scroll Content */}
+            <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(85vh-150px)]">
+              {/* Recipient Card */}
+              <div className="flex items-center gap-4 bg-[var(--card-hover)] p-4 rounded-2xl border border-[var(--glass-border)]">
+                <img
+                  src={getRecipientInfo(selectedJob).image}
+                  alt={getRecipientInfo(selectedJob).name}
+                  className="w-12 h-12 rounded-full border border-[var(--glass-border)] object-cover"
+                />
+                <div>
+                  <span className="text-xs text-[var(--text-secondary)] block mb-0.5">Recipient Details</span>
+                  <span className="font-semibold block text-sm text-[var(--text-primary)]">{getRecipientInfo(selectedJob).name}</span>
+                  <span className="text-xs text-[var(--text-secondary)] block">{getRecipientInfo(selectedJob).phone}</span>
+                </div>
+              </div>
+
+              {/* Status & Error Callout */}
+              {selectedJob.status === 'failed' && (
+                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex gap-3 text-danger text-xs">
+                  <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <span className="font-bold block text-xs mb-1">Processing Failure log</span>
+                    <p className="font-mono leading-relaxed break-all bg-black/10 p-2.5 rounded-lg border border-rose-500/10">
+                      {selectedJob.error_message || 'Unknown network error.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Metadata Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="glass-card p-3.5">
+                  <span className="text-xs text-[var(--text-secondary)] block mb-0.5">Type</span>
+                  <span className="text-xs font-semibold capitalize text-[var(--text-primary)]">{selectedJob.notification_type.replace('_', ' ')}</span>
+                </div>
+                <div className="glass-card p-3.5">
+                  <span className="text-xs text-[var(--text-secondary)] block mb-0.5">Provider</span>
+                  <span className="text-xs font-semibold text-[var(--text-primary)]">{selectedJob.provider}</span>
+                </div>
+                <div className="glass-card p-3.5">
+                  <span className="text-xs text-[var(--text-secondary)] block mb-0.5">Scheduled</span>
+                  <span className="text-xs font-medium text-[var(--text-primary)]">{formatDateTime(selectedJob.scheduled_for)}</span>
+                </div>
+                <div className="glass-card p-3.5">
+                  <span className="text-xs text-[var(--text-secondary)] block mb-0.5">Processed</span>
+                  <span className="text-xs font-medium text-[var(--text-primary)]">{formatDateTime(selectedJob.processed_at)}</span>
+                </div>
+                <div className="glass-card p-3.5">
+                  <span className="text-xs text-[var(--text-secondary)] block mb-0.5">Created At</span>
+                  <span className="text-xs font-medium text-[var(--text-primary)]">{formatDateTime(selectedJob.created_at)}</span>
+                </div>
+                <div className="glass-card p-3.5">
+                  <span className="text-xs text-[var(--text-secondary)] block mb-0.5">Updated At</span>
+                  <span className="text-xs font-medium text-[var(--text-primary)]">{formatDateTime(selectedJob.updated_at)}</span>
+                </div>
+              </div>
+
+              {/* Raw Payload Section */}
+              <div className="space-y-2">
+                <span className="text-xs text-[var(--text-secondary)] block">
+                  Raw payload context
+                </span>
+                <pre className="p-4 bg-black/25 text-neutral-300 rounded-2xl border border-[var(--glass-border)] text-xs font-mono overflow-x-auto max-h-48 leading-relaxed">
+                  {JSON.stringify(selectedJob.payload, null, 2)}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Notifications;

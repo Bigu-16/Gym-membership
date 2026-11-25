@@ -15,19 +15,17 @@ async def list_audit_logs(
     entity_type: str | None = None,
     action: str | None = None,
     actor_user_id: int | None = None,
-    club_id: int | None = None,
     limit: int = Query(default=200, ge=1, le=1000),
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    admin: AppUser = Depends(get_current_admin_user),
 ) -> list[AuditLogResponse]:
-    stmt = select(AuditLog).order_by(AuditLog.created_at.desc(), AuditLog.id.desc()).limit(limit)
+    # Only this gym's own activity.
+    stmt = select(AuditLog).where(AuditLog.club_id == admin.club_id).order_by(AuditLog.created_at.desc(), AuditLog.id.desc()).limit(limit)
     if entity_type:
         stmt = stmt.where(AuditLog.entity_type == entity_type)
     if action:
         stmt = stmt.where(AuditLog.action == action)
     if actor_user_id is not None:
         stmt = stmt.where(AuditLog.actor_user_id == actor_user_id)
-    if club_id is not None:
-        stmt = stmt.where(AuditLog.club_id == club_id)
     result = await db.scalars(stmt)
     return [AuditLogResponse.model_validate(row) for row in result.all()]

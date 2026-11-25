@@ -1,34 +1,42 @@
-# Taekwondo Club
+# Gym portal (two separate gyms)
 
-Web app for running a kids' taekwondo club with several branches: enrolment, monthly fees,
-uniform stock, attendance and reports, in English and Amharic.
+One website and one server for two gyms that are completely separate tenants:
 
-## What it does
+| Tenant | App | What it has |
+|---|---|---|
+| **N & T Center** (`kind = gym`) | The original gym app (`src/GymApp.jsx`, `src/components/…`) | Members, families, packages, schedule, check-ins, freezes, messages and reminders |
+| **Taekwondo club** (`kind = taekwondo`) | The taekwondo app (`src/tkd/…`) | Parents with several kids, Telebirr/CBE/Abyssinia/cash fees, uniform stock, weekend/summer seasons, attendance reports, English/Amharic |
 
-- **Branches (multi-tenant).** Every kid, payment, uniform and attendance mark belongs to one branch.
-  Staff accounts see only their branch; the owner account sees all branches and manages staff.
-- **Seasons.** School season (default Sep–Jun): classes on weekends. Summer (default 15 Jun–10 Sep):
-  Monday to Saturday. Dates and days are set per branch in Settings.
-- **Class times.** Default 3–4, 4–5, 5–6 morning and 8–9 afternoon (Ethiopian time; stored as
-  09:00–15:00). The afternoon class does not run on Sunday. Each kid trains in one class time.
-- **Enrolment.** One parent, any number of kids, one payment (Cash, Telebirr, CBE, Bank of Abyssinia,
-  with an optional transaction number). Optional uniform for each kid. Printable receipt.
-  Entering an existing parent's phone offers to add the kids to that family.
-- **Fees and expiry.** Monthly fee per kid. Paying early continues from the current end date.
-  Expiry colours: yellow at 7 days left, red at 2 days, solid red when expired (both editable).
-  "Classes left" counts real class days in the season.
-- **Uniforms.** Per size: ordered (on the way), in stock, sold. Supplier orders count as stock once
-  marked received. Sales can be part of enrolment or separate (any buyer). Stock counts fix drift.
-- **Attendance.** One register per class time per day; reports show attendance rate per day,
-  weekday, class time and kid, and flag kids who missed 3+ classes in a row.
-- **Languages.** English / Amharic toggle on every page. Amharic shows Ethiopian calendar dates
-  and Ethiopian clock times.
-- **Accessibility.** Designed to WCAG 2.2 AAA contrast (7:1 text), 44px+ touch targets, visible focus,
-  labelled fields, status shown with words and icons as well as colour.
+## How the separation works
+
+- Every account belongs to exactly one tenant (`app_users.club_id`). There is no owner account and no switching.
+- After sign-in the server says which tenant the account belongs to (`GET /auth/me` → `club_kind`), and only that tenant's app is loaded.
+- Every gym table has a `club_id`. The server limits every query to the signed-in account's tenant automatically, stamps new rows with it, and refuses any row that points at another tenant's record (`backend/app/core/tenancy.py`). A request without a tenant sees nothing.
+- The gym app's API is at `/api/v1/…` (as before) and the taekwondo app's at `/api/v1/tkd/…`. Each tenant gets "Not found" for the other app's API.
+- Staff lists, activity logs, reminders and settings are per tenant.
+
+## Creating a tenant
+
+Tenants and their first admin are created on the server (never from the app):
+
+```bash
+cd backend && uv run python -m scripts.create_tenant --kind taekwondo --name "Taekwondo Club" --name-am "ቴኳንዶ ክለብ" --admin-name "Full Name" --admin-email admin@example.com
+```
+
+The password is asked for twice. `--list` shows the existing tenants. The admin then adds staff in the app.
+
+## Deploying
+
+`alembic upgrade head` runs two migrations:
+
+- `20261120_0009` adds the taekwondo tables.
+- `20261123_0010` makes the existing gym the tenant **N & T Center**, stamps all of its existing data and every existing login with it, and makes the tenant required. Nothing is deleted.
+
+Then create the taekwondo tenant with the command above.
 
 ## Run it locally
 
-The local setup uses a throwaway SQLite file, never the database in `backend/.env`.
+This uses a throwaway SQLite file, never the database in `backend/.env`.
 
 ```bash
 cd backend && DATABASE_URL=sqlite+aiosqlite:///./dev.db uv run python -m scripts.dev_seed
@@ -42,7 +50,7 @@ cd backend && DATABASE_URL=sqlite+aiosqlite:///./dev.db APP_ENV=development uv r
 VITE_API_URL=http://127.0.0.1:8010/api/v1 npm run dev
 ```
 
-Demo sign-in details are in `backend/scripts/dev_seed.py` (local demo data only).
+The demo creates both tenants. Their demo logins are listed in `backend/scripts/dev_seed.py`.
 
 ## Tests
 
@@ -53,10 +61,3 @@ npm run lint && npm test
 ```bash
 cd backend && uv run pytest
 ```
-
-## Deploying
-
-`alembic upgrade head` runs migration `20261120_0009`, which adds the branch tables, creates a first
-branch called "Main branch" with the default class times and sizes, and links existing staff accounts
-to it. It is additive: the old gym tables stay in the database untouched.
-After deploying, set the monthly fee and uniform price in Settings.

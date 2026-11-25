@@ -3,31 +3,29 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin_user
-from app.services.audit import record_audit
 from app.core.security import hash_password
 from app.db import get_db_session
-from app.models import AppUser, Club
-from app.models.enums import UserRole
+from app.models import AppUser
 from app.schemas.auth import UserCreateRequest, UserPasswordResetRequest, UserResponse, UserUpdateRequest
+from app.services.audit import record_audit
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-async def _check_branch(db: AsyncSession, role: UserRole, club_id: int | None) -> int | None:
-    """Staff must belong to an existing branch; owners never do."""
-    if role == UserRole.admin:
-        return None
-    if club_id is None or await db.get(Club, club_id) is None:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Choose the branch this staff member works in")
-    return club_id
+async def _own_user(db: AsyncSession, admin: AppUser, user_id: int) -> AppUser:
+    """Accounts of other gyms behave as if they do not exist."""
+    user = await db.get(AppUser, user_id)
+    if user is None or user.club_id != admin.club_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user
 
 
 @router.get("/", response_model=list[UserResponse])
 async def list_users(
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    admin: AppUser = Depends(get_current_admin_user),
 ) -> list[UserResponse]:
-    result = await db.scalars(select(AppUser).order_by(AppUser.created_at.desc()))
+    result = await db.scalars(select(AppUser).where(AppUser.club_id == admin.club_id).order_by(AppUser.created_at.desc()))
     return [UserResponse.model_validate(user) for user in result.all()]
 
 
@@ -37,6 +35,7 @@ async def create_user(
     db: AsyncSession = Depends(get_db_session),
     admin: AppUser = Depends(get_current_admin_user),
 ) -> UserResponse:
+    # Emails are the login name, so they are unique across all gyms.
     existing = await db.scalar(select(AppUser).where(AppUser.email == payload.email.lower()))
     if existing is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already in use")
@@ -47,11 +46,11 @@ async def create_user(
         password_hash=hash_password(payload.password),
         role=payload.role,
         is_active=payload.is_active,
-        club_id=await _check_branch(db, payload.role, payload.club_id),
+        club_id=admin.club_id,  # always the admin's own gym
     )
     db.add(user)
     await db.flush()
-    record_audit(db, admin, "user_created", "user", user.id, f"Created {user.role.value} account {user.email}")
+    record_audit(db, admin, "user_created", "user", user.id, f"Created {user.role.value} account {user.email}", club_id=admin.club_id)
     await db.commit()
     await db.refresh(user)
     return UserResponse.model_validate(user)
@@ -61,12 +60,9 @@ async def create_user(
 async def get_user(
     user_id: int,
     db: AsyncSession = Depends(get_db_session),
-    _: AppUser = Depends(get_current_admin_user),
+    admin: AppUser = Depends(get_current_admin_user),
 ) -> UserResponse:
-    user = await db.get(AppUser, user_id)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return UserResponse.model_validate(user)
+    return UserResponse.model_validate(await _own_user(db, admin, user_id))
 
 
 @router.patch("/{user_id}", response_model=UserResponse)
@@ -76,9 +72,7 @@ async def update_user(
     db: AsyncSession = Depends(get_db_session),
     current_admin: AppUser = Depends(get_current_admin_user),
 ) -> UserResponse:
-    user = await db.get(AppUser, user_id)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user = await _own_user(db, current_admin, user_id)
 
     updates = payload.model_dump(exclude_unset=True)
     if "email" in updates and updates["email"] is not None:
@@ -88,26 +82,20 @@ async def update_user(
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already in use")
         updates["email"] = normalized_email
 
-    if "role" in updates or "club_id" in updates:
-        role = updates.get("role") or user.role
-        club_id = updates["club_id"] if "club_id" in updates else user.club_id
-        if user.id == current_admin.id and role != UserRole.admin:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot remove your own owner access")
-        updates["club_id"] = await _check_branch(db, role, club_id)
-        if updates["club_id"] != user.club_id or role != user.role:
-            user.token_version += 1  # moved branch / role: sign out so the new access applies
-
     if user.id == current_admin.id and updates.get("is_active") is False:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You cannot deactivate your own account",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot deactivate your own account")
+    if user.id == current_admin.id and updates.get("role") not in (None, current_admin.role):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot remove your own admin access")
 
     if updates.get("is_active") is False and user.is_active:
         user.token_version += 1  # a deactivated account is signed out everywhere immediately
+    if "role" in updates and updates["role"] is not None and updates["role"] != user.role:
+        user.token_version += 1  # new access applies on the next sign-in
     for field, value in updates.items():
+        if value is None and field in {"full_name", "email", "role", "is_active"}:
+            continue
         setattr(user, field, value)
-    record_audit(db, current_admin, "user_updated", "user", user.id, f"Updated account {user.email}", {"fields": sorted(updates)})
+    record_audit(db, current_admin, "user_updated", "user", user.id, f"Updated account {user.email}", {"fields": sorted(updates)}, club_id=current_admin.club_id)
 
     await db.commit()
     await db.refresh(user)
@@ -121,13 +109,10 @@ async def reset_user_password(
     db: AsyncSession = Depends(get_db_session),
     admin: AppUser = Depends(get_current_admin_user),
 ) -> UserResponse:
-    user = await db.get(AppUser, user_id)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
+    user = await _own_user(db, admin, user_id)
     user.password_hash = hash_password(payload.password)
     user.token_version += 1  # existing logins with the old password stop working
-    record_audit(db, admin, "password_reset", "user", user.id, f"Reset password for {user.email}")
+    record_audit(db, admin, "password_reset", "user", user.id, f"Reset password for {user.email}", club_id=admin.club_id)
     await db.commit()
     await db.refresh(user)
     return UserResponse.model_validate(user)

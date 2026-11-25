@@ -18,6 +18,10 @@ engine = create_async_engine(
 SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 
+# Importing registers the tenant isolation listeners on every Session.
+import app.core.tenancy  # noqa: E402,F401
+
+
 async def get_db_session() -> AsyncIterator[AsyncSession]:
     async with SessionLocal() as session:
         yield session

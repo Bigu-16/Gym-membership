@@ -1,10 +1,11 @@
 from decimal import Decimal
 
-from sqlalchemy import JSON, Boolean, Integer, Numeric, String
+from sqlalchemy import JSON, Boolean, Enum, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models.base import TimestampMixin
+from app.models.enums import ClubKind
 
 # Monday = 0 ... Sunday = 6 (Python's date.weekday()).
 DEFAULT_TERM_DAYS = [5, 6]  # school season (Sep - Jun): weekends only
@@ -12,12 +13,19 @@ DEFAULT_SUMMER_DAYS = [0, 1, 2, 3, 4, 5]  # summer (Jun - Sep): Monday to Saturd
 
 
 class Club(TimestampMixin, Base):
-    """A branch (tenant). Every student, payment, uniform and attendance row belongs to one."""
+    """A tenant: one gym. Its accounts and data are never visible to any other tenant.
+
+    `kind` decides which app the tenant uses. The taekwondo settings below only apply to
+    kind == taekwondo; the gym app keeps its own settings in its own tables.
+    """
 
     __tablename__ = "clubs"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    kind: Mapped[ClubKind] = mapped_column(
+        Enum(ClubKind, name="club_kind_enum", native_enum=False, length=20), nullable=False, default=ClubKind.taekwondo
+    )
     name_am: Mapped[str | None] = mapped_column(String(120), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="Africa/Addis_Ababa")

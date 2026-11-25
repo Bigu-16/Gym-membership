@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import DateTime, ForeignKey, func
+from sqlalchemy.orm import Mapped, declared_attr, mapped_column
 
 
 class TimestampMixin:
@@ -16,3 +16,11 @@ class TimestampMixin:
         onupdate=func.now(),
         nullable=False,
     )
+
+
+class TenantMixin:
+    """Every row belongs to exactly one tenant (gym). Queries must always filter on club_id."""
+
+    @declared_attr
+    def club_id(cls) -> Mapped[int]:
+        return mapped_column(ForeignKey("clubs.id", ondelete="CASCADE"), nullable=False, index=True)

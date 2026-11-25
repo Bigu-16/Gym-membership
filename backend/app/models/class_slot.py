@@ -4,16 +4,15 @@ from sqlalchemy import JSON, Boolean, ForeignKey, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.models.base import TimestampMixin
+from app.models.base import TenantMixin, TimestampMixin
 
 
-class ClassSlot(TimestampMixin, Base):
+class ClassSlot(TenantMixin, TimestampMixin, Base):
     """A class hour, e.g. 09:00-10:00 (3-4 in Ethiopian time). Each kid trains in one slot."""
 
     __tablename__ = "class_slots"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    club_id: Mapped[int] = mapped_column(ForeignKey("clubs.id", ondelete="CASCADE"), nullable=False, index=True)
     # Stored in international (24h) time; the app shows the Ethiopian hour too.
     start_time: Mapped[time] = mapped_column(Time, nullable=False)
     end_time: Mapped[time] = mapped_column(Time, nullable=False)

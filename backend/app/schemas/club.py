@@ -21,6 +21,7 @@ class ClubResponse(BaseModel):
 
     id: int
     name: str
+    kind: str
     name_am: str | None
     is_active: bool
     timezone: str
@@ -36,16 +37,9 @@ class ClubResponse(BaseModel):
     low_stock_threshold: int
 
 
-class ClubCreate(BaseModel):
-    name: str = Field(min_length=2, max_length=120)
-    name_am: OptionalText = None
-    monthly_fee: Money = Decimal("0")
-
-
 class ClubUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=120)
     name_am: OptionalText = None
-    is_active: bool | None = None
     monthly_fee: Money | None = None
     uniform_price: Money | None = None
     summer_start: str | None = None

@@ -14,6 +14,8 @@ def record_audit(
     club_id: int | None = None,
 ) -> None:
     """Add an activity-log row to the caller's transaction (committed with the change itself)."""
+    if club_id is None:
+        club_id = db.info.get("club_id") or (actor.club_id if actor else None)
     db.add(
         AuditLog(
             club_id=club_id,

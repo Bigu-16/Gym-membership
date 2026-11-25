@@ -44,6 +44,48 @@ def test_gym_operations_migration_sql():
     assert "WHERE check_out_time IS NULL" in sql
 
 
+def test_official_catalog_migration_loads_once_and_keeps_existing_rows():
+    import importlib.util as util
+
+    from sqlalchemy import create_engine, func, insert, select
+
+    import app.models  # noqa: F401 - registers all tables
+    from app.core.database import Base
+    from app.models import MembershipPlan, ScheduleTemplate
+
+    path = Path(__file__).parents[1] / "alembic" / "versions" / "20261015_0007_load_official_catalog.py"
+    spec = util.spec_from_file_location("catalog_migration", path)
+    module = util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    # The schema as it was then: these tables had no tenant yet, so club_id may be empty here.
+    from sqlalchemy import MetaData
+
+    from app.models import Club
+
+    then = MetaData()
+    Club.__table__.to_metadata(then)
+    for table in (ScheduleTemplate.__table__, MembershipPlan.__table__):
+        table.to_metadata(then).c.club_id.nullable = True
+    engine = create_engine("sqlite://")
+    then.create_all(engine)
+    with engine.begin() as conn:
+        # A class the center already had (same slot written differently) and an old plan.
+        conn.execute(insert(ScheduleTemplate).values(title="Kids Taekwondo", type="group", days=["Monday", "Wednesday", "Friday"], time="4:00 PM - 5:00 PM", capacity=20))
+        conn.execute(insert(MembershipPlan).values(name="Karate One Month - 3 Classes", program="Karate", price=999, currency="AED", included_items=[], duration_label="x", duration_months=1, duration_days=30, sort_order=0, is_active=True))
+
+        first = module.load_official_catalog(conn)
+        second = module.load_official_catalog(conn)
+
+        assert first == {"classes_added": 10, "packages_added": 22, "packages_updated": 1}
+        assert second["classes_added"] == 0 and second["packages_added"] == 0
+        assert conn.scalar(select(func.count()).select_from(ScheduleTemplate)) == 11
+        assert conn.scalar(select(func.count()).select_from(MembershipPlan)) == 23
+        assert conn.scalar(select(MembershipPlan.price).where(MembershipPlan.name == "Karate One Month - 3 Classes")) == 350
+        # The center's existing class keeps its own settings.
+        assert conn.scalar(select(ScheduleTemplate.capacity).where(ScheduleTemplate.time == "4:00 PM - 5:00 PM")) == 20
+
+
 def test_freeze_migration_sql():
     sql = render_migration_sql("20261016_0008_freeze_pauses_membership.py")
     assert "ADD COLUMN frozen_since DATE" in sql
@@ -51,14 +93,17 @@ def test_freeze_migration_sql():
     assert "UPDATE members SET frozen_since = CURRENT_DATE WHERE is_frozen" in sql
 
 
-def test_branch_migration_is_additive_and_seeds_a_first_branch():
-    sql = render_migration_sql("20261120_0009_taekwondo_branches.py")
-    assert sql.count("CREATE TYPE fee_method_enum") == 1
-    for table in ("clubs", "class_slots", "guardians", "students", "fee_payments", "uniform_sizes",
-                  "uniform_orders", "uniform_order_lines", "uniform_sales", "uniform_adjustments", "attendance"):
-        assert f"CREATE TABLE {table} " in sql
-    assert "ALTER TABLE app_users ADD COLUMN club_id" in sql
-    # Nothing from the old gym data is dropped.
-    assert "DROP TABLE" not in sql
-    assert "INSERT INTO clubs (name) VALUES ('Main branch')" in sql
+def test_tenant_separation_migration_keeps_all_gym_data():
+    sql = render_migration_sql("20261123_0010_separate_gym_tenants.py")
+    assert "ALTER TABLE clubs ADD COLUMN kind" in sql
+    assert "SET name = 'N & T Center', kind = 'gym'" in sql
+    for table in ("members", "families", "payments", "enrollments", "sessions", "check_ins", "membership_plans",
+                  "schedule_templates", "notification_jobs", "announcements", "business_profiles"):
+        assert f"ALTER TABLE {table} ADD COLUMN club_id" in sql
+        assert f"UPDATE {table} SET club_id = (SELECT id FROM clubs WHERE kind = 'gym'" in sql
+        assert f"ALTER TABLE {table} ALTER COLUMN club_id SET NOT NULL" in sql
     assert "UPDATE app_users SET club_id" in sql
+    assert "ALTER TABLE app_users ALTER COLUMN club_id SET NOT NULL" in sql
+    # Only unused taekwondo placeholders are removed; no gym table is dropped or emptied.
+    assert "DROP TABLE" not in sql
+    assert "DELETE FROM members" not in sql and "DELETE FROM payments" not in sql

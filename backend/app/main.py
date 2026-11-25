@@ -1,13 +1,18 @@
 import logging
 import time
 import uuid
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.config import settings
+from app.core.tenancy import TenantError
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("app.requests")
@@ -79,9 +84,22 @@ async def request_context(request: Request, call_next):
     return response
 
 
+@app.exception_handler(TenantError)
+async def tenant_error(request: Request, exc: TenantError) -> JSONResponse:
+    """Anything that would cross from one gym into another is answered as if it does not exist."""
+    logger.warning("Blocked cross-tenant access %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(status_code=404, content={"detail": "Not found"})
+
+
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/")
 async def root() -> dict[str, str]:
-    return {"message": settings.app_name, "docs": "/docs", "api": settings.api_v1_prefix}
+    return {"message": settings.app_name, "docs": "/docs", "api": settings.api_v1_prefix, "admin": "/admin"}
+
+
+@app.get("/admin", include_in_schema=False)
+async def admin_dashboard() -> FileResponse:
+    return FileResponse(STATIC_DIR / "admin-dashboard.html")

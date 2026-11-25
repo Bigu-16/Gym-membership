@@ -3,19 +3,20 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_tenant
 from app.core.config import settings
 from app.core.rate_limit import email_lookup_rate_limiter, login_rate_limiter, password_change_rate_limiter
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db import get_db_session
-from app.models import AppUser
-from app.models.enums import UserRole
+from app.models import AppUser, Club
+from app.models.enums import ClubKind, UserRole
 from app.schemas.auth import (
     BootstrapAdminRequest,
     ChangePasswordRequest,
     CheckEmailRequest,
     CheckEmailResponse,
     LoginResponse,
+    MeResponse,
     UserResponse,
 )
 from app.services.audit import record_audit
@@ -50,12 +51,19 @@ async def bootstrap_admin(
             detail="Bootstrap is only available before the first user exists",
         )
 
+    # Development only: the first admin joins the first gym tenant (created if missing).
+    club = await db.scalar(select(Club).where(Club.kind == ClubKind.gym).order_by(Club.id).limit(1))
+    if club is None:
+        club = Club(name="N & T Center", kind=ClubKind.gym, timezone=settings.gym_timezone, currency="AED")
+        db.add(club)
+        await db.flush()
     user = AppUser(
         full_name=payload.full_name,
         email=payload.email.lower(),
         password_hash=hash_password(payload.password),
         role=UserRole.admin,
         is_active=True,
+        club_id=club.id,
     )
     db.add(user)
     await db.commit()
@@ -80,9 +88,16 @@ async def login(
     return LoginResponse(access_token=token)
 
 
-@router.get("/me", response_model=UserResponse)
-async def me(current_user: AppUser = Depends(get_current_user)) -> UserResponse:
-    return UserResponse.model_validate(current_user)
+@router.get("/me", response_model=MeResponse)
+async def me(
+    current_user: AppUser = Depends(get_current_user),
+    club: Club = Depends(get_tenant),
+) -> MeResponse:
+    return MeResponse(
+        **UserResponse.model_validate(current_user).model_dump(),
+        club_name=club.name,
+        club_kind=club.kind.value,
+    )
 
 
 @router.post("/change-password", response_model=LoginResponse)
